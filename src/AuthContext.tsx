@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot } from './firebase';
+import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from './firebase';
 import { UserProfile, FirestoreErrorInfo, OperationType } from './types';
 
 interface AuthContextType {
@@ -59,10 +59,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               displayName: firebaseUser.displayName || 'Anonymous',
               email: firebaseUser.email || '',
               photoURL: firebaseUser.photoURL || '',
-              role: 'user',
+              role: firebaseUser.email === 'jonyoax95@gmail.com' ? 'admin' : 'user',
               createdAt: serverTimestamp(),
             };
             await setDoc(userDocRef, newUser);
+          } else {
+            // If the document exists but the role is not admin and it should be
+            const currentData = userDoc.data() as UserProfile;
+            if (firebaseUser.email === 'jonyoax95@gmail.com' && currentData.role !== 'admin') {
+               await updateDoc(userDocRef, { role: 'admin' });
+            }
           }
         } catch (error) {
           console.error('Error in initial user setup:', error);
