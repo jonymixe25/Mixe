@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -12,12 +12,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const navItems = [
     { path: '/', label: 'Inicio', icon: Home },
+    { path: '/news', label: 'Noticias', icon: Newspaper },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
       { path: '/contacts', label: 'Contactos', icon: Users },
       { path: '/admin', label: 'Transmitir', icon: Video },
+      ...(user.role === 'admin' ? [{ path: '/dashboard', label: 'Admin', icon: Shield }] : []),
     ] : []),
   ];
+
+  const handleLogin = async () => {
+    await login();
+    navigate('/profile');
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-[#ff4e00] selection:text-white">
@@ -58,7 +65,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </button>
               ) : (
                 <button
-                  onClick={login}
+                  onClick={handleLogin}
                   className="bg-[#ff4e00] px-4 py-2 rounded-full text-sm font-bold hover:bg-[#ff4e00]/90 transition-colors flex items-center gap-2"
                 >
                   <LogIn className="w-4 h-4" />
@@ -103,7 +110,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               ))}
               {!user && (
                 <button
-                  onClick={() => { login(); setIsMenuOpen(false); }}
+                  onClick={() => { handleLogin(); setIsMenuOpen(false); }}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#ff4e00] text-white font-bold"
                 >
                   <LogIn className="w-5 h-5" />

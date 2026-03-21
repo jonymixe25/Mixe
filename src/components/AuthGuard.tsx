@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../AuthContext';
 import { Navigate } from 'react-router-dom';
 
-const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AuthGuard: React.FC<{ children: React.ReactNode; requireAdmin?: boolean }> = ({ children, requireAdmin = false }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -14,6 +14,10 @@ const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireAdmin && user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

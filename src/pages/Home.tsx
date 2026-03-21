@@ -1,26 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { db, collection, query, where, onSnapshot } from '../firebase';
+import { db, collection, query, where, onSnapshot, orderBy, limit } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio } from 'lucide-react';
+import { Video, Users, Play, Radio, Newspaper, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const [streams, setStreams] = useState<StreamSession[]>([]);
+  const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'streams'), where('status', '==', 'live'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'));
+    const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
       const liveStreams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession));
       setStreams(liveStreams);
-      setLoading(false);
     }, (error) => {
       console.error('Error fetching live streams:', error);
+    });
+
+    const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(3));
+    const unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
+      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching news:', error);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeStreams();
+      unsubscribeNews();
+    };
   }, []);
 
   return (
@@ -84,7 +95,7 @@ const Home: React.FC = () => {
                 className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all"
               >
                 <img
-                  src={`https://picsum.photos/seed/${stream.id}/800/450`}
+                  src={stream.thumbnailUrl || `https://picsum.photos/seed/${stream.id}/800/450`}
                   alt={stream.title}
                   className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
                   referrerPolicy="no-referrer"
@@ -127,6 +138,53 @@ const Home: React.FC = () => {
             </Link>
           </div>
         )}
+      </section>
+
+      {/* Latest News Section */}
+      <section className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Newspaper className="w-6 h-6 text-[#ff4e00]" />
+            <h2 className="text-2xl font-bold tracking-tight uppercase italic">Noticias Recientes</h2>
+          </div>
+          <Link to="/news" className="text-[#ff4e00] text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:underline">
+            Ver todas
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {news.map((article) => (
+            <Link
+              key={article.id}
+              to="/news"
+              className="group bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-[#ff4e00]/30 transition-all flex flex-col"
+            >
+              <div className="aspect-video relative overflow-hidden">
+                <img
+                  src={article.imageUrl || `https://picsum.photos/seed/${article.id}/800/450`}
+                  alt={article.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent" />
+              </div>
+              <div className="p-6">
+                <h3 className="text-lg font-bold mb-2 group-hover:text-[#ff4e00] transition-colors line-clamp-2">
+                  {article.title}
+                </h3>
+                <p className="text-white/40 text-xs line-clamp-2 italic">
+                  {article.content}
+                </p>
+              </div>
+            </Link>
+          ))}
+          {news.length === 0 && !loading && (
+            <div className="col-span-full py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+              <p className="text-white/40 italic">No hay noticias recientes.</p>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

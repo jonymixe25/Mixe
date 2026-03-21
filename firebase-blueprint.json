@@ -26,6 +26,7 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["live", "ended"] },
+        "thumbnailUrl": { "type": "string" },
         "startedAt": { "type": "string", "format": "date-time" },
         "endedAt": { "type": "string", "format": "date-time" },
         "viewerCount": { "type": "number" }
@@ -44,6 +45,21 @@
         "addedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "contactId"]
+    },
+    "News": {
+      "title": "News Article",
+      "description": "News and cultural updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "authorId", "createdAt"]
     }
   },
   "firestore": {
@@ -58,6 +74,10 @@
     "/users/{uid}/contacts/{contactId}": {
       "schema": "Contact",
       "description": "User contacts subcollection"
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "News articles collection"
     }
   }
 }
