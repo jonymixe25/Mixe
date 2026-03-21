@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where } from '../firebase';
-import { StreamSession } from '../types';
+import { useAuth, handleFirestoreError } from '../AuthContext';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, setDoc, deleteDoc, getDocs } from '../firebase';
+import { StreamSession, OperationType } from '../types';
 import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
@@ -20,6 +20,16 @@ const AdminStream: React.FC = () => {
   const [generatingImg, setGeneratingImg] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const peerConnections = useRef<{ [key: string]: RTCPeerConnection }>({});
+
+  // WebRTC Configuration
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+  };
 
   // Simulated Chat
   const [chatMessages, setChatMessages] = useState<{ id: string; user: string; text: string }[]>([
@@ -53,12 +63,78 @@ const AdminStream: React.FC = () => {
   useEffect(() => {
     if (activeStream && videoRef.current) {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          if (videoRef.current) videoRef.current.srcObject = stream;
+        .then(s => {
+          streamRef.current = s;
+          if (videoRef.current) videoRef.current.srcObject = s;
+          
+          // Listen for signaling requests from viewers
+          const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
+          const unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+              if (change.type === 'added') {
+                const viewerId = change.doc.id;
+                const data = change.doc.data();
+                
+                // If it's a new viewer request (no offer yet)
+                if (!data.offer && !data.answer) {
+                  await handleNewViewer(viewerId);
+                }
+              } else if (change.type === 'modified') {
+                const viewerId = change.doc.id;
+                const data = change.doc.data();
+                
+                if (data.answer && peerConnections.current[viewerId]) {
+                  const pc = peerConnections.current[viewerId];
+                  if (pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                  }
+                }
+                
+                if (data.viewerCandidate && peerConnections.current[viewerId]) {
+                  const pc = peerConnections.current[viewerId];
+                  await pc.addIceCandidate(new RTCIceCandidate(data.viewerCandidate));
+                }
+              }
+            });
+          });
+
+          return () => unsubscribeSignaling();
         })
         .catch(err => console.error("Error accessing camera:", err));
     }
   }, [activeStream]);
+
+  const handleNewViewer = async (viewerId: string) => {
+    if (!activeStream || !streamRef.current) return;
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    peerConnections.current[viewerId] = pc;
+
+    // Add local tracks to the peer connection
+    streamRef.current.getTracks().forEach(track => {
+      pc.addTrack(track, streamRef.current!);
+    });
+
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        setDoc(doc(db, 'streams', activeStream.id, 'signaling', viewerId), {
+          broadcasterCandidate: event.candidate.toJSON()
+        }, { merge: true });
+      }
+    };
+
+    // Create and send offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    await setDoc(doc(db, 'streams', activeStream.id, 'signaling', viewerId), {
+      offer: {
+        type: offer.type,
+        sdp: offer.sdp
+      }
+    }, { merge: true });
+  };
 
   const handleStartStream = async () => {
     if (!user || !title) return;
@@ -76,7 +152,7 @@ const AdminStream: React.FC = () => {
       };
       await addDoc(collection(db, 'streams'), streamData);
     } catch (error) {
-      console.error('Error starting stream:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'streams');
     } finally {
       setLoading(false);
     }
@@ -95,8 +171,8 @@ const AdminStream: React.FC = () => {
     if (!activeStream) return;
     setLoading(true);
     try {
-      const streamRef = doc(db, 'streams', activeStream.id);
-      await updateDoc(streamRef, {
+      const docRef = doc(db, 'streams', activeStream.id);
+      await updateDoc(docRef, {
         status: 'ended',
         endedAt: serverTimestamp(),
       });
@@ -107,8 +183,20 @@ const AdminStream: React.FC = () => {
         tracks.forEach(track => track.stop());
         videoRef.current.srcObject = null;
       }
+      streamRef.current = null;
+
+      // Close all peer connections
+      Object.values(peerConnections.current).forEach(pc => pc.close());
+      peerConnections.current = {};
+
+      // Clear signaling data
+      const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
+      const snapshot = await getDocs(signalingRef);
+      snapshot.forEach(async (d) => {
+        await deleteDoc(doc(db, 'streams', activeStream.id, 'signaling', d.id));
+      });
     } catch (error) {
-      console.error('Error ending stream:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `streams/${activeStream.id}`);
     } finally {
       setLoading(false);
     }

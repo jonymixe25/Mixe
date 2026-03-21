@@ -60,6 +60,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "content", "authorId", "createdAt"]
+    },
+    "Media": {
+      "title": "Media Item",
+      "description": "Uploaded image or media file metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "url": { "type": "string" },
+        "folder": { "type": "string" },
+        "fileName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "url", "folder", "fileName", "createdAt"]
     }
   },
   "firestore": {
@@ -78,6 +92,10 @@
     "/news/{newsId}": {
       "schema": "News",
       "description": "News articles collection"
+    },
+    "/media/{mediaId}": {
+      "schema": "Media",
+      "description": "Media items collection"
     }
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment } from '../firebase';
+import { db, doc, onSnapshot, updateDoc, increment, collection, addDoc, setDoc, deleteDoc, auth } from '../firebase';
 import { StreamSession } from '../types';
 import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -23,6 +23,16 @@ const StreamView: React.FC = () => {
   const [showControls, setShowControls] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const signalingDocId = useRef<string | null>(null);
+
+  // WebRTC Configuration
+  const rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -42,8 +52,72 @@ const StreamView: React.FC = () => {
       viewerCount: increment(1)
     });
 
+    // WebRTC Setup
+    const setupWebRTC = async () => {
+      if (!auth.currentUser) return;
+      const viewerUid = auth.currentUser.uid;
+      signalingDocId.current = viewerUid;
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      pcRef.current = pc;
+
+      pc.ontrack = (event) => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          setDoc(doc(db, 'streams', id, 'signaling', viewerUid), {
+            viewerCandidate: event.candidate.toJSON()
+          }, { merge: true });
+        }
+      };
+
+      // Create signaling document
+      const docRef = doc(db, 'streams', id, 'signaling', viewerUid);
+      await setDoc(docRef, {
+        joinedAt: new Date().toISOString()
+      });
+
+      // Listen for broadcaster's offer and candidates
+      const unsubscribeSignaling = onSnapshot(docRef, async (snapshot) => {
+        const data = snapshot.data();
+        if (!data) return;
+
+        if (data.offer && pc.signalingState === 'stable') {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await setDoc(docRef, {
+            answer: {
+              type: answer.type,
+              sdp: answer.sdp
+            }
+          }, { merge: true });
+        }
+
+        if (data.broadcasterCandidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(data.broadcasterCandidate));
+        }
+      });
+
+      return unsubscribeSignaling;
+    };
+
+    let unsubscribeSignaling: (() => void) | undefined;
+    setupWebRTC().then(unsub => {
+      unsubscribeSignaling = unsub;
+    });
+
     return () => {
       unsubscribe();
+      if (unsubscribeSignaling) unsubscribeSignaling();
+      if (pcRef.current) pcRef.current.close();
+      if (signalingDocId.current) {
+        deleteDoc(doc(db, 'streams', id, 'signaling', signalingDocId.current));
+      }
       // Decrement viewer count on leave
       updateDoc(streamRef, {
         viewerCount: increment(-1)
@@ -168,11 +242,9 @@ const StreamView: React.FC = () => {
           {/* Simulated Video Element */}
           <video
             ref={videoRef}
-            src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
             poster={stream.thumbnailUrl}
             className="w-full h-full object-cover"
             autoPlay
-            loop
             muted={isMuted}
             playsInline
           />

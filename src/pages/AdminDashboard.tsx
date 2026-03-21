@@ -110,7 +110,7 @@ const AdminDashboard: React.FC = () => {
           await deleteDoc(doc(db, 'news', newsId));
           setToast({ message: 'Noticia eliminada', type: 'success' });
         } catch (error) {
-          console.error('Error deleting news:', error);
+          handleFirestoreError(error, OperationType.DELETE, `news/${newsId}`);
         }
       }
     });
@@ -127,7 +127,7 @@ const AdminDashboard: React.FC = () => {
           await deleteDoc(doc(db, 'streams', streamId));
           setToast({ message: 'Transmisión eliminada', type: 'success' });
         } catch (error) {
-          console.error('Error deleting stream:', error);
+          handleFirestoreError(error, OperationType.DELETE, `streams/${streamId}`);
         }
       }
     });
@@ -146,7 +146,7 @@ const AdminDashboard: React.FC = () => {
           });
           setToast({ message: `Rol actualizado a ${newRole}`, type: 'success' });
         } catch (error) {
-          console.error('Error updating user role:', error);
+          handleFirestoreError(error, OperationType.UPDATE, `users/${targetUser.uid}`);
         }
       }
     });

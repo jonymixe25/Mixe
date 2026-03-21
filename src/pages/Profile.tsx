@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuth, handleFirestoreError } from '../AuthContext';
 import { db, doc, updateDoc } from '../firebase';
 import { User, Mail, Shield, Save, Camera, Upload } from 'lucide-react';
 import { motion } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
+import { OperationType } from '../types';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ const Profile: React.FC = () => {
       });
       setMessage({ type: 'success', text: 'Perfil actualizado correctamente.' });
     } catch (error) {
-      console.error('Error updating profile:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
       setMessage({ type: 'error', text: 'Error al actualizar el perfil.' });
     } finally {
       setSaving(false);

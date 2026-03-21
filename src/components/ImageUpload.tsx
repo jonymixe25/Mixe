@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { storage, ref, uploadBytes, getDownloadURL } from '../firebase';
+import { storage, ref, uploadBytes, getDownloadURL, db, collection, addDoc, serverTimestamp } from '../firebase';
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
@@ -15,6 +16,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   currentImageUrl,
   folder = "uploads"
 }) => {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +38,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
       const snapshot = await uploadBytes(storageRef, file);
       const url = await getDownloadURL(snapshot.ref);
+      
+      // Save metadata to Firestore if user is logged in
+      if (user) {
+        try {
+          await addDoc(collection(db, 'media'), {
+            userId: user.uid,
+            url,
+            folder,
+            fileName: file.name,
+            createdAt: serverTimestamp()
+          });
+        } catch (err) {
+          console.error('Error saving media metadata:', err);
+        }
+      }
+
       onUploadComplete(url);
     } catch (error) {
       console.error('Error uploading image:', error);

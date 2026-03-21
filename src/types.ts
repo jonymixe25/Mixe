@@ -29,6 +29,15 @@ export interface Contact {
   addedAt: any;
 }
 
+export interface MediaItem {
+  id: string;
+  userId: string;
+  url: string;
+  folder: string;
+  fileName: string;
+  createdAt: any;
+}
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',

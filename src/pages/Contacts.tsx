@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../AuthContext';
+import { useAuth, handleFirestoreError } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc, deleteDoc } from '../firebase';
-import { Contact, UserProfile } from '../types';
+import { Contact, UserProfile, OperationType } from '../types';
 import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -60,7 +60,7 @@ const Contacts: React.FC = () => {
       setSearchResults([]);
       setSearchQuery('');
     } catch (error) {
-      console.error('Error adding contact:', error);
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/contacts`);
     }
   };
 
@@ -74,7 +74,7 @@ const Contacts: React.FC = () => {
         await deleteDoc(doc(db, 'users', user.uid, 'contacts', snapshot.docs[0].id));
       }
     } catch (error) {
-      console.error('Error removing contact:', error);
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/contacts`);
     }
   };
 
