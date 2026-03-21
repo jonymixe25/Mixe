@@ -92,15 +92,10 @@ const Home: React.FC = () => {
               <Link
                 key={stream.id}
                 to={`/stream/${stream.id}`}
-                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all"
+                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all flex flex-col items-center justify-center"
               >
-                <img
-                  src={stream.thumbnailUrl || `https://picsum.photos/seed/${stream.id}/800/450`}
-                  alt={stream.title}
-                  className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#ff4e00]/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity" />
+                <Video className="w-12 h-12 text-white/10 group-hover:text-[#ff4e00]/20 transition-colors" />
                 
                 <div className="absolute top-4 left-4">
                   <div className="bg-red-600 px-2 py-1 rounded-md flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">

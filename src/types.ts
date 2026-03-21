@@ -15,7 +15,6 @@ export interface StreamSession {
   title: string;
   description?: string;
   status: 'live' | 'ended';
-  thumbnailUrl?: string;
   startedAt: any;
   endedAt?: any;
   viewerCount: number;

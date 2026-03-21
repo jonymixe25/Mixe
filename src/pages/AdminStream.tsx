@@ -2,22 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth, handleFirestoreError } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, setDoc, deleteDoc, getDocs } from '../firebase';
 import { StreamSession, OperationType } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Upload } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Send, Share2, Mic, MicOff, Camera, CameraOff, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
-import { generateMixeThumbnail } from '../services/imageService';
 import Modal from '../components/Modal';
-import ImageUpload from '../components/ImageUpload';
 
 const AdminStream: React.FC = () => {
   const { user } = useAuth();
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
-  const [generatingImg, setGeneratingImg] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -31,13 +27,33 @@ const AdminStream: React.FC = () => {
     ],
   };
 
-  // Simulated Chat
-  const [chatMessages, setChatMessages] = useState<{ id: string; user: string; text: string }[]>([
-    { id: '1', user: 'Maria G.', text: '¡Qué bonita música!' },
-    { id: '2', user: 'Juan P.', text: 'Saludos desde la Sierra Norte' },
-    { id: '3', user: 'Elena R.', text: 'Increíble transmisión' },
-  ]);
+  // Real-time Chat
+  const [chatMessages, setChatMessages] = useState<{ id: string; userName: string; text: string }[]>([]);
   const [newMessage, setNewMessage] = useState('');
+
+  useEffect(() => {
+    if (!activeStream) {
+      setChatMessages([]);
+      return;
+    }
+
+    const messagesRef = collection(db, 'streams', activeStream.id, 'messages');
+    const q = query(messagesRef, where('createdAt', '!=', null)); // Simple way to get all for now, ideally order by createdAt
+    
+    // Note: Firestore requires an index for != null and orderBy if combined with other filters, 
+    // but here it's simple. Let's just use onSnapshot on the collection.
+    const unsubscribe = onSnapshot(messagesRef, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as { id: string; userName: string; text: string; createdAt: any }[];
+      
+      // Sort manually to avoid needing a complex index immediately
+      setChatMessages(msgs.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)));
+    });
+
+    return () => unsubscribe();
+  }, [activeStream?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -60,12 +76,75 @@ const AdminStream: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+
+  const toggleMic = () => {
+    if (streamRef.current) {
+      const audioTracks = streamRef.current.getAudioTracks();
+      audioTracks.forEach(track => track.enabled = !isMicOn);
+      setIsMicOn(!isMicOn);
+    }
+  };
+
+  const toggleCam = () => {
+    if (streamRef.current) {
+      const videoTracks = streamRef.current.getVideoTracks();
+      videoTracks.forEach(track => track.enabled = !isCamOn);
+      setIsCamOn(!isCamOn);
+    }
+  };
+
   useEffect(() => {
     if (activeStream && videoRef.current) {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        }, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      })
         .then(s => {
           streamRef.current = s;
           if (videoRef.current) videoRef.current.srcObject = s;
+          
+          // Setup audio visualization
+          try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(s);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            
+            audioContextRef.current = audioContext;
+            analyserRef.current = analyser;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const updateLevel = () => {
+              if (!analyserRef.current) return;
+              analyserRef.current.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+              }
+              const average = sum / bufferLength;
+              setAudioLevel(average);
+              requestAnimationFrame(updateLevel);
+            };
+            updateLevel();
+          } catch (e) {
+            console.error("Audio visualizer error:", e);
+          }
           
           // Listen for signaling requests from viewers
           const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
@@ -102,7 +181,7 @@ const AdminStream: React.FC = () => {
         })
         .catch(err => console.error("Error accessing camera:", err));
     }
-  }, [activeStream]);
+  }, [activeStream?.id]);
 
   const handleNewViewer = async (viewerId: string) => {
     if (!activeStream || !streamRef.current) return;
@@ -136,6 +215,15 @@ const AdminStream: React.FC = () => {
     }, { merge: true });
   };
 
+  const [showShareToast, setShowShareToast] = useState(false);
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/stream/${activeStream?.id}`;
+    navigator.clipboard.writeText(url);
+    setShowShareToast(true);
+    setTimeout(() => setShowShareToast(false), 3000);
+  };
+
   const handleStartStream = async () => {
     if (!user || !title) return;
     setLoading(true);
@@ -145,7 +233,6 @@ const AdminStream: React.FC = () => {
         userName: user.displayName,
         title,
         description,
-        thumbnailUrl: thumbnailUrl || `https://picsum.photos/seed/${Date.now()}/1280/720`,
         status: 'live',
         startedAt: serverTimestamp(),
         viewerCount: 0,
@@ -156,15 +243,6 @@ const AdminStream: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGenerateThumbnail = async () => {
-    setGeneratingImg(true);
-    const url = await generateMixeThumbnail();
-    if (url) {
-      setThumbnailUrl(url);
-    }
-    setGeneratingImg(false);
   };
 
   const handleEndStream = async () => {
@@ -221,11 +299,21 @@ const AdminStream: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
-    setChatMessages(prev => [...prev, { id: Date.now().toString(), user: 'Admin', text: newMessage }]);
-    setNewMessage('');
+    if (!newMessage.trim() || !activeStream || !user) return;
+    
+    try {
+      await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
+        userId: user.uid,
+        userName: user.displayName || 'Anónimo',
+        text: newMessage,
+        createdAt: serverTimestamp()
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   return (
@@ -286,6 +374,45 @@ const AdminStream: React.FC = () => {
                 <span className="text-[10px] font-bold uppercase tracking-widest">REC</span>
               </div>
             </div>
+
+            {activeStream && (
+              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+                  <button 
+                    onClick={toggleMic}
+                    className={`p-3 rounded-xl transition-all ${isMicOn ? 'bg-[#ff4e00] text-white' : 'bg-red-500 text-white'}`}
+                  >
+                    {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                  </button>
+                  <button 
+                    onClick={toggleCam}
+                    className={`p-3 rounded-xl transition-all ${isCamOn ? 'bg-[#ff4e00] text-white' : 'bg-red-500 text-white'}`}
+                  >
+                    {isCamOn ? <Camera className="w-5 h-5" /> : <CameraOff className="w-5 h-5" />}
+                  </button>
+                  
+                  {/* Audio Level Indicator */}
+                  <div className="flex items-center gap-1 px-3 h-10 bg-white/5 rounded-xl border border-white/5">
+                    {[...Array(8)].map((_, i) => (
+                      <div 
+                        key={i}
+                        className="w-1 rounded-full transition-all duration-75"
+                        style={{ 
+                          height: `${Math.max(10, Math.min(100, (audioLevel / 100) * (i + 1) * 15))}%`,
+                          backgroundColor: i < 5 ? '#ff4e00' : i < 7 ? '#fbbf24' : '#ef4444',
+                          opacity: isMicOn ? 1 : 0.2
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-3">
+                  <Settings2 className="w-4 h-4 text-white/40" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">720p HD</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {activeStream ? (
@@ -295,19 +422,19 @@ const AdminStream: React.FC = () => {
                 <p className="text-white/60 text-sm italic">{activeStream.description || 'Sin descripción'}</p>
               </div>
               
-              {/* Simulated Chat */}
+              {/* Real-time Chat */}
               <div className="bg-white/5 border border-white/10 rounded-3xl flex flex-col h-[300px]">
                 <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
                     Chat en Vivo
                   </h3>
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest">3 Conectados</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">{activeStream.viewerCount} Conectados</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
                   {chatMessages.map(msg => (
                     <div key={msg.id} className="text-xs">
-                      <span className="font-bold text-[#ff4e00] mr-2">{msg.user}:</span>
+                      <span className="font-bold text-[#ff4e00] mr-2">{msg.userName}:</span>
                       <span className="text-white/80 italic">{msg.text}</span>
                     </div>
                   ))}
@@ -342,26 +469,6 @@ const AdminStream: React.FC = () => {
           {!activeStream ? (
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-6">
               <div className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/40">Miniatura del Stream</label>
-                    <button
-                      onClick={handleGenerateThumbnail}
-                      disabled={generatingImg}
-                      className="text-[#ff4e00] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:underline disabled:opacity-50"
-                    >
-                      <Wand2 className="w-3 h-3" />
-                      {generatingImg ? 'Generando...' : 'Generar con IA'}
-                    </button>
-                  </div>
-                  <ImageUpload 
-                    onUploadComplete={(url) => setThumbnailUrl(url)}
-                    label=""
-                    currentImageUrl={thumbnailUrl}
-                    folder="thumbnails"
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-widest text-white/40">Título del Stream</label>
@@ -418,20 +525,29 @@ const AdminStream: React.FC = () => {
 
               <div className="h-px bg-white/10" />
 
-              <button
-                onClick={() => setIsModalOpen(true)}
-                disabled={loading}
-                className="w-full bg-red-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/90 transition-colors disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <StopCircle className="w-5 h-5" />
-                    Finalizar Stream
-                  </>
-                )}
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={handleShare}
+                  className="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-white/10 transition-colors"
+                >
+                  <Share2 className="w-5 h-5" />
+                  Compartir
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={loading}
+                  className="flex-1 bg-red-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-500/90 transition-colors disabled:opacity-50"
+                >
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <StopCircle className="w-5 h-5" />
+                      Finalizar
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
@@ -447,6 +563,21 @@ const AdminStream: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Share Toast */}
+      <AnimatePresence>
+        {showShareToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-[#ff4e00] text-white px-6 py-3 rounded-2xl font-bold shadow-xl flex items-center gap-3"
+          >
+            <Share2 className="w-5 h-5" />
+            ¡Enlace copiado al portapapeles!
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

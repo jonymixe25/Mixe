@@ -298,12 +298,8 @@ const AdminDashboard: React.FC = () => {
                     <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                       <td className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-16 h-10 rounded-lg bg-white/5 border border-white/10 overflow-hidden relative">
-                            <img 
-                              src={s.thumbnailUrl || `https://picsum.photos/seed/${s.id}/100/100`} 
-                              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
-                              alt="thumb" 
-                            />
+                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                            <Video className="w-5 h-5 text-white/20 group-hover:text-[#ff4e00]/40 transition-colors" />
                           </div>
                           <div>
                             <p className="font-bold text-sm">{s.title}</p>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment, collection, addDoc, setDoc, deleteDoc, auth } from '../firebase';
+import { db, doc, onSnapshot, updateDoc, increment, collection, addDoc, setDoc, deleteDoc, auth, serverTimestamp } from '../firebase';
 import { StreamSession } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 
@@ -11,7 +11,7 @@ const StreamView: React.FC = () => {
   const navigate = useNavigate();
   const [stream, setStream] = useState<StreamSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chat, setChat] = useState<{ user: string, text: string }[]>([]);
+  const [chat, setChat] = useState<{ id: string; userName: string; text: string; createdAt: any }[]>([]);
   const [message, setMessage] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [showShareToast, setShowShareToast] = useState(false);
@@ -34,6 +34,75 @@ const StreamView: React.FC = () => {
     ],
   };
 
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
+
+  const setupWebRTC = async () => {
+    if (!auth.currentUser || !id) return;
+    const viewerUid = auth.currentUser.uid;
+    signalingDocId.current = viewerUid;
+
+    const pc = new RTCPeerConnection(rtcConfig);
+    pcRef.current = pc;
+
+    pc.onconnectionstatechange = () => {
+      switch(pc.connectionState) {
+        case 'connected': setConnectionStatus('connected'); break;
+        case 'failed': setConnectionStatus('failed'); break;
+        case 'disconnected': setConnectionStatus('failed'); break;
+      }
+    };
+
+    pc.ontrack = (event) => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        setDoc(doc(db, 'streams', id, 'signaling', viewerUid), {
+          viewerCandidate: event.candidate.toJSON()
+        }, { merge: true });
+      }
+    };
+
+    // Create signaling document
+    const docRef = doc(db, 'streams', id, 'signaling', viewerUid);
+    await setDoc(docRef, {
+      joinedAt: new Date().toISOString()
+    });
+
+    // Listen for broadcaster's offer and candidates
+    const unsubscribeSignaling = onSnapshot(docRef, async (snapshot) => {
+      const data = snapshot.data();
+      if (!data) return;
+
+      if (data.offer && pc.signalingState === 'stable') {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await setDoc(docRef, {
+          answer: {
+            type: answer.type,
+            sdp: answer.sdp
+          }
+        }, { merge: true });
+      }
+
+      if (data.broadcasterCandidate) {
+        await pc.addIceCandidate(new RTCIceCandidate(data.broadcasterCandidate));
+      }
+    });
+
+    return unsubscribeSignaling;
+  };
+
+  const reconnect = () => {
+    if (pcRef.current) pcRef.current.close();
+    setConnectionStatus('connecting');
+    setupWebRTC();
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -52,76 +121,36 @@ const StreamView: React.FC = () => {
       viewerCount: increment(1)
     });
 
-    // WebRTC Setup
-    const setupWebRTC = async () => {
-      if (!auth.currentUser) return;
-      const viewerUid = auth.currentUser.uid;
-      signalingDocId.current = viewerUid;
-
-      const pc = new RTCPeerConnection(rtcConfig);
-      pcRef.current = pc;
-
-      pc.ontrack = (event) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          setDoc(doc(db, 'streams', id, 'signaling', viewerUid), {
-            viewerCandidate: event.candidate.toJSON()
-          }, { merge: true });
-        }
-      };
-
-      // Create signaling document
-      const docRef = doc(db, 'streams', id, 'signaling', viewerUid);
-      await setDoc(docRef, {
-        joinedAt: new Date().toISOString()
-      });
-
-      // Listen for broadcaster's offer and candidates
-      const unsubscribeSignaling = onSnapshot(docRef, async (snapshot) => {
-        const data = snapshot.data();
-        if (!data) return;
-
-        if (data.offer && pc.signalingState === 'stable') {
-          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await setDoc(docRef, {
-            answer: {
-              type: answer.type,
-              sdp: answer.sdp
-            }
-          }, { merge: true });
-        }
-
-        if (data.broadcasterCandidate) {
-          await pc.addIceCandidate(new RTCIceCandidate(data.broadcasterCandidate));
-        }
-      });
-
-      return unsubscribeSignaling;
-    };
-
     let unsubscribeSignaling: (() => void) | undefined;
     setupWebRTC().then(unsub => {
       unsubscribeSignaling = unsub;
     });
 
+    // Real-time Chat Setup
+    const messagesRef = collection(db, 'streams', id, 'messages');
+    const unsubscribeChat = onSnapshot(messagesRef, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as { id: string; userName: string; text: string; createdAt: any }[];
+      
+      setChat(msgs.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)));
+    });
+
     return () => {
       unsubscribe();
+      unsubscribeChat();
       if (unsubscribeSignaling) unsubscribeSignaling();
       if (pcRef.current) pcRef.current.close();
-      if (signalingDocId.current) {
-        deleteDoc(doc(db, 'streams', id, 'signaling', signalingDocId.current));
-      }
-      // Decrement viewer count on leave
+      
+      // Decrement viewer count
       updateDoc(streamRef, {
         viewerCount: increment(-1)
       });
+
+      if (signalingDocId.current) {
+        deleteDoc(doc(db, 'streams', id, 'signaling', signalingDocId.current));
+      }
     };
   }, [id, navigate]);
 
@@ -151,17 +180,27 @@ const StreamView: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !id || !auth.currentUser) return;
 
-    const newMsg = { user: 'Tú', text: message };
-    setChat(prev => [...prev, newMsg]);
-    setMessage('');
+    try {
+      const text = message.trim();
+      setMessage('');
+      
+      await addDoc(collection(db, 'streams', id, 'messages'), {
+        userId: auth.currentUser.uid,
+        userName: auth.currentUser.displayName || 'Espectador',
+        text: text,
+        createdAt: serverTimestamp()
+      });
 
-    // Simulate TTS for certain keywords
-    if (message.toLowerCase().includes('hola')) {
-      speak('¡Hola! Bienvenido a la transmisión.');
+      // Simulate TTS for certain keywords
+      if (text.toLowerCase().includes('hola')) {
+        speak('¡Hola! Bienvenido a la transmisión.');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
@@ -242,7 +281,6 @@ const StreamView: React.FC = () => {
           {/* Simulated Video Element */}
           <video
             ref={videoRef}
-            poster={stream.thumbnailUrl}
             className="w-full h-full object-cover"
             autoPlay
             muted={isMuted}
@@ -260,6 +298,10 @@ const StreamView: React.FC = () => {
                 <Users className="w-4 h-4" />
                 {stream.viewerCount}
               </div>
+              <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/60">
+                <Settings2 className="w-3 h-3" />
+                Baja Latencia
+              </div>
             </div>
             <button
               onClick={() => navigate('/')}
@@ -268,6 +310,32 @@ const StreamView: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Connection Status Overlay */}
+          {connectionStatus !== 'connected' && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
+              {connectionStatus === 'connecting' ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-12 h-12 border-4 border-[#ff4e00]/30 border-t-[#ff4e00] rounded-full animate-spin mb-4" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Conectando con el Streamer...</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <div className="bg-red-500/20 p-4 rounded-full mb-4 border border-red-500/20">
+                    <Radio className="w-8 h-8 text-red-500" />
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-6">La conexión ha fallado</p>
+                  <button 
+                    onClick={reconnect}
+                    className="bg-[#ff4e00] text-white px-6 py-3 rounded-2xl font-bold hover:bg-[#ff4e00]/90 transition-all flex items-center gap-2 text-xs uppercase tracking-widest"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    Reintentar Conexión
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Overlay UI - Bottom Controls */}
           <div className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
@@ -384,10 +452,16 @@ const StreamView: React.FC = () => {
       <div className="lg:col-span-1 flex flex-col h-[400px] lg:h-[calc(100vh-12rem)]">
         <div className="bg-white/5 border border-white/10 rounded-2xl lg:rounded-3xl flex-1 flex flex-col overflow-hidden shadow-xl">
           <div className="p-3 lg:p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-            <h3 className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
-              <MessageSquare className="w-3 h-3 lg:w-4 lg:h-4" />
-              Chat en Vivo
-            </h3>
+            <div className="flex items-center gap-4">
+              <h3 className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                <MessageSquare className="w-3 h-3 lg:w-4 lg:h-4" />
+                Chat en Vivo
+              </h3>
+              <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+                <Users className="w-3 h-3 text-red-500" />
+                <span className="text-[10px] font-bold text-red-500">{stream?.viewerCount || 0}</span>
+              </div>
+            </div>
             <button onClick={() => speak('Bienvenidos al chat')} className="text-white/20 hover:text-[#ff4e00]">
               <Volume2 className="w-3 h-3 lg:w-4 lg:h-4" />
             </button>
@@ -397,14 +471,19 @@ const StreamView: React.FC = () => {
             <div className="text-center py-4">
               <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">Comienzo del chat</p>
             </div>
-            {chat.map((msg, i) => (
+            {chat.map((msg) => (
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                key={i}
+                key={msg.id}
                 className="space-y-1"
               >
-                <span className="text-[10px] font-bold text-[#ff4e00] uppercase tracking-widest">{msg.user}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-[#ff4e00] uppercase tracking-widest">{msg.userName}</span>
+                  <span className="text-[9px] text-white/30">
+                    {msg.createdAt?.seconds ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                </div>
                 <p className="text-sm text-white/80 bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/5">
                   {msg.text}
                 </p>
