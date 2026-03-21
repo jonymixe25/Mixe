@@ -52,8 +52,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "jonyoax95@gmail.com" && request.auth.token.email_verified == true));
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          request.auth.token.email == "jonyoax95@gmail.com");
     }
 
     function hasRequiredFields(fields) {
@@ -66,6 +67,10 @@ service cloud.firestore {
 
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidOptionalString(field, maxLen) {
+      return !(field in request.resource.data) || (request.resource.data[field] is string && request.resource.data[field].size() <= maxLen);
     }
 
     // ===============================================================
@@ -83,13 +88,14 @@ service cloud.firestore {
 
     function isValidStream(data) {
       return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount', 'thumbnailUrl']) &&
              data.userId == request.auth.uid &&
              data.userName is string && data.userName.size() > 0 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.status in ['live', 'ended'] &&
              data.startedAt is timestamp &&
-             data.viewerCount is number && data.viewerCount >= 0;
+             data.viewerCount is number && data.viewerCount >= 0 &&
+             isValidOptionalString('thumbnailUrl', 1000);
     }
 
     function isValidContact(data) {
@@ -107,7 +113,9 @@ service cloud.firestore {
              data.authorId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.content is string && data.content.size() > 0 &&
-             data.createdAt is timestamp;
+             data.authorName is string && data.authorName.size() > 0 &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('imageUrl', 1000);
     }
 
     // ===============================================================

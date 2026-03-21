@@ -49,18 +49,18 @@ const Home: React.FC = () => {
           <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
+            className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
           >
             La Voz <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] to-[#ff8c00]">
               De La Cultura Mixe
             </span>
           </motion.h1>
-          <p className="mt-6 text-xl text-white/60 font-medium italic">
+          <p className="mt-4 sm:mt-6 text-lg sm:text-xl text-white/60 font-medium italic">
             La región de los jamás conquistados
           </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <button className="bg-[#ff4e00] text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform">
+          <div className="mt-8 sm:mt-10 flex flex-wrap justify-center gap-4">
+            <button className="w-full sm:w-auto bg-[#ff4e00] text-white px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition-transform">
               <Play className="w-5 h-5 fill-current" />
               Ver en Pantalla Completa
             </button>

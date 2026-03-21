@@ -67,8 +67,8 @@ const News: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent" />
               </div>
               
-              <div className="p-8 flex-1 flex flex-col">
-                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40 mb-4">
+              <div className="p-6 lg:p-8 flex-1 flex flex-col">
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3 lg:mb-4">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
                     {article.createdAt?.seconds ? format(new Date(article.createdAt.seconds * 1000), 'dd MMM, yyyy', { locale: es }) : 'Reciente'}
@@ -79,11 +79,11 @@ const News: React.FC = () => {
                   </div>
                 </div>
 
-                <h2 className="text-2xl font-bold mb-4 group-hover:text-[#ff4e00] transition-colors">
+                <h2 className="text-xl lg:text-2xl font-bold mb-3 lg:mb-4 group-hover:text-[#ff4e00] transition-colors">
                   {article.title}
                 </h2>
                 
-                <p className="text-white/60 text-sm leading-relaxed line-clamp-3 mb-6 italic">
+                <p className="text-white/60 text-xs lg:text-sm leading-relaxed line-clamp-3 mb-4 lg:mb-6 italic">
                   {article.content}
                 </p>
 

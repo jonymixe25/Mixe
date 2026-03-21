@@ -14,6 +14,7 @@ const StreamView: React.FC = () => {
   const [chat, setChat] = useState<{ user: string, text: string }[]>([]);
   const [message, setMessage] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
   
   // Video Controls State
   const [isPlaying, setIsPlaying] = useState(true);
@@ -137,6 +138,16 @@ const StreamView: React.FC = () => {
     }, 3000);
   };
 
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShowShareToast(true);
+      setTimeout(() => setShowShareToast(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff4e00]"></div>
@@ -146,11 +157,11 @@ const StreamView: React.FC = () => {
   if (!stream) return null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
       {/* Video Player Section */}
-      <div className="lg:col-span-3 space-y-6">
+      <div className="lg:col-span-3 space-y-4 lg:space-y-6">
         <div 
-          className="aspect-video bg-black rounded-3xl overflow-hidden border border-white/10 relative shadow-2xl shadow-[#ff4e00]/5 group"
+          className="aspect-video bg-black rounded-2xl lg:rounded-3xl overflow-hidden border border-white/10 relative shadow-2xl shadow-[#ff4e00]/5 group"
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setShowControls(false)}
         >
@@ -241,54 +252,72 @@ const StreamView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-3xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white/5 border border-white/10 rounded-2xl lg:rounded-3xl p-4 lg:p-6 gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#ff4e00] p-0.5">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-[#ff4e00] p-0.5">
               <img
                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
                 alt="avatar"
-                className="w-full h-full rounded-2xl bg-black"
+                className="w-full h-full rounded-xl lg:rounded-2xl bg-black"
               />
             </div>
             <div>
-              <h2 className="font-bold text-lg">{stream.userName}</h2>
-              <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Streamer Mixe</p>
+              <h2 className="font-bold text-base lg:text-lg">{stream.userName}</h2>
+              <p className="text-[10px] lg:text-xs text-white/40 font-bold uppercase tracking-widest">Streamer Mixe</p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex w-full sm:w-auto gap-2 lg:gap-3">
             <button
               onClick={() => setIsLiked(!isLiked)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 lg:px-6 py-2.5 lg:py-3 rounded-xl lg:rounded-2xl font-bold transition-all text-sm lg:text-base ${
                 isLiked ? 'bg-red-500 text-white scale-105' : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
               }`}
             >
-              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+              <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${isLiked ? 'fill-current' : ''}`} />
               {isLiked ? '¡Me gusta!' : 'Me gusta'}
             </button>
-            <button className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors">
-              <Share2 className="w-5 h-5" />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={handleShare}
+                className="p-2.5 lg:p-3 rounded-xl lg:rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                title="Compartir Stream"
+              >
+                <Share2 className="w-4 h-4 lg:w-5 lg:h-5" />
+              </button>
+              <AnimatePresence>
+                {showShareToast && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute bottom-full mb-2 right-0 bg-[#ff4e00] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg"
+                  >
+                    ¡Enlace copiado!
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-4">Descripción</h2>
-          <p className="text-white/80 leading-relaxed italic">
+        <div className="bg-white/5 border border-white/10 rounded-2xl lg:rounded-3xl p-6 lg:p-8">
+          <h2 className="text-[10px] lg:text-sm font-bold uppercase tracking-widest text-white/40 mb-3 lg:mb-4">Descripción</h2>
+          <p className="text-sm lg:text-base text-white/80 leading-relaxed italic">
             {stream.description || 'El streamer no ha proporcionado una descripción para esta transmisión.'}
           </p>
         </div>
       </div>
 
       {/* Chat Section */}
-      <div className="lg:col-span-1 flex flex-col h-[calc(100vh-12rem)]">
-        <div className="bg-white/5 border border-white/10 rounded-3xl flex-1 flex flex-col overflow-hidden shadow-xl">
-          <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
+      <div className="lg:col-span-1 flex flex-col h-[400px] lg:h-[calc(100vh-12rem)]">
+        <div className="bg-white/5 border border-white/10 rounded-2xl lg:rounded-3xl flex-1 flex flex-col overflow-hidden shadow-xl">
+          <div className="p-3 lg:p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+            <h3 className="text-[10px] lg:text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+              <MessageSquare className="w-3 h-3 lg:w-4 lg:h-4" />
               Chat en Vivo
             </h3>
             <button onClick={() => speak('Bienvenidos al chat')} className="text-white/20 hover:text-[#ff4e00]">
-              <Volume2 className="w-4 h-4" />
+              <Volume2 className="w-3 h-3 lg:w-4 lg:h-4" />
             </button>
           </div>
 

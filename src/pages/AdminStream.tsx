@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import { generateMixeThumbnail } from '../services/imageService';
 import Modal from '../components/Modal';
+import ImageUpload from '../components/ImageUpload';
 
 const AdminStream: React.FC = () => {
   const { user } = useAuth();
@@ -253,7 +254,7 @@ const AdminStream: React.FC = () => {
           {!activeStream ? (
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-6">
               <div className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-widest text-white/40">Miniatura del Stream</label>
                     <button
@@ -265,16 +266,12 @@ const AdminStream: React.FC = () => {
                       {generatingImg ? 'Generando...' : 'Generar con IA'}
                     </button>
                   </div>
-                  <div className="aspect-video bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative group">
-                    {thumbnailUrl ? (
-                      <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
-                        <ImageIcon className="w-8 h-8 mb-2" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Sin miniatura</p>
-                      </div>
-                    )}
-                  </div>
+                  <ImageUpload 
+                    onUploadComplete={(url) => setThumbnailUrl(url)}
+                    label=""
+                    currentImageUrl={thumbnailUrl}
+                    folder="thumbnails"
+                  />
                 </div>
 
                 <div className="space-y-2">

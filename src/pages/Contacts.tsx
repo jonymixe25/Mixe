@@ -80,14 +80,14 @@ const Contacts: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
-            <Users className="w-6 h-6 text-[#ff4e00]" />
+          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#ff4e00]/10 rounded-xl lg:rounded-2xl flex items-center justify-center">
+            <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[#ff4e00]" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight uppercase italic">Mis Contactos</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight uppercase italic">Mis Contactos</h1>
         </div>
-        <span className="text-white/40 text-sm font-bold uppercase tracking-widest">
+        <span className="text-white/40 text-[10px] lg:text-sm font-bold uppercase tracking-widest">
           {contacts.length} Amigos
         </span>
       </div>
