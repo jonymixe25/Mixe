@@ -49,18 +49,18 @@ const Home: React.FC = () => {
           <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
+            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
           >
             La Voz <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] to-[#ff8c00]">
               De La Cultura Mixe
             </span>
           </motion.h1>
-          <p className="mt-4 sm:mt-6 text-lg sm:text-xl text-white/60 font-medium italic">
+          <p className="mt-6 text-xl text-white/60 font-medium italic">
             La región de los jamás conquistados
           </p>
-          <div className="mt-8 sm:mt-10 flex flex-wrap justify-center gap-4">
-            <button className="w-full sm:w-auto bg-[#ff4e00] text-white px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-105 transition-transform">
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
+            <button className="bg-[#ff4e00] text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform">
               <Play className="w-5 h-5 fill-current" />
               Ver en Pantalla Completa
             </button>
@@ -92,10 +92,15 @@ const Home: React.FC = () => {
               <Link
                 key={stream.id}
                 to={`/stream/${stream.id}`}
-                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all flex flex-col items-center justify-center"
+                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-[#ff4e00]/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity" />
-                <Video className="w-12 h-12 text-white/10 group-hover:text-[#ff4e00]/20 transition-colors" />
+                <img
+                  src={stream.thumbnailUrl || `https://picsum.photos/seed/${stream.id}/800/450`}
+                  alt={stream.title}
+                  className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 
                 <div className="absolute top-4 left-4">
                   <div className="bg-red-600 px-2 py-1 rounded-md flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">

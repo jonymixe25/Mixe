@@ -26,6 +26,7 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["live", "ended"] },
+        "thumbnailUrl": { "type": "string" },
         "startedAt": { "type": "string", "format": "date-time" },
         "endedAt": { "type": "string", "format": "date-time" },
         "viewerCount": { "type": "number" }
@@ -59,32 +60,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "content", "authorId", "createdAt"]
-    },
-    "Media": {
-      "title": "Media Item",
-      "description": "Uploaded image or media file metadata",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "url": { "type": "string" },
-        "folder": { "type": "string" },
-        "fileName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "url", "folder", "fileName", "createdAt"]
-    },
-    "Message": {
-      "title": "Chat Message",
-      "description": "Real-time chat message for a stream",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "userName", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -96,10 +71,6 @@
       "schema": "Stream",
       "description": "Live stream session documents"
     },
-    "/streams/{streamId}/messages/{messageId}": {
-      "schema": "Message",
-      "description": "Chat messages subcollection"
-    },
     "/users/{uid}/contacts/{contactId}": {
       "schema": "Contact",
       "description": "User contacts subcollection"
@@ -107,10 +78,6 @@
     "/news/{newsId}": {
       "schema": "News",
       "description": "News articles collection"
-    },
-    "/media/{mediaId}": {
-      "schema": "Media",
-      "description": "Media items collection"
     }
   }
 }

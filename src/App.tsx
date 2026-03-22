@@ -14,7 +14,6 @@ import AdminStream from './pages/AdminStream';
 import StreamView from './pages/StreamView';
 import AdminDashboard from './pages/AdminDashboard';
 import News from './pages/News';
-import Gallery from './pages/Gallery';
 
 export default function App() {
   return (
@@ -26,7 +25,6 @@ export default function App() {
             <Route path="/news" element={<News />} />
             <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
             <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
-            <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
             <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
             <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
             <Route path="/stream/:id" element={<StreamView />} />

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp } from '../firebase';
-import { StreamSession, UserProfile, OperationType } from '../types';
+import { StreamSession, UserProfile } from '../types';
 import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
-import ImageUpload from '../components/ImageUpload';
-import { handleFirestoreError } from '../AuthContext';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -92,7 +90,7 @@ const AdminDashboard: React.FC = () => {
       setNewsImage('');
       setToast({ message: 'Noticia publicada con éxito', type: 'success' });
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'news');
+      console.error('Error creating news:', error);
       setToast({ message: 'Error al publicar la noticia', type: 'error' });
     } finally {
       setSavingNews(false);
@@ -110,7 +108,7 @@ const AdminDashboard: React.FC = () => {
           await deleteDoc(doc(db, 'news', newsId));
           setToast({ message: 'Noticia eliminada', type: 'success' });
         } catch (error) {
-          handleFirestoreError(error, OperationType.DELETE, `news/${newsId}`);
+          console.error('Error deleting news:', error);
         }
       }
     });
@@ -127,7 +125,7 @@ const AdminDashboard: React.FC = () => {
           await deleteDoc(doc(db, 'streams', streamId));
           setToast({ message: 'Transmisión eliminada', type: 'success' });
         } catch (error) {
-          handleFirestoreError(error, OperationType.DELETE, `streams/${streamId}`);
+          console.error('Error deleting stream:', error);
         }
       }
     });
@@ -146,7 +144,7 @@ const AdminDashboard: React.FC = () => {
           });
           setToast({ message: `Rol actualizado a ${newRole}`, type: 'success' });
         } catch (error) {
-          handleFirestoreError(error, OperationType.UPDATE, `users/${targetUser.uid}`);
+          console.error('Error updating user role:', error);
         }
       }
     });
@@ -192,18 +190,18 @@ const AdminDashboard: React.FC = () => {
         <p className="text-white/60 italic">{modalConfig?.message}</p>
       </Modal>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#ff4e00]/10 rounded-xl lg:rounded-2xl flex items-center justify-center">
-            <Shield className="w-5 h-5 lg:w-6 lg:h-6 text-[#ff4e00]" />
+          <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
+            <Shield className="w-6 h-6 text-[#ff4e00]" />
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight uppercase italic">Panel de Control</h1>
+          <h1 className="text-3xl font-bold tracking-tight uppercase italic">Panel de Control</h1>
         </div>
         
-        <div className="flex w-full sm:w-auto bg-white/5 p-1 rounded-2xl border border-white/10 overflow-x-auto scrollbar-hide">
+        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
           <button
             onClick={() => setActiveTab('streams')}
-            className={`flex-1 sm:flex-none px-4 lg:px-6 py-2 rounded-xl text-[10px] lg:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
               activeTab === 'streams' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'
             }`}
           >
@@ -211,7 +209,7 @@ const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-1 sm:flex-none px-4 lg:px-6 py-2 rounded-xl text-[10px] lg:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
               activeTab === 'users' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'
             }`}
           >
@@ -219,7 +217,7 @@ const AdminDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('news')}
-            className={`flex-1 sm:flex-none px-4 lg:px-6 py-2 rounded-xl text-[10px] lg:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
               activeTab === 'news' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'
             }`}
           >
@@ -298,8 +296,12 @@ const AdminDashboard: React.FC = () => {
                     <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                       <td className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                            <Video className="w-5 h-5 text-white/20 group-hover:text-[#ff4e00]/40 transition-colors" />
+                          <div className="w-16 h-10 rounded-lg bg-white/5 border border-white/10 overflow-hidden relative">
+                            <img 
+                              src={s.thumbnailUrl || `https://picsum.photos/seed/${s.id}/100/100`} 
+                              className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity" 
+                              alt="thumb" 
+                            />
                           </div>
                           <div>
                             <p className="font-bold text-sm">{s.title}</p>
@@ -386,31 +388,30 @@ const AdminDashboard: React.FC = () => {
                   <Plus className="w-5 h-5 text-[#ff4e00]" />
                   Publicar Nueva Noticia
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Título de la noticia"
-                      value={newsTitle}
-                      onChange={(e) => setNewsTitle(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none"
-                      required
-                    />
-                    <textarea
-                      placeholder="Contenido de la noticia..."
-                      value={newsContent}
-                      onChange={(e) => setNewsContent(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none min-h-[150px] resize-none"
-                      required
-                    />
-                  </div>
-                  <ImageUpload 
-                    onUploadComplete={(url) => setNewsImage(url)}
-                    label="Imagen de la Noticia"
-                    currentImageUrl={newsImage}
-                    folder="news"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Título de la noticia"
+                    value={newsTitle}
+                    onChange={(e) => setNewsTitle(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="URL de la imagen (opcional)"
+                    value={newsImage}
+                    onChange={(e) => setNewsImage(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none"
                   />
                 </div>
+                <textarea
+                  placeholder="Contenido de la noticia..."
+                  value={newsContent}
+                  onChange={(e) => setNewsContent(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none min-h-[150px] resize-none"
+                  required
+                />
                 <button
                   type="submit"
                   disabled={savingNews}

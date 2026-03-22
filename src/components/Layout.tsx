@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Image as ImageIcon } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -16,7 +16,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
       { path: '/contacts', label: 'Contactos', icon: Users },
-      { path: '/gallery', label: 'Galería', icon: ImageIcon },
       { path: '/admin', label: 'Transmitir', icon: Video },
       ...(user.role === 'admin' ? [{ path: '/dashboard', label: 'Admin', icon: Shield }] : []),
     ] : []),

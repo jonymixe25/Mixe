@@ -15,6 +15,7 @@ export interface StreamSession {
   title: string;
   description?: string;
   status: 'live' | 'ended';
+  thumbnailUrl?: string;
   startedAt: any;
   endedAt?: any;
   viewerCount: number;
@@ -26,15 +27,6 @@ export interface Contact {
   contactName: string;
   contactPhoto?: string;
   addedAt: any;
-}
-
-export interface MediaItem {
-  id: string;
-  userId: string;
-  url: string;
-  folder: string;
-  fileName: string;
-  createdAt: any;
 }
 
 export enum OperationType {
