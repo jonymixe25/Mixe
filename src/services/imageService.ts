@@ -3,28 +3,40 @@ import { GoogleGenAI } from "@google/genai";
 export const generateMixeThumbnail = async (): Promise<string | null> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    const response = await ai.models.generateContent({
+    
+    // First, get a descriptive prompt for the image
+    const promptResponse = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: "Genera un prompt detallado en inglés para una imagen que represente la cultura Mixe de Oaxaca, México. Debe incluir elementos como vestimenta tradicional, paisajes de la Sierra Norte, instrumentos musicales de viento o arte textil. El prompt debe ser optimizado para un generador de imágenes.",
+    });
+
+    const imagePrompt = promptResponse.text || "A beautiful representation of Mixe culture from Oaxaca, Mexico, featuring traditional textiles and the misty mountains of the Sierra Norte.";
+
+    // Now generate the image
+    const imageResponse = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
           {
-            text: 'A vibrant and attractive live stream thumbnail representing Mixe culture from Oaxaca, Mexico. High-quality digital art style. Features traditional Mixe embroidery patterns (huipil), the beautiful mountains of the Sierra Norte, a musical trumpet or band instrument (traditional Mixe music), and a warm sunset. The composition should be dynamic and suitable for a video preview, with space for text overlays. Cinematic lighting, 16:9 aspect ratio.',
+            text: imagePrompt,
           },
         ],
       },
       config: {
         imageConfig: {
-          aspectRatio: "16:9"
-        }
-      }
+          aspectRatio: "16:9",
+          imageSize: "1K"
+        },
+      },
     });
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
+    for (const part of imageResponse.candidates[0].content.parts) {
       if (part.inlineData) {
         const base64EncodeString = part.inlineData.data;
         return `data:image/png;base64,${base64EncodeString}`;
       }
     }
+
     return null;
   } catch (error) {
     console.error('Error generating thumbnail:', error);

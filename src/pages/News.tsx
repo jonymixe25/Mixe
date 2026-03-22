@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, orderBy, onSnapshot } from '../firebase';
-import { Newspaper, Calendar, User, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Newspaper, Calendar, User, ArrowRight, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -17,6 +17,7 @@ interface NewsArticle {
 const News: React.FC = () => {
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
@@ -67,8 +68,8 @@ const News: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent" />
               </div>
               
-              <div className="p-8 flex-1 flex flex-col">
-                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40 mb-4">
+              <div className="p-6 lg:p-8 flex-1 flex flex-col">
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3 lg:mb-4">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
                     {article.createdAt?.seconds ? format(new Date(article.createdAt.seconds * 1000), 'dd MMM, yyyy', { locale: es }) : 'Reciente'}
@@ -79,16 +80,19 @@ const News: React.FC = () => {
                   </div>
                 </div>
 
-                <h2 className="text-2xl font-bold mb-4 group-hover:text-[#ff4e00] transition-colors">
+                <h2 className="text-xl lg:text-2xl font-bold mb-3 lg:mb-4 group-hover:text-[#ff4e00] transition-colors">
                   {article.title}
                 </h2>
                 
-                <p className="text-white/60 text-sm leading-relaxed line-clamp-3 mb-6 italic">
+                <p className="text-white/60 text-xs lg:text-sm leading-relaxed line-clamp-3 mb-4 lg:mb-6 italic">
                   {article.content}
                 </p>
 
                 <div className="mt-auto">
-                  <button className="flex items-center gap-2 text-[#ff4e00] font-bold text-sm hover:gap-3 transition-all">
+                  <button 
+                    onClick={() => setSelectedArticle(article)}
+                    className="flex items-center gap-2 text-[#ff4e00] font-bold text-sm hover:gap-3 transition-all"
+                  >
                     Leer más
                     <ArrowRight className="w-4 h-4" />
                   </button>
@@ -103,6 +107,69 @@ const News: React.FC = () => {
           <p className="text-white/40 font-medium italic">No hay noticias publicadas en este momento.</p>
         </div>
       )}
+
+      {/* News Detail Modal */}
+      <AnimatePresence>
+        {selectedArticle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedArticle(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-4xl bg-[#0a0502] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+            >
+              <button 
+                onClick={() => setSelectedArticle(null)}
+                className="absolute top-6 right-6 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <div className="overflow-y-auto">
+                <div className="aspect-video relative">
+                  <img
+                    src={selectedArticle.imageUrl || `https://picsum.photos/seed/${selectedArticle.id}/1200/675`}
+                    alt={selectedArticle.title}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent" />
+                </div>
+
+                <div className="p-8 sm:p-12 space-y-6">
+                  <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-white/40">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-[#ff4e00]" />
+                      {selectedArticle.createdAt?.seconds ? format(new Date(selectedArticle.createdAt.seconds * 1000), 'dd MMMM, yyyy', { locale: es }) : 'Reciente'}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-[#ff4e00]" />
+                      {selectedArticle.authorName}
+                    </div>
+                  </div>
+
+                  <h2 className="text-3xl sm:text-5xl font-black tracking-tight uppercase italic leading-tight">
+                    {selectedArticle.title}
+                  </h2>
+
+                  <div className="h-px bg-white/10 w-24" />
+
+                  <div className="text-white/80 text-lg leading-relaxed italic whitespace-pre-wrap">
+                    {selectedArticle.content}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc, deleteDoc } from '../firebase';
-import { Contact, UserProfile } from '../types';
+import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc, deleteDoc, handleFirestoreError } from '../firebase';
+import { Contact, UserProfile, OperationType } from '../types';
 import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+import Toast from '../components/Toast';
 
 const Contacts: React.FC = () => {
   const { user } = useAuth();
@@ -12,6 +14,11 @@ const Contacts: React.FC = () => {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -40,7 +47,8 @@ const Contacts: React.FC = () => {
         .filter(u => u.uid !== user?.uid);
       setSearchResults(results);
     } catch (error) {
-      console.error('Error searching users:', error);
+      handleFirestoreError(error, OperationType.GET, 'users');
+      setToast({ message: 'Error al buscar usuarios.', type: 'error', isVisible: true });
     } finally {
       setSearching(false);
     }
@@ -49,6 +57,12 @@ const Contacts: React.FC = () => {
   const addContact = async (targetUser: UserProfile) => {
     if (!user) return;
     try {
+      // Check if already in contacts
+      if (contacts.some(c => c.contactId === targetUser.uid)) {
+        setToast({ message: 'Este usuario ya está en tus contactos.', type: 'error', isVisible: true });
+        return;
+      }
+
       const contactData: Contact = {
         userId: user.uid,
         contactId: targetUser.uid,
@@ -57,10 +71,11 @@ const Contacts: React.FC = () => {
         addedAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'users', user.uid, 'contacts'), contactData);
+      setToast({ message: 'Contacto añadido con éxito.', type: 'success', isVisible: true });
       setSearchResults([]);
       setSearchQuery('');
     } catch (error) {
-      console.error('Error adding contact:', error);
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/contacts`);
     }
   };
 
@@ -72,22 +87,23 @@ const Contacts: React.FC = () => {
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
         await deleteDoc(doc(db, 'users', user.uid, 'contacts', snapshot.docs[0].id));
+        setToast({ message: 'Contacto eliminado.', type: 'success', isVisible: true });
       }
     } catch (error) {
-      console.error('Error removing contact:', error);
+      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/contacts`);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
-            <Users className="w-6 h-6 text-[#ff4e00]" />
+          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-[#ff4e00]/10 rounded-xl lg:rounded-2xl flex items-center justify-center">
+            <Users className="w-5 h-5 lg:w-6 lg:h-6 text-[#ff4e00]" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight uppercase italic">Mis Contactos</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight uppercase italic">Mis Contactos</h1>
         </div>
-        <span className="text-white/40 text-sm font-bold uppercase tracking-widest">
+        <span className="text-white/40 text-[10px] lg:text-sm font-bold uppercase tracking-widest">
           {contacts.length} Amigos
         </span>
       </div>
@@ -192,6 +208,12 @@ const Contacts: React.FC = () => {
           )}
         </div>
       </div>
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 };

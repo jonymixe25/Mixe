@@ -37,6 +37,14 @@ service cloud.firestore {
     //   - contactPhoto: string (optional)
     //   - addedAt: timestamp (required)
     //
+    // Collection: streams/{streamId}/messages
+    // Document ID: {messageId}
+    // Fields:
+    //   - userId: string (required)
+    //   - userName: string (required)
+    //   - text: string (required)
+    //   - createdAt: timestamp (required)
+    //
     // ===============================================================
 
     // ===============================================================
@@ -52,8 +60,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "jonyoax95@gmail.com" && request.auth.token.email_verified == true));
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          request.auth.token.email == "jonyoax95@gmail.com");
     }
 
     function hasRequiredFields(fields) {
@@ -68,6 +77,10 @@ service cloud.firestore {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
+    function isValidOptionalString(field, maxLen) {
+      return !(field in request.resource.data) || (request.resource.data[field] is string && request.resource.data[field].size() <= maxLen);
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -78,18 +91,23 @@ service cloud.firestore {
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
              isValidEmail(data.email) &&
              data.role in ['admin', 'user'] &&
-             data.createdAt is timestamp;
+             data.createdAt is timestamp &&
+             isValidOptionalString('bio', 500) &&
+             isValidOptionalString('photoURL', 1000);
     }
 
     function isValidStream(data) {
-      return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount']) &&
-             data.userId == request.auth.uid &&
-             data.userName is string && data.userName.size() > 0 &&
+      return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount', 'likes']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'thumbnailUrl']) &&
+             data.userId is string &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.status in ['live', 'ended'] &&
              data.startedAt is timestamp &&
-             data.viewerCount is number && data.viewerCount >= 0;
+             data.viewerCount is number && data.viewerCount >= 0 &&
+             data.likes is number && data.likes >= 0 &&
+             isValidOptionalString('description', 2000) &&
+             isValidOptionalString('thumbnailUrl', 2000);
     }
 
     function isValidContact(data) {
@@ -97,8 +115,9 @@ service cloud.firestore {
              hasOnlyAllowedFields(['userId', 'contactId', 'contactName', 'contactPhoto', 'addedAt']) &&
              data.userId == request.auth.uid &&
              data.contactId is string && data.contactId.size() > 0 &&
-             data.contactName is string && data.contactName.size() > 0 &&
-             data.addedAt is timestamp;
+             data.contactName is string && data.contactName.size() > 0 && data.contactName.size() < 100 &&
+             data.addedAt is timestamp &&
+             isValidOptionalString('contactPhoto', 1000);
     }
 
     function isValidNews(data) {
@@ -106,24 +125,78 @@ service cloud.firestore {
              hasOnlyAllowedFields(['title', 'content', 'authorId', 'authorName', 'imageUrl', 'createdAt']) &&
              data.authorId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.content is string && data.content.size() > 0 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() < 100 &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('imageUrl', 1000);
+    }
+
+    function isValidMedia(data) {
+      return hasRequiredFields(['userId', 'url', 'folder', 'fileName', 'createdAt']) &&
+             hasOnlyAllowedFields(['userId', 'url', 'folder', 'fileName', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.url is string && data.url.size() > 0 && data.url.size() < 2000 &&
+             data.folder is string && data.folder.size() > 0 && data.folder.size() < 100 &&
+             data.fileName is string && data.fileName.size() > 0 && data.fileName.size() < 255 &&
              data.createdAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return hasRequiredFields(['userId', 'userName', 'createdAt']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'text', 'imageUrl', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('text', 500) &&
+             isValidOptionalString('imageUrl', 2000);
     }
 
     // ===============================================================
     // Match Rules
     // ===============================================================
     match /users/{uid} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(uid) || isAdmin();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(uid) || isAdmin()) && (request.resource.data.role == resource.data.role || isAdmin());
     }
 
+    match /media/{mediaId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidMedia(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     match /streams/{streamId} {
       allow read: if true; // Publicly readable for live streams
-      allow create: if isAuthenticated() && isValidStream(request.resource.data);
-      allow update: if isAuthenticated() && isValidStream(request.resource.data) && (request.resource.data.userId == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        // Owner/Admin can update everything
+        (isValidStream(request.resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
+        // Viewers can ONLY update viewerCount or likes
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount', 'likes']) && 
+         (
+           ('viewerCount' in request.resource.data.diff(resource.data).affectedKeys() && 
+            request.resource.data.viewerCount is number &&
+            math.abs(request.resource.data.viewerCount - resource.data.viewerCount) == 1) ||
+           ('likes' in request.resource.data.diff(resource.data).affectedKeys() && 
+            request.resource.data.likes is number &&
+            math.abs(request.resource.data.likes - resource.data.likes) == 1)
+         ))
+      );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      match /signaling/{signalingId} {
+        allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
+        allow update: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow delete: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+      }
+
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && isValidMessage(request.resource.data);
+        allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      }
     }
 
     match /users/{uid}/contacts/{contactId} {

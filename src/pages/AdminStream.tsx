@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where } from '../firebase';
-import { StreamSession } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send } from 'lucide-react';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit } from '../firebase';
+import { StreamSession, OperationType, ChatMessage } from '../types';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import { generateMixeThumbnail } from '../services/imageService';
 import Modal from '../components/Modal';
+import ImageUpload from '../components/ImageUpload';
 
 const AdminStream: React.FC = () => {
   const { user } = useAuth();
@@ -19,14 +20,13 @@ const AdminStream: React.FC = () => {
   const [generatingImg, setGeneratingImg] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Simulated Chat
-  const [chatMessages, setChatMessages] = useState<{ id: string; user: string; text: string }[]>([
-    { id: '1', user: 'Maria G.', text: '¡Qué bonita música!' },
-    { id: '2', user: 'Juan P.', text: 'Saludos desde la Sierra Norte' },
-    { id: '3', user: 'Elena R.', text: 'Increíble transmisión' },
-  ]);
+  // Real-time Chat
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isUploadingChatImage, setIsUploadingChatImage] = useState(false);
+  const chatImageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -44,10 +44,38 @@ const AdminStream: React.FC = () => {
       } else {
         setActiveStream(null);
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'streams');
     });
 
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    if (!activeStream) {
+      setChatMessages([]);
+      return;
+    }
+
+    const chatQuery = query(
+      collection(db, 'streams', activeStream.id, 'messages'),
+      orderBy('createdAt', 'asc'),
+      limit(50)
+    );
+
+    const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+      setChatMessages(messages);
+    }, (error) => {
+      console.error('Chat error:', error);
+    });
+
+    return () => unsubscribeChat();
+  }, [activeStream]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   useEffect(() => {
     if (activeStream && videoRef.current) {
@@ -72,10 +100,11 @@ const AdminStream: React.FC = () => {
         status: 'live',
         startedAt: serverTimestamp(),
         viewerCount: 0,
+        likes: 0,
       };
       await addDoc(collection(db, 'streams'), streamData);
     } catch (error) {
-      console.error('Error starting stream:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'streams');
     } finally {
       setLoading(false);
     }
@@ -107,7 +136,7 @@ const AdminStream: React.FC = () => {
         videoRef.current.srcObject = null;
       }
     } catch (error) {
-      console.error('Error ending stream:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `streams/${activeStream.id}`);
     } finally {
       setLoading(false);
     }
@@ -132,11 +161,48 @@ const AdminStream: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
-    setChatMessages(prev => [...prev, { id: Date.now().toString(), user: 'Admin', text: newMessage }]);
+    if (!newMessage.trim() || !user || !activeStream) return;
+    
+    const msgText = newMessage.trim();
     setNewMessage('');
+
+    try {
+      await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
+        userId: user.uid,
+        userName: user.displayName,
+        text: msgText,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `streams/${activeStream.id}/messages`);
+    }
+  };
+
+  const handleChatImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !activeStream) return;
+
+    setIsUploadingChatImage(true);
+    try {
+      const { storage, ref, uploadBytes, getDownloadURL } = await import('../firebase');
+      const storageRef = ref(storage, `chat/${activeStream.id}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+
+      await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
+        userId: user.uid,
+        userName: user.displayName,
+        imageUrl: url,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error uploading chat image:', error);
+    } finally {
+      setIsUploadingChatImage(false);
+      if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+    }
   };
 
   return (
@@ -206,24 +272,52 @@ const AdminStream: React.FC = () => {
                 <p className="text-white/60 text-sm italic">{activeStream.description || 'Sin descripción'}</p>
               </div>
               
-              {/* Simulated Chat */}
+              {/* Real-time Chat */}
               <div className="bg-white/5 border border-white/10 rounded-3xl flex flex-col h-[300px]">
                 <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
                     Chat en Vivo
                   </h3>
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest">3 Conectados</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">En vivo</span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
                   {chatMessages.map(msg => (
                     <div key={msg.id} className="text-xs">
-                      <span className="font-bold text-[#ff4e00] mr-2">{msg.user}:</span>
-                      <span className="text-white/80 italic">{msg.text}</span>
+                      <span className={`font-bold mr-2 ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                        {msg.userName}:
+                      </span>
+                      {msg.imageUrl ? (
+                        <div className="mt-1 rounded-lg overflow-hidden border border-white/10 max-w-[150px]">
+                          <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
+                        </div>
+                      ) : (
+                        <span className="text-white/80 italic">{msg.text}</span>
+                      )}
                     </div>
                   ))}
+                  <div ref={chatEndRef} />
                 </div>
                 <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 flex gap-2">
+                  <input
+                    type="file"
+                    ref={chatImageInputRef}
+                    onChange={handleChatImageUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => chatImageInputRef.current?.click()}
+                    disabled={isUploadingChatImage}
+                    className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-white/40"
+                  >
+                    {isUploadingChatImage ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4" />
+                    )}
+                  </button>
                   <input
                     type="text"
                     value={newMessage}
@@ -261,20 +355,16 @@ const AdminStream: React.FC = () => {
                       disabled={generatingImg}
                       className="text-[#ff4e00] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:underline disabled:opacity-50"
                     >
-                      <Wand2 className="w-3 h-3" />
+                      {generatingImg ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
                       {generatingImg ? 'Generando...' : 'Generar con IA'}
                     </button>
                   </div>
-                  <div className="aspect-video bg-white/5 border border-white/10 rounded-2xl overflow-hidden relative group">
-                    {thumbnailUrl ? (
-                      <img src={thumbnailUrl} alt="Thumbnail" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
-                        <ImageIcon className="w-8 h-8 mb-2" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest">Sin miniatura</p>
-                      </div>
-                    )}
-                  </div>
+                  <ImageUpload
+                    onUploadComplete={(url) => setThumbnailUrl(url)}
+                    currentImageUrl={thumbnailUrl || ''}
+                    label=""
+                    folder="thumbnails"
+                  />
                 </div>
 
                 <div className="space-y-2">

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp } from '../firebase';
-import { StreamSession, UserProfile } from '../types';
+import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
+import { StreamSession, UserProfile, OperationType } from '../types';
 import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
+
+import ImageUpload from '../components/ImageUpload';
+
+import Toast from '../components/Toast';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -13,8 +17,6 @@ const AdminDashboard: React.FC = () => {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'streams' | 'users' | 'news'>('streams');
-
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
     title: string;
@@ -23,8 +25,16 @@ const AdminDashboard: React.FC = () => {
     confirmText?: string;
     confirmVariant?: 'danger' | 'primary';
   } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
 
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showConfirm = (config: any) => {
+    setModalConfig(config);
+    setIsModalOpen(true);
+  };
 
   // News form state
   const [newsTitle, setNewsTitle] = useState('');
@@ -33,29 +43,21 @@ const AdminDashboard: React.FC = () => {
   const [savingNews, setSavingNews] = useState(false);
 
   useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  const showConfirm = (config: typeof modalConfig) => {
-    setModalConfig(config);
-    setIsModalOpen(true);
-  };
-
-  useEffect(() => {
     if (!user || user.role !== 'admin') return;
 
     // Listen to all streams
     const streamsQuery = query(collection(db, 'streams'), orderBy('startedAt', 'desc'));
     const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
       setStreams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'streams');
     });
 
     // Fetch all users
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'users');
     });
 
     // Fetch all news
@@ -63,6 +65,8 @@ const AdminDashboard: React.FC = () => {
     const unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
       setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'news');
     });
 
     return () => {
@@ -88,10 +92,9 @@ const AdminDashboard: React.FC = () => {
       setNewsTitle('');
       setNewsContent('');
       setNewsImage('');
-      setToast({ message: 'Noticia publicada con éxito', type: 'success' });
+      setToast({ message: 'Noticia publicada con éxito', type: 'success', isVisible: true });
     } catch (error) {
-      console.error('Error creating news:', error);
-      setToast({ message: 'Error al publicar la noticia', type: 'error' });
+      handleFirestoreError(error, OperationType.CREATE, 'news');
     } finally {
       setSavingNews(false);
     }
@@ -106,9 +109,9 @@ const AdminDashboard: React.FC = () => {
       onConfirm: async () => {
         try {
           await deleteDoc(doc(db, 'news', newsId));
-          setToast({ message: 'Noticia eliminada', type: 'success' });
+          setToast({ message: 'Noticia eliminada', type: 'success', isVisible: true });
         } catch (error) {
-          console.error('Error deleting news:', error);
+          handleFirestoreError(error, OperationType.DELETE, `news/${newsId}`);
         }
       }
     });
@@ -123,9 +126,9 @@ const AdminDashboard: React.FC = () => {
       onConfirm: async () => {
         try {
           await deleteDoc(doc(db, 'streams', streamId));
-          setToast({ message: 'Transmisión eliminada', type: 'success' });
+          setToast({ message: 'Transmisión eliminada', type: 'success', isVisible: true });
         } catch (error) {
-          console.error('Error deleting stream:', error);
+          handleFirestoreError(error, OperationType.DELETE, `streams/${streamId}`);
         }
       }
     });
@@ -142,9 +145,9 @@ const AdminDashboard: React.FC = () => {
           await updateDoc(doc(db, 'users', targetUser.uid), {
             role: newRole
           });
-          setToast({ message: `Rol actualizado a ${newRole}`, type: 'success' });
+          setToast({ message: `Rol actualizado a ${newRole}`, type: 'success', isVisible: true });
         } catch (error) {
-          console.error('Error updating user role:', error);
+          handleFirestoreError(error, OperationType.UPDATE, `users/${targetUser.uid}`);
         }
       }
     });
@@ -162,23 +165,6 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 relative">
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`fixed top-24 right-8 z-[110] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${
-              toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'
-            }`}
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            <span className="text-sm font-bold">{toast.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -189,6 +175,13 @@ const AdminDashboard: React.FC = () => {
       >
         <p className="text-white/60 italic">{modalConfig?.message}</p>
       </Modal>
+
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -388,7 +381,7 @@ const AdminDashboard: React.FC = () => {
                   <Plus className="w-5 h-5 text-[#ff4e00]" />
                   Publicar Nueva Noticia
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-6">
                   <input
                     type="text"
                     placeholder="Título de la noticia"
@@ -397,12 +390,11 @@ const AdminDashboard: React.FC = () => {
                     className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none"
                     required
                   />
-                  <input
-                    type="text"
-                    placeholder="URL de la imagen (opcional)"
-                    value={newsImage}
-                    onChange={(e) => setNewsImage(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none"
+                  <ImageUpload 
+                    onUploadComplete={(url) => setNewsImage(url)}
+                    label="Imagen de la Noticia"
+                    folder="news"
+                    currentImageUrl={newsImage}
                   />
                 </div>
                 <textarea

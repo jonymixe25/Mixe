@@ -37,34 +37,67 @@ const Home: React.FC = () => {
   return (
     <div className="space-y-12">
       {/* Hero Section */}
-      <section className="relative h-[60vh] rounded-3xl overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0502]/60 to-[#0a0502] z-10" />
-        <img
-          src="https://picsum.photos/seed/mixe/1920/1080?blur=2"
+      <section className="relative h-[70vh] rounded-[2.5rem] overflow-hidden flex items-center justify-center group">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0502]/40 to-[#0a0502] z-10" />
+        <motion.img
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse" }}
+          src="https://picsum.photos/seed/mixe-culture/1920/1080?blur=2"
           alt="Voz Mixe Hero"
           className="absolute inset-0 w-full h-full object-cover"
           referrerPolicy="no-referrer"
         />
-        <div className="relative z-20 text-center max-w-3xl px-4">
+        <div className="relative z-20 text-center max-w-4xl px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="inline-block px-4 py-1.5 rounded-full bg-[#ff4e00]/20 border border-[#ff4e00]/30 text-[#ff4e00] text-[10px] font-bold uppercase tracking-[0.2em] mb-8"
+          >
+            Cultura • Tradición • Comunidad
+          </motion.div>
           <motion.h1
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
+            className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter uppercase italic leading-[0.85] mb-8"
           >
             La Voz <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] to-[#ff8c00]">
-              De La Cultura Mixe
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] via-[#ff8c00] to-[#ff4e00] bg-[length:200%_auto] animate-gradient">
+              Mixe
             </span>
           </motion.h1>
-          <p className="mt-6 text-xl text-white/60 font-medium italic">
-            La región de los jamás conquistados
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <button className="bg-[#ff4e00] text-white px-8 py-4 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform">
-              <Play className="w-5 h-5 fill-current" />
-              Ver en Pantalla Completa
-            </button>
-          </div>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="text-lg sm:text-2xl text-white/70 font-medium italic max-w-2xl mx-auto leading-relaxed"
+          >
+            "La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.
+          </motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-12 flex flex-wrap justify-center gap-6"
+          >
+            <Link 
+              to="/news"
+              className="w-full sm:w-auto bg-white text-black px-10 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 shadow-xl shadow-white/5"
+            >
+              <Newspaper className="w-5 h-5" />
+              Explorar Noticias
+            </Link>
+            {streams.length > 0 && (
+              <Link 
+                to={`/stream/${streams[0].id}`}
+                className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/20 text-white px-10 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-white/20 transition-all transform hover:-translate-y-1 active:scale-95"
+              >
+                <Radio className="w-5 h-5 text-[#ff4e00] animate-pulse" />
+                Ver Transmisión en Vivo
+              </Link>
+            )}
+          </motion.div>
         </div>
       </section>
 
@@ -92,15 +125,19 @@ const Home: React.FC = () => {
               <Link
                 key={stream.id}
                 to={`/stream/${stream.id}`}
-                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all"
+                className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all flex flex-col items-center justify-center"
               >
-                <img
-                  src={stream.thumbnailUrl || `https://picsum.photos/seed/${stream.id}/800/450`}
-                  alt={stream.title}
-                  className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                {stream.thumbnailUrl ? (
+                  <img 
+                    src={stream.thumbnailUrl} 
+                    alt={stream.title} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#ff4e00]/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity" />
+                )}
+                <Video className="w-12 h-12 text-white/10 group-hover:text-[#ff4e00]/20 transition-colors relative z-10" />
                 
                 <div className="absolute top-4 left-4">
                   <div className="bg-red-600 px-2 py-1 rounded-md flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">

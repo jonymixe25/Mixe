@@ -14,11 +14,31 @@ export interface StreamSession {
   userName: string;
   title: string;
   description?: string;
-  status: 'live' | 'ended';
   thumbnailUrl?: string;
+  status: 'live' | 'ended';
   startedAt: any;
   endedAt?: any;
   viewerCount: number;
+  likes?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  text?: string;
+  imageUrl?: string;
+  createdAt: any;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  imageUrl?: string;
+  createdAt: any;
 }
 
 export interface Contact {
@@ -27,6 +47,15 @@ export interface Contact {
   contactName: string;
   contactPhoto?: string;
   addedAt: any;
+}
+
+export interface MediaItem {
+  id: string;
+  userId: string;
+  url: string;
+  folder: string;
+  fileName: string;
+  createdAt: any;
 }
 
 export enum OperationType {

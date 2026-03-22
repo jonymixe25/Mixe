@@ -1,19 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment } from '../firebase';
-import { StreamSession } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings } from 'lucide-react';
+import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit } from '../firebase';
+import { StreamSession, OperationType, ChatMessage } from '../types';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
+import { useAuth } from '../AuthContext';
+
+import Toast from '../components/Toast';
 
 const StreamView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stream, setStream] = useState<StreamSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chat, setChat] = useState<{ user: string, text: string }[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
+  const [isUploadingChatImage, setIsUploadingChatImage] = useState(false);
+  const chatImageInputRef = useRef<HTMLInputElement>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
   
   // Video Controls State
   const [isPlaying, setIsPlaying] = useState(true);
@@ -22,6 +33,7 @@ const StreamView: React.FC = () => {
   const [showControls, setShowControls] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -34,21 +46,51 @@ const StreamView: React.FC = () => {
         navigate('/');
       }
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `streams/${id}`);
+    });
+
+    // Chat listener
+    const chatQuery = query(
+      collection(db, 'streams', id, 'messages'),
+      orderBy('createdAt', 'asc'),
+      limit(50)
+    );
+    const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+      setChat(messages);
+    }, (error) => {
+      console.error('Chat error:', error);
     });
 
     // Increment viewer count
-    updateDoc(streamRef, {
-      viewerCount: increment(1)
-    });
+    const updateViewerCount = async (val: number) => {
+      try {
+        await updateDoc(streamRef, {
+          viewerCount: increment(val)
+        });
+      } catch (error) {
+        try {
+          handleFirestoreError(error, OperationType.UPDATE, `streams/${id}`);
+        } catch (e) {
+          if ((e as any).isQuotaError) throw e;
+          console.error('Background update error:', e);
+        }
+      }
+    };
+
+    updateViewerCount(1);
 
     return () => {
       unsubscribe();
-      // Decrement viewer count on leave
-      updateDoc(streamRef, {
-        viewerCount: increment(-1)
-      });
+      unsubscribeChat();
+      updateViewerCount(-1);
     };
   }, [id, navigate]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chat]);
 
   const speak = async (text: string) => {
     try {
@@ -76,18 +118,85 @@ const StreamView: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || !user || !id) return;
 
-    const newMsg = { user: 'Tú', text: message };
-    setChat(prev => [...prev, newMsg]);
+    const msgText = message.trim();
     setMessage('');
 
-    // Simulate TTS for certain keywords
-    if (message.toLowerCase().includes('hola')) {
-      speak('¡Hola! Bienvenido a la transmisión.');
+    try {
+      await addDoc(collection(db, 'streams', id, 'messages'), {
+        userId: user.uid,
+        userName: user.displayName,
+        text: msgText,
+        createdAt: serverTimestamp(),
+      });
+
+      // Simulate TTS for certain keywords
+      if (msgText.toLowerCase().includes('hola')) {
+        speak(`¡Hola ${user.displayName}! Bienvenido a la transmisión.`);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `streams/${id}/messages`);
     }
+  };
+
+  const handleChatImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !id) return;
+
+    setIsUploadingChatImage(true);
+    try {
+      const { storage, ref, uploadBytes, getDownloadURL } = await import('../firebase');
+      const storageRef = ref(storage, `chat/${id}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+
+      await addDoc(collection(db, 'streams', id, 'messages'), {
+        userId: user.uid,
+        userName: user.displayName,
+        imageUrl: url,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error uploading chat image:', error);
+    } finally {
+      setIsUploadingChatImage(false);
+      if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+    }
+  };
+
+  const handleLike = async () => {
+    if (!id) return;
+    if (!user) {
+      setToast({
+        message: 'Debes iniciar sesión para dar me gusta',
+        type: 'error',
+        isVisible: true
+      });
+      return;
+    }
+
+    setIsLiked(!isLiked);
+    try {
+      await updateDoc(doc(db, 'streams', id), {
+        likes: increment(isLiked ? -1 : 1)
+      });
+    } catch (error) {
+      console.error('Error updating likes:', error);
+      setIsLiked(isLiked); // Rollback
+    }
+  };
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    setToast({
+      message: '¡Enlace copiado al portapapeles!',
+      type: 'success',
+      isVisible: true
+    });
   };
 
   const togglePlay = () => {
@@ -257,15 +366,21 @@ const StreamView: React.FC = () => {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => setIsLiked(!isLiked)}
+              onClick={handleLike}
               className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${
                 isLiked ? 'bg-red-500 text-white scale-105' : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
               }`}
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-              {isLiked ? '¡Me gusta!' : 'Me gusta'}
+              <span className="flex items-center gap-1">
+                {isLiked ? '¡Me gusta!' : 'Me gusta'}
+                <span className="opacity-50 text-xs">({stream.likes || 0})</span>
+              </span>
             </button>
-            <button className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors">
+            <button 
+              onClick={handleShare}
+              className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+            >
               <Share2 className="w-5 h-5" />
             </button>
           </div>
@@ -296,40 +411,78 @@ const StreamView: React.FC = () => {
             <div className="text-center py-4">
               <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">Comienzo del chat</p>
             </div>
-            {chat.map((msg, i) => (
+            {chat.map((msg) => (
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                key={i}
+                key={msg.id}
                 className="space-y-1"
               >
-                <span className="text-[10px] font-bold text-[#ff4e00] uppercase tracking-widest">{msg.user}</span>
-                <p className="text-sm text-white/80 bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/5">
-                  {msg.text}
-                </p>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                  {msg.userName}
+                </span>
+                {msg.imageUrl ? (
+                  <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px]">
+                    <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
+                  </div>
+                ) : (
+                  <p className={`text-sm p-3 rounded-2xl rounded-tl-none border ${msg.userId === user?.uid ? 'bg-emerald-500/10 text-emerald-50 border-emerald-500/20' : 'bg-white/5 text-white/80 border-white/5'}`}>
+                    {msg.text}
+                  </p>
+                )}
               </motion.div>
             ))}
+            <div ref={chatEndRef} />
           </div>
 
           <form onSubmit={handleSendMessage} className="p-4 bg-black/40 border-t border-white/10">
-            <div className="relative">
+            <div className="relative flex gap-2">
               <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Enviar mensaje..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-4 pr-12 text-sm focus:border-[#ff4e00] outline-none transition-all"
+                type="file"
+                ref={chatImageInputRef}
+                onChange={handleChatImageUpload}
+                accept="image/*"
+                className="hidden"
               />
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#ff4e00] hover:scale-110 transition-transform"
+              <button 
+                type="button"
+                onClick={() => chatImageInputRef.current?.click()}
+                disabled={isUploadingChatImage}
+                className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-white/40"
               >
-                <Radio className="w-5 h-5" />
+                {isUploadingChatImage ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <ImageIcon className="w-5 h-5" />
+                )}
               </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Enviar mensaje..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-4 pr-12 text-sm focus:border-[#ff4e00] outline-none transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!message.trim()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#ff4e00] hover:scale-110 transition-transform disabled:opacity-50"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </form>
         </div>
       </div>
+      {/* Toast Notification */}
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from './firebase';
-import { UserProfile, FirestoreErrorInfo, OperationType } from './types';
+import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError } from './firebase';
+import { UserProfile, OperationType } from './types';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -15,29 +15,6 @@ export const AuthContext = React.createContext<AuthContextType>({
   login: async () => {},
   logout: async () => {},
 });
-
-export const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -62,12 +39,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: firebaseUser.email === 'jonyoax95@gmail.com' ? 'admin' : 'user',
               createdAt: serverTimestamp(),
             };
-            await setDoc(userDocRef, newUser);
+            try {
+              await setDoc(userDocRef, newUser);
+            } catch (error) {
+              handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
+            }
           } else {
             // If the document exists but the role is not admin and it should be
             const currentData = userDoc.data() as UserProfile;
             if (firebaseUser.email === 'jonyoax95@gmail.com' && currentData.role !== 'admin') {
-               await updateDoc(userDocRef, { role: 'admin' });
+               try {
+                 await updateDoc(userDocRef, { role: 'admin' });
+               } catch (error) {
+                 handleFirestoreError(error, OperationType.UPDATE, `users/${firebaseUser.uid}`);
+               }
             }
           }
         } catch (error) {

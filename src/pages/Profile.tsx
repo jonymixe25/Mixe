@@ -1,33 +1,42 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, doc, updateDoc } from '../firebase';
-import { User, Mail, Shield, Save, Camera } from 'lucide-react';
+import { db, doc, updateDoc, handleFirestoreError } from '../firebase';
+import { User, Mail, Shield, Save, Camera, Upload } from 'lucide-react';
 import { motion } from 'motion/react';
+import ImageUpload from '../components/ImageUpload';
+import { OperationType } from '../types';
+
+import Toast from '../components/Toast';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     setSaving(true);
-    setMessage(null);
 
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         displayName,
         bio,
+        photoURL,
       });
-      setMessage({ type: 'success', text: 'Perfil actualizado correctamente.' });
+      setToast({ message: 'Perfil actualizado correctamente.', type: 'success', isVisible: true });
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setMessage({ type: 'error', text: 'Error al actualizar el perfil.' });
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      setToast({ message: 'Error al actualizar el perfil.', type: 'error', isVisible: true });
     } finally {
       setSaving(false);
     }
@@ -45,18 +54,14 @@ const Profile: React.FC = () => {
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-8">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative group">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#ff4e00]/20 group-hover:border-[#ff4e00] transition-colors">
-              <img
-                src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
-                alt={user.displayName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <button className="absolute bottom-0 right-0 bg-[#ff4e00] p-2 rounded-full shadow-lg hover:scale-110 transition-transform">
-              <Camera className="w-4 h-4 text-white" />
-            </button>
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-full max-w-[200px]">
+            <ImageUpload 
+              onUploadComplete={(url) => setPhotoURL(url)}
+              label="Foto de Perfil"
+              currentImageUrl={photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
+              folder="profiles"
+            />
           </div>
           <div className="text-center">
             <h2 className="text-xl font-bold">{user.displayName}</h2>
@@ -107,18 +112,6 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {message && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-4 rounded-2xl text-sm font-medium ${
-                message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-              }`}
-            >
-              {message.text}
-            </motion.div>
-          )}
-
           <button
             type="submit"
             disabled={saving}
@@ -135,6 +128,12 @@ const Profile: React.FC = () => {
           </button>
         </form>
       </div>
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 };
