@@ -52,34 +52,65 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
-          <User className="w-6 h-6 text-[#ff4e00]" />
+    <div className="max-w-4xl mx-auto space-y-12 relative">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-[#ff4e00]">
+            <User className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Perfil de Usuario</span>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Mi Espacio</span></h1>
+          <p className="text-white/40 text-sm font-medium italic max-w-md">
+            <span>Personaliza tu identidad y gestiona tu información en la plataforma.</span>
+          </p>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase italic"><span>Mi Perfil</span></h1>
+        
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-3 shadow-xl ${
+            isEditing 
+              ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' 
+              : 'glass text-[#ff4e00] border-white/10 hover:bg-[#ff4e00] hover:text-white'
+          }`}
+        >
+          {isEditing ? (
+            <>
+              <X className="w-4 h-4" />
+              <span>Cancelar Edición</span>
+            </>
+          ) : (
+            <>
+              <Edit3 className="w-4 h-4" />
+              <span>Editar Perfil</span>
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+      <div className="glass rounded-[3rem] overflow-hidden shadow-2xl border-white/10 relative">
         {/* Header/Cover Placeholder */}
-        <div className="h-32 bg-gradient-to-r from-[#ff4e00]/20 to-[#ff4e00]/5 relative" />
+        <div className="h-48 bg-gradient-to-br from-[#ff4e00]/30 via-[#ff4e00]/10 to-transparent relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-[#ff4e00]/20 rounded-full blur-3xl" />
+        </div>
         
-        <div className="px-8 pb-8">
-          <div className="relative -mt-16 mb-6 flex items-end justify-between">
+        <div className="px-10 lg:px-16 pb-16">
+          <div className="relative -mt-24 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="relative group">
-              <div className="w-32 h-32 rounded-[2.5rem] bg-[#0a0502] p-1 shadow-2xl">
-                <div className="w-full h-full rounded-[2.2rem] overflow-hidden border-2 border-white/10 relative">
+              <div className="w-44 h-44 rounded-[3rem] bg-[#0a0502] p-1.5 shadow-2xl ring-1 ring-white/10">
+                <div className="w-full h-full rounded-[2.7rem] overflow-hidden border-2 border-white/10 relative group-hover:border-[#ff4e00]/50 transition-colors duration-500">
                   <img 
                     src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
                     alt="profile" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-white" />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                    <Camera className="w-8 h-8 text-white animate-bounce" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Actualizar Foto</span>
                   </div>
                 </div>
               </div>
-              <div className="absolute -bottom-2 -right-2">
+              <div className="absolute -bottom-2 -right-2 scale-125">
                 <ImageUpload 
                   onUploadComplete={handlePhotoUpdate}
                   currentImageUrl=""
@@ -89,91 +120,112 @@ const Profile: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className="mb-4 p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors border border-white/10"
-            >
-              {isEditing ? <X className="w-5 h-5 text-red-500" /> : <Edit3 className="w-5 h-5 text-[#ff4e00]" />}
-            </button>
+            {!isEditing && (
+              <div className="flex flex-col gap-2 md:mb-4">
+                <h2 className="text-4xl lg:text-5xl font-display font-black tracking-tighter uppercase italic leading-none">
+                  {user.displayName}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-[#ff4e00] rounded-full animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Miembro Activo</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-4">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-2"><span>Nombre de Usuario</span></label>
+          <AnimatePresence mode="wait">
+            {isEditing ? (
+              <motion.div 
+                key="editing"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-10"
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Nombre de Usuario</label>
                     <input 
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all placeholder:text-white/20"
+                      placeholder="Tu nombre público..."
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-2"><span>Biografía</span></label>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Biografía</label>
                     <textarea 
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:border-[#ff4e00] outline-none transition-all min-h-[120px] resize-none"
-                      placeholder="Cuéntanos algo sobre ti..."
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all min-h-[150px] resize-none leading-relaxed placeholder:text-white/20"
+                      placeholder="Cuéntanos un poco sobre ti, tus gustos o tu conexión con la cultura Mixe..."
                     />
                   </div>
+                </div>
+                
+                <div className="flex justify-end">
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="w-full bg-[#ff4e00] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ff4e00]/90 transition-colors disabled:opacity-50"
+                    className="w-full lg:w-auto bg-[#ff4e00] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-[#ff4e00]/90 transition-all duration-500 shadow-2xl shadow-[#ff4e00]/20 disabled:opacity-50 active:scale-95"
                   >
                     {loading ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        <Save className="w-5 h-5" />
+                        <Save className="w-6 h-6" />
                         <span>Guardar Cambios</span>
                       </>
                     )}
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold tracking-tight"><span>{user.displayName}</span></h2>
-                    <p className="text-white/60 italic mt-2 leading-relaxed">
-                      <span>{user.bio || 'Sin biografía.'}</span>
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                    <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                      <Mail className="w-5 h-5 text-[#ff4e00]/60" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40"><span>Correo</span></p>
-                        <p className="text-sm font-medium"><span>{user.email}</span></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                      <Shield className="w-5 h-5 text-[#ff4e00]/60" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40"><span>Rol</span></p>
-                        <p className="text-sm font-medium capitalize"><span>{user.role}</span></p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                      <Calendar className="w-5 h-5 text-[#ff4e00]/60" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40"><span>Miembro desde</span></p>
-                        <p className="text-sm font-medium">
-                          <span>{user.createdAt ? format(user.createdAt.toDate(), "d 'de' MMMM, yyyy", { locale: es }) : 'Reciente'}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="view"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-12"
+              >
+                <div className="space-y-4 max-w-2xl">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Biografía</h3>
+                  <p className="text-xl text-white/60 italic leading-relaxed font-medium">
+                    <span>{user.bio || 'Este usuario aún no ha escrito su biografía. ¡Anímate a compartir algo sobre ti!'}</span>
+                  </p>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-white/10">
+                  {[
+                    { icon: Mail, label: 'Correo Electrónico', value: user.email, color: 'text-blue-500' },
+                    { icon: Shield, label: 'Rol en la Plataforma', value: user.role, color: 'text-[#ff4e00]', capitalize: true },
+                    { icon: Calendar, label: 'Miembro Desde', value: user.createdAt ? format(user.createdAt.toDate(), "d 'de' MMMM, yyyy", { locale: es }) : 'Reciente', color: 'text-purple-500' }
+                  ].map((item, i) => (
+                    <div key={item.label} className="space-y-4 group">
+                      <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#ff4e00]/30 transition-all duration-500`}>
+                        <item.icon className={`w-6 h-6 ${item.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{item.label}</p>
+                        <p className={`text-lg font-display font-bold ${item.capitalize ? 'capitalize' : ''}`}>{item.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
+    </div>
 
       <Toast 
         message={toast.message}

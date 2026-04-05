@@ -15,6 +15,7 @@ import StreamView from './pages/StreamView';
 import AdminDashboard from './pages/AdminDashboard';
 import News from './pages/News';
 import Chat from './pages/Chat';
+import Gallery from './pages/Gallery';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
               <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
               <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
+              <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
               <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
               <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
               <Route path="/stream/:id" element={<StreamView />} />

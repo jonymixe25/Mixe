@@ -24,6 +24,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; type: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -35,6 +36,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSelectedFile({ name: file.name, type: file.type });
     const sizeInMB = file.size / (1024 * 1024);
 
     // Local preview for images
@@ -44,6 +46,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      setPreview(null);
     }
 
     // Upload to Firebase
@@ -105,10 +109,20 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const clearImage = () => {
     setPreview(null);
+    setSelectedFile(null);
     onUploadComplete('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const getFileIcon = (fileType?: string) => {
+    if (!fileType) return <FileText className="w-8 h-8" />;
+    if (fileType.startsWith('image/')) return <ImageIcon className="w-8 h-8" />;
+    if (fileType.startsWith('video/')) return <Loader2 className="w-8 h-8 animate-pulse" />;
+    if (fileType.startsWith('audio/')) return <CheckCircle className="w-8 h-8" />;
+    if (fileType === 'application/pdf') return <FileText className="w-8 h-8" />;
+    return <FileText className="w-8 h-8" />;
   };
 
   return (
@@ -124,7 +138,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       
       <div 
         className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
-          preview ? 'border-transparent' : 'border-white/10 hover:border-[#ff4e00]/50 bg-white/5'
+          preview || selectedFile ? 'border-transparent' : 'border-white/10 hover:border-[#ff4e00]/50 bg-white/5'
         } ${uploading ? 'border-[#ff4e00]/50 bg-[#ff4e00]/5' : ''}`}
       >
         {preview ? (
@@ -149,6 +163,25 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               </div>
             )}
           </>
+        ) : selectedFile ? (
+          <div className="flex flex-col items-center gap-4 p-6 text-center">
+            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-[#ff4e00]">
+              {getFileIcon(selectedFile.type)}
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-widest block truncate max-w-[200px]">{selectedFile.name}</span>
+              <span className="text-[10px] opacity-50 uppercase tracking-widest block">{selectedFile.type}</span>
+            </div>
+            {!uploading && (
+              <button 
+                type="button"
+                onClick={clearImage}
+                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline"
+              >
+                Cambiar archivo
+              </button>
+            )}
+          </div>
         ) : (
           <button
             type="button"

@@ -56,6 +56,8 @@ export interface MediaItem {
   url: string;
   folder: string;
   fileName: string;
+  fileType?: string;
+  fileSize?: number;
   createdAt: any;
 }
 

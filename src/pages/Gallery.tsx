@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, orderBy, deleteDoc, doc, handleFirestoreError } from '../firebase';
 import { MediaItem, OperationType } from '../types';
-import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X } from 'lucide-react';
+import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Modal from '../components/Modal';
@@ -17,6 +17,7 @@ const Gallery: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const [uploadFolder, setUploadFolder] = useState('General');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -52,7 +53,7 @@ const Gallery: React.FC = () => {
     try {
       await deleteDoc(doc(db, 'media', itemToDelete));
       setToast({
-        message: 'Imagen eliminada correctamente',
+        message: 'Archivo eliminado correctamente',
         type: 'success',
         isVisible: true
       });
@@ -69,37 +70,47 @@ const Gallery: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const folders = ['all', ...Array.from(new Set(media.map(item => item.folder)))];
+  const folders = ['all', ...Array.from(new Set(media.map(item => item.folder || 'General')))];
 
   const filteredMedia = filter === 'all' 
     ? media 
-    : media.filter(item => item.folder === filter);
+    : media.filter(item => (item.folder || 'General') === filter);
+
+  const getFileIcon = (fileType?: string) => {
+    if (!fileType) return <ImageIcon className="w-8 h-8" />;
+    if (fileType.startsWith('image/')) return <ImageIcon className="w-8 h-8" />;
+    if (fileType.startsWith('video/')) return <Video className="w-8 h-8" />;
+    if (fileType.startsWith('audio/')) return <Volume2 className="w-8 h-8" />;
+    if (fileType === 'application/pdf') return <FileText className="w-8 h-8" />;
+    return <FileText className="w-8 h-8" />;
+  };
 
   if (!user) return null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
-            <ImageIcon className="w-6 h-6 text-[#ff4e00]" />
+    <div className="max-w-7xl mx-auto space-y-12">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-[#ff4e00]">
+            <Folder className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Almacenamiento</span>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight uppercase italic"><span>Galería de Medios</span></h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest"><span>Tus archivos subidos</span></p>
-          </div>
+          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Mis Archivos</span></h1>
+          <p className="text-white/40 text-sm font-medium italic max-w-md">
+            <span>Organiza y gestiona tus documentos, fotos y videos en carpetas seguras.</span>
+          </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex items-center gap-2 glass p-1.5 rounded-2xl overflow-x-auto scrollbar-hide w-full sm:w-auto">
             {folders.map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
                   filter === f 
-                    ? 'bg-[#ff4e00] text-white' 
-                    : 'bg-white/5 text-white/40 hover:bg-white/10'
+                    ? 'bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20' 
+                    : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <span>{f === 'all' ? 'Todo' : f}</span>
@@ -109,10 +120,10 @@ const Gallery: React.FC = () => {
           
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-[#ff4e00] text-white px-6 py-2 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#ff4e00]/90 transition-colors shadow-lg shadow-[#ff4e00]/20 whitespace-nowrap"
+            className="w-full sm:w-auto bg-white text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all duration-500 shadow-xl shadow-white/5 active:scale-95"
           >
-            <Plus className="w-4 h-4" />
-            <span>Subir Archivo</span>
+            <Plus className="w-5 h-5" />
+            <span>Subir</span>
           </button>
         </div>
       </div>
@@ -122,19 +133,38 @@ const Gallery: React.FC = () => {
         onClose={() => setIsUploadModalOpen(false)}
         title="Subir Nuevo Archivo"
       >
-        <div className="space-y-6">
-          <p className="text-white/60 text-sm italic"><span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu galería personal. Soporta archivos de más de 80MB.</span></p>
+        <div className="space-y-8 p-2">
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Carpeta de destino</label>
+            <div className="relative group">
+              <Folder className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-[#ff4e00] transition-colors" />
+              <input 
+                type="text"
+                value={uploadFolder}
+                onChange={(e) => setUploadFolder(e.target.value)}
+                placeholder="Ej: Documentos, Fotos, Trabajo..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm focus:border-[#ff4e00] focus:bg-white/10 transition-all outline-none font-medium"
+              />
+            </div>
+          </div>
+          <div className="glass rounded-2xl p-6 border-dashed border-white/10">
+            <p className="text-white/60 text-sm italic leading-relaxed text-center">
+              <span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu carpeta personal.</span>
+            </p>
+          </div>
           <ImageUpload 
             onUploadComplete={() => setIsUploadModalOpen(false)}
-            folder="gallery"
+            folder={uploadFolder || 'General'}
             label="Selecciona un archivo"
           />
         </div>
       </Modal>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff4e00]"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="aspect-square glass rounded-[2.5rem] animate-pulse" />
+          ))}
         </div>
       ) : filteredMedia.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -146,44 +176,57 @@ const Gallery: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 key={item.id}
-                className="group relative bg-white/5 border border-white/10 rounded-3xl overflow-hidden aspect-square shadow-xl"
+                className="group relative glass rounded-[2.5rem] overflow-hidden aspect-square shadow-xl hover:shadow-2xl hover:shadow-[#ff4e00]/5 transition-all duration-500"
               >
-                <img 
-                  src={item.url} 
-                  alt={item.fileName} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  referrerPolicy="no-referrer"
-                />
+                {item.fileType?.startsWith('image/') ? (
+                  <img 
+                    src={item.url} 
+                    alt={item.fileName} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors duration-500">
+                    <div className="w-20 h-20 bg-[#ff4e00]/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner">
+                      <div className="text-[#ff4e00]">
+                        {getFileIcon(item.fileType)}
+                      </div>
+                    </div>
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] px-6 text-center truncate w-full">
+                      {item.fileName}
+                    </p>
+                  </div>
+                )}
                 
                 {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-6 flex flex-col justify-end gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold truncate"><span>{item.fileName}</span></p>
-                    <div className="flex items-center gap-4 text-[10px] text-white/60 font-bold uppercase tracking-widest">
-                      <span className="flex items-center gap-1">
-                        <Folder className="w-3 h-3" />
-                        <span>{item.folder}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-[#0a0502]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 p-8 flex flex-col justify-end gap-6">
+                  <div className="space-y-2">
+                    <p className="text-lg font-display font-bold truncate leading-none"><span>{item.fileName}</span></p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/60">
+                        <Folder className="w-3 h-3 text-[#ff4e00]" />
+                        <span>{item.folder || 'General'}</span>
+                      </div>
+                      <div className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/60">
+                        <Calendar className="w-3 h-3 text-[#ff4e00]" />
                         <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Reciente'}</span>
-                      </span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <a 
                       href={item.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
+                      className="flex-1 bg-white text-black hover:bg-[#ff4e00] hover:text-white py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg"
                     >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>Ver Original</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Abrir</span>
                     </a>
                     <button
                       onClick={() => confirmDelete(item.id)}
-                      className="p-2 bg-red-500/20 backdrop-blur-md hover:bg-red-500/40 text-red-500 rounded-xl transition-colors"
+                      className="p-3 bg-red-500/10 backdrop-blur-md hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all duration-300"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -194,23 +237,27 @@ const Gallery: React.FC = () => {
           </AnimatePresence>
         </div>
       ) : (
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center space-y-4">
-          <ImageIcon className="w-16 h-16 text-white/10 mx-auto" />
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold uppercase italic"><span>No hay imágenes</span></h3>
-            <p className="text-white/40 text-sm italic"><span>Las imágenes que subas en el perfil, noticias o transmisiones aparecerán aquí.</span></p>
+        <div className="glass rounded-[3rem] p-24 text-center border-dashed">
+          <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Folder className="w-10 h-10 text-white/10" />
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-2xl font-display font-black uppercase italic"><span>No hay archivos</span></h3>
+            <p className="text-white/40 text-sm italic max-w-md mx-auto">
+              <span>Sube documentos, fotos o videos para verlos aquí organizados por carpetas.</span>
+            </p>
           </div>
         </div>
       )}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Eliminar Imagen"
+        title="Eliminar Archivo"
         onConfirm={handleDelete}
         confirmText="Eliminar"
         confirmVariant="danger"
       >
-        <p className="text-white/60 italic"><span>¿Estás seguro de que deseas eliminar esta imagen de tu galería? Esta acción no se puede deshacer.</span></p>
+        <p className="text-white/60 italic"><span>¿Estás seguro de que deseas eliminar este archivo? Esta acción no se puede deshacer.</span></p>
       </Modal>
 
       <Toast 
