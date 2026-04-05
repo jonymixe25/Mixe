@@ -100,6 +100,18 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "JoinRequest": {
+      "title": "Join Request",
+      "description": "Request from a viewer to join the live stream",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -130,6 +142,14 @@
     "/chats/{chatId}/messages/{messageId}": {
       "schema": "PrivateMessage",
       "description": "Private messages subcollection"
+    },
+    "/streams/{streamId}/joinRequests/{requestId}": {
+      "schema": "JoinRequest",
+      "description": "Requests to join a stream"
+    },
+    "/streams/{streamId}/guestSignaling/{guestId}": {
+      "schema": "object",
+      "description": "WebRTC signaling for guest streams"
     }
   }
 }

@@ -30,6 +30,10 @@ const AdminStream: React.FC = () => {
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [guestStream, setGuestStream] = useState<MediaStream | null>(null);
+  const guestVideoRef = useRef<HTMLVideoElement>(null);
   
   // WebRTC Broadcaster State
   const peerConnections = useRef<{ [viewerId: string]: RTCPeerConnection }>({});
@@ -82,6 +86,18 @@ const AdminStream: React.FC = () => {
   }, [activeStream]);
 
   useEffect(() => {
+    if (!activeStream) return;
+
+    const requestsRef = collection(db, 'streams', activeStream.id, 'joinRequests');
+    const unsubscribe = onSnapshot(requestsRef, (snapshot) => {
+      const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setJoinRequests(requests);
+    });
+
+    return () => unsubscribe();
+  }, [activeStream]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
@@ -89,7 +105,10 @@ const AdminStream: React.FC = () => {
     let unsubscribeSignaling: (() => void) | null = null;
 
     if (activeStream && videoRef.current) {
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode }, 
+        audio: true 
+      })
         .then(stream => {
           localStream.current = stream;
           if (videoRef.current) videoRef.current.srcObject = stream;
@@ -182,6 +201,67 @@ const AdminStream: React.FC = () => {
     return () => {
       unsubscribeAnswer();
       unsubscribeIce();
+    };
+  };
+
+  const toggleCamera = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  const handleAcceptJoin = async (requestId: string, guestId: string) => {
+    if (!activeStream) return;
+    try {
+      await updateDoc(doc(db, 'streams', activeStream.id, 'joinRequests', requestId), {
+        status: 'accepted'
+      });
+      // The guest will now initiate a WebRTC connection to send their stream to the admin
+      setupGuestReceiver(activeStream.id, guestId);
+    } catch (error) {
+      console.error('Error accepting join request:', error);
+    }
+  };
+
+  const setupGuestReceiver = async (streamId: string, guestId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    pc.ontrack = (event) => {
+      setGuestStream(event.streams[0]);
+      if (guestVideoRef.current) {
+        guestVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    // Signaling for guest stream (Admin is the receiver here)
+    const guestSignalingRef = doc(db, 'streams', streamId, 'guestSignaling', guestId);
+    
+    onSnapshot(guestSignalingRef, async (snapshot) => {
+      const data = snapshot.data();
+      if (data?.offer && pc.signalingState === 'stable') {
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await updateDoc(guestSignalingRef, {
+          answer: { type: answer.type, sdp: answer.sdp }
+        });
+      }
+    });
+
+    const guestCandidatesRef = collection(db, 'streams', streamId, 'guestSignaling', guestId, 'guestCandidates');
+    onSnapshot(guestCandidatesRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        }
+      });
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        const adminCandidatesRef = collection(db, 'streams', streamId, 'guestSignaling', guestId, 'adminCandidates');
+        addDoc(adminCandidatesRef, event.candidate.toJSON());
+      }
     };
   };
 
@@ -361,8 +441,32 @@ const AdminStream: React.FC = () => {
                   autoPlay
                   muted
                   playsInline
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 />
+                
+                {guestStream && (
+                  <div className="absolute bottom-4 right-4 w-1/3 aspect-video bg-black rounded-2xl overflow-hidden border-2 border-[#ff4e00] shadow-xl z-10">
+                    <video
+                      ref={guestVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest">
+                      <span>Invitado</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="absolute bottom-6 left-6 flex gap-2">
+                  <button 
+                    onClick={toggleCamera}
+                    className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 hover:bg-white/10 transition-all group"
+                  >
+                    <Sparkles className="w-5 h-5 text-white/60 group-hover:text-[#ff4e00]" />
+                  </button>
+                </div>
+
                 {cameraError && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-center p-6">
                     <Video className="w-12 h-12 text-red-500 mb-4" />
@@ -573,7 +677,36 @@ const AdminStream: React.FC = () => {
             </div>
           )}
 
-          {/* Tips Card */}
+              <div className="bg-gradient-to-br from-[#ff4e00]/20 to-transparent border border-[#ff4e00]/20 rounded-3xl p-6">
+                <h3 className="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#ff4e00]" />
+                  <span>Solicitudes para Unirse</span>
+                </h3>
+                <div className="space-y-3">
+                  {joinRequests.filter(r => r.status === 'pending').length === 0 ? (
+                    <p className="text-[10px] text-white/40 italic"><span>No hay solicitudes pendientes</span></p>
+                  ) : (
+                    joinRequests.filter(r => r.status === 'pending').map(request => (
+                      <div key={request.id} className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/10">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.userId}`} alt="avatar" />
+                          </div>
+                          <span className="text-xs font-bold"><span>{request.userName}</span></span>
+                        </div>
+                        <button 
+                          onClick={() => handleAcceptJoin(request.id, request.userId)}
+                          className="bg-[#ff4e00] text-white text-[10px] font-bold px-3 py-1.5 rounded-xl hover:bg-[#ff4e00]/90 transition-colors"
+                        >
+                          <span>Aceptar</span>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Tips Card */}
           <div className="bg-gradient-to-br from-[#ff4e00]/20 to-transparent border border-[#ff4e00]/20 rounded-3xl p-6">
             <h3 className="text-sm font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#ff4e00]" />

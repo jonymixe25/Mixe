@@ -229,6 +229,29 @@ service cloud.firestore {
         allow create: if isAuthenticated() && isValidMessage(request.resource.data);
         allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       }
+
+      match /joinRequests/{requestId} {
+        allow read: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow create: if isAuthenticated() && request.auth.uid == requestId;
+        allow update: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+      }
+
+      match /guestSignaling/{guestId} {
+        allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
+        allow update: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow delete: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+
+        match /guestCandidates/{candidateId} {
+          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
+        }
+
+        match /adminCandidates/{candidateId} {
+          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        }
+      }
     }
 
     match /users/{uid}/contacts/{contactId} {

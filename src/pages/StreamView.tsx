@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -21,6 +21,10 @@ const StreamView: React.FC = () => {
   const [chatUploadProgress, setChatUploadProgress] = useState(0);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [joinStatus, setJoinStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [guestStream, setGuestStream] = useState<MediaStream | null>(null);
+  const [guestFacingMode, setGuestFacingMode] = useState<'user' | 'environment'>('user');
+  const guestVideoRef = useRef<HTMLVideoElement>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -87,6 +91,20 @@ const StreamView: React.FC = () => {
     };
 
     updateViewerCount(1);
+
+    // Join Request Listener
+    const requestRef = doc(db, 'streams', id, 'joinRequests', user.uid);
+    const unsubscribeRequest = onSnapshot(requestRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setJoinStatus(data.status);
+        if (data.status === 'accepted' && !guestStream) {
+          setupGuestSender();
+        }
+      } else {
+        setJoinStatus('none');
+      }
+    });
 
     // WebRTC Viewer Setup
     const setupWebRTC = async () => {
@@ -168,10 +186,107 @@ const StreamView: React.FC = () => {
     return () => {
       unsubscribe();
       unsubscribeChat();
+      unsubscribeRequest();
       updateViewerCount(-1);
       cleanupWebRTC.then(cleanup => cleanup?.());
+      if (guestStream) {
+        guestStream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [id, navigate]);
+
+  const setupGuestSender = async () => {
+    if (!id || !user) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: guestFacingMode }, 
+        audio: true 
+      });
+      setGuestStream(stream);
+      if (guestVideoRef.current) {
+        guestVideoRef.current.srcObject = stream;
+      }
+
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
+      });
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          const candidatesRef = collection(db, 'streams', id, 'guestSignaling', user.uid, 'guestCandidates');
+          addDoc(candidatesRef, event.candidate.toJSON());
+        }
+      };
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      const guestSignalingRef = doc(db, 'streams', id, 'guestSignaling', user.uid);
+      await setDoc(guestSignalingRef, {
+        offer: { type: offer.type, sdp: offer.sdp },
+        createdAt: serverTimestamp()
+      });
+
+      onSnapshot(guestSignalingRef, async (snapshot) => {
+        const data = snapshot.data();
+        if (data?.answer && peerConnection.signalingState !== 'stable') {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        }
+      });
+
+      const adminCandidatesRef = collection(db, 'streams', id, 'guestSignaling', user.uid, 'adminCandidates');
+      onSnapshot(adminCandidatesRef, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error('Error setting up guest sender:', error);
+    }
+  };
+
+  const handleJoinRequest = async () => {
+    if (!id || !user) return;
+    try {
+      await setDoc(doc(db, 'streams', id, 'joinRequests', user.uid), {
+        userId: user.uid,
+        userName: user.displayName,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+      setToast({
+        message: 'Solicitud enviada al anfitrión',
+        type: 'success',
+        isVisible: true
+      });
+    } catch (error) {
+      console.error('Error sending join request:', error);
+    }
+  };
+
+  const toggleGuestCamera = async () => {
+    const newMode = guestFacingMode === 'user' ? 'environment' : 'user';
+    setGuestFacingMode(newMode);
+    if (guestStream) {
+      guestStream.getTracks().forEach(track => track.stop());
+      const newStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: newMode }, 
+        audio: true 
+      });
+      setGuestStream(newStream);
+      if (guestVideoRef.current) {
+        guestVideoRef.current.srcObject = newStream;
+      }
+      // In a real app, you'd need to replace the track in the RTCPeerConnection
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -384,6 +499,27 @@ const StreamView: React.FC = () => {
             playsInline
           />
 
+          {guestStream && (
+            <div className="absolute bottom-24 right-6 w-1/4 aspect-video bg-black rounded-2xl overflow-hidden border-2 border-[#ff4e00] shadow-2xl z-30">
+              <video
+                ref={guestVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className={`w-full h-full object-cover ${guestFacingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+              />
+              <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest">
+                <span>Tú</span>
+              </div>
+              <button 
+                onClick={toggleGuestCamera}
+                className="absolute bottom-2 right-2 p-1.5 bg-black/60 rounded-lg hover:bg-[#ff4e00] transition-colors"
+              >
+                <Camera className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
           {connectionStatus !== 'connected' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
               <div className="relative">
@@ -415,6 +551,20 @@ const StreamView: React.FC = () => {
                 <Users className="w-4 h-4" />
                 <span>{stream.viewerCount}</span>
               </div>
+              {joinStatus === 'none' && user.uid !== stream.userId && (
+                <button 
+                  onClick={handleJoinRequest}
+                  className="bg-[#ff4e00] px-4 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold hover:bg-[#ff4e00]/90 transition-all"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Unirse</span>
+                </button>
+              )}
+              {joinStatus === 'pending' && (
+                <div className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold italic text-white/60">
+                  <span>Solicitud pendiente...</span>
+                </div>
+              )}
             </div>
             <button
               onClick={() => navigate('/')}
