@@ -86,7 +86,7 @@ const Gallery: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight uppercase italic">Galería de Medios</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Tus imágenes subidas</p>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Tus archivos subidos</p>
           </div>
         </div>
 
@@ -112,7 +112,7 @@ const Gallery: React.FC = () => {
             className="bg-[#ff4e00] text-white px-6 py-2 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#ff4e00]/90 transition-colors shadow-lg shadow-[#ff4e00]/20 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            Subir Imagen
+            Subir Archivo
           </button>
         </div>
       </div>
@@ -120,14 +120,14 @@ const Gallery: React.FC = () => {
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        title="Subir Nueva Imagen"
+        title="Subir Nuevo Archivo"
       >
         <div className="space-y-6">
-          <p className="text-white/60 text-sm italic">Selecciona una imagen de tu dispositivo para guardarla en tu galería personal.</p>
+          <p className="text-white/60 text-sm italic">Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu galería personal. Soporta archivos de más de 80MB.</p>
           <ImageUpload 
             onUploadComplete={() => setIsUploadModalOpen(false)}
             folder="gallery"
-            label="Selecciona una imagen"
+            label="Selecciona un archivo"
           />
         </div>
       </Modal>

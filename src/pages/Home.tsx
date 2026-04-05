@@ -62,7 +62,7 @@ const Home: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter uppercase italic leading-[0.85] mb-8"
           >
-            La Voz <br />
+            <span>La Voz</span> <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] via-[#ff8c00] to-[#ff4e00] bg-[length:200%_auto] animate-gradient">
               Mixe
             </span>

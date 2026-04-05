@@ -26,10 +26,16 @@ const AdminStream: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isUploadingChatImage, setIsUploadingChatImage] = useState(false);
+  const [chatUploadProgress, setChatUploadProgress] = useState(0);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
+  
+  // WebRTC Broadcaster State
+  const peerConnections = useRef<{ [viewerId: string]: RTCPeerConnection }>({});
+  const localStream = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (!user) return;
+    // ... existing active stream listener ...
 
     const q = query(
       collection(db, 'streams'),
@@ -81,11 +87,83 @@ const AdminStream: React.FC = () => {
     if (activeStream && videoRef.current) {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
+          localStream.current = stream;
           if (videoRef.current) videoRef.current.srcObject = stream;
+          
+          // Listen for new viewers
+          const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
+          const unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+              if (change.type === 'added') {
+                const viewerId = change.doc.id;
+                if (!peerConnections.current[viewerId]) {
+                  await createPeerConnection(activeStream.id, viewerId);
+                }
+              }
+            });
+          });
+          return () => unsubscribeSignaling();
         })
         .catch(err => console.error("Error accessing camera:", err));
     }
   }, [activeStream]);
+
+  const createPeerConnection = async (streamId: string, viewerId: string) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    peerConnections.current[viewerId] = pc;
+
+    // Add local tracks to the peer connection
+    localStream.current?.getTracks().forEach(track => {
+      pc.addTrack(track, localStream.current!);
+    });
+
+    // Handle ICE candidates
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        const candidatesRef = collection(db, 'streams', streamId, 'signaling', viewerId, 'adminCandidates');
+        addDoc(candidatesRef, event.candidate.toJSON());
+      }
+    };
+
+    // Create offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const viewerRef = doc(db, 'streams', streamId, 'signaling', viewerId);
+    await updateDoc(viewerRef, {
+      offer: {
+        type: offer.type,
+        sdp: offer.sdp
+      },
+      status: 'offered'
+    });
+
+    // Listen for answer
+    const unsubscribeAnswer = onSnapshot(viewerRef, async (snapshot) => {
+      const data = snapshot.data();
+      if (data?.answer && pc.signalingState !== 'stable') {
+        const answer = new RTCSessionDescription(data.answer);
+        await pc.setRemoteDescription(answer);
+      }
+    });
+
+    // Listen for viewer ICE candidates
+    const viewerCandidatesRef = collection(db, 'streams', streamId, 'signaling', viewerId, 'viewerCandidates');
+    const unsubscribeIce = onSnapshot(viewerCandidatesRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        }
+      });
+    });
+
+    return () => {
+      unsubscribeAnswer();
+      unsubscribeIce();
+    };
+  };
 
   const handleStartStream = async () => {
     if (!user || !title) return;
@@ -185,23 +263,37 @@ const AdminStream: React.FC = () => {
     if (!file || !user || !activeStream) return;
 
     setIsUploadingChatImage(true);
+    setChatUploadProgress(0);
     try {
-      const { storage, ref, uploadBytes, getDownloadURL } = await import('../firebase');
+      const { storage, ref, uploadBytesResumable, getDownloadURL } = await import('../firebase');
       const storageRef = ref(storage, `chat/${activeStream.id}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
-        userId: user.uid,
-        userName: user.displayName,
-        imageUrl: url,
-        createdAt: serverTimestamp(),
-      });
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setChatUploadProgress(p);
+        },
+        (error) => {
+          console.error('Error uploading chat image:', error);
+          setIsUploadingChatImage(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
+            userId: user.uid,
+            userName: user.displayName,
+            imageUrl: url,
+            createdAt: serverTimestamp(),
+          });
+          setIsUploadingChatImage(false);
+          setChatUploadProgress(0);
+          if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+        }
+      );
     } catch (error) {
-      console.error('Error uploading chat image:', error);
-    } finally {
+      console.error('Error starting chat image upload:', error);
       setIsUploadingChatImage(false);
-      if (chatImageInputRef.current) chatImageInputRef.current.value = '';
     }
   };
 
@@ -310,10 +402,16 @@ const AdminStream: React.FC = () => {
                     type="button"
                     onClick={() => chatImageInputRef.current?.click()}
                     disabled={isUploadingChatImage}
-                    className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-white/40"
+                    className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-white/40 relative overflow-hidden"
                   >
                     {isUploadingChatImage ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <div 
+                          className="absolute bottom-0 left-0 h-0.5 bg-[#ff4e00] transition-all duration-300"
+                          style={{ width: `${chatUploadProgress}%` }}
+                        />
+                      </>
                     ) : (
                       <ImageIcon className="w-4 h-4" />
                     )}

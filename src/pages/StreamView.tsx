@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit } from '../firebase';
+import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
 import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,6 +18,7 @@ const StreamView: React.FC = () => {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
   const [isUploadingChatImage, setIsUploadingChatImage] = useState(false);
+  const [chatUploadProgress, setChatUploadProgress] = useState(0);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
@@ -34,9 +35,14 @@ const StreamView: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  // WebRTC Viewer State
+  const pc = useRef<RTCPeerConnection | null>(null);
+  const viewerId = useRef<string>(Math.random().toString(36).substring(7));
 
   useEffect(() => {
     if (!id) return;
+    // ... existing stream and chat listeners ...
 
     const streamRef = doc(db, 'streams', id);
     const unsubscribe = onSnapshot(streamRef, (doc) => {
@@ -81,10 +87,77 @@ const StreamView: React.FC = () => {
 
     updateViewerCount(1);
 
+    // WebRTC Viewer Setup
+    const setupWebRTC = async () => {
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      pc.current = peerConnection;
+
+      // Handle incoming tracks
+      peerConnection.ontrack = (event) => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = event.streams[0];
+        }
+      };
+
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          const candidatesRef = collection(db, 'streams', id, 'signaling', viewerId.current, 'viewerCandidates');
+          addDoc(candidatesRef, event.candidate.toJSON());
+        }
+      };
+
+      // Create signaling document
+      const viewerRef = doc(db, 'streams', id, 'signaling', viewerId.current);
+      await setDoc(viewerRef, {
+        status: 'new',
+        createdAt: serverTimestamp()
+      });
+
+      // Listen for offer
+      const unsubscribeOffer = onSnapshot(viewerRef, async (snapshot) => {
+        const data = snapshot.data();
+        if (data?.offer && peerConnection.signalingState === 'stable') {
+          const offer = new RTCSessionDescription(data.offer);
+          await peerConnection.setRemoteDescription(offer);
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          await updateDoc(viewerRef, {
+            answer: {
+              type: answer.type,
+              sdp: answer.sdp
+            },
+            status: 'answered'
+          });
+        }
+      });
+
+      // Listen for admin ICE candidates
+      const adminCandidatesRef = collection(db, 'streams', id, 'signaling', viewerId.current, 'adminCandidates');
+      const unsubscribeIce = onSnapshot(adminCandidatesRef, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          }
+        });
+      });
+
+      return () => {
+        unsubscribeOffer();
+        unsubscribeIce();
+        peerConnection.close();
+      };
+    };
+
+    const cleanupWebRTC = setupWebRTC();
+
     return () => {
       unsubscribe();
       unsubscribeChat();
       updateViewerCount(-1);
+      cleanupWebRTC.then(cleanup => cleanup?.());
     };
   }, [id, navigate]);
 
@@ -147,23 +220,37 @@ const StreamView: React.FC = () => {
     if (!file || !user || !id) return;
 
     setIsUploadingChatImage(true);
+    setChatUploadProgress(0);
     try {
-      const { storage, ref, uploadBytes, getDownloadURL } = await import('../firebase');
+      const { storage, ref, uploadBytesResumable, getDownloadURL } = await import('../firebase');
       const storageRef = ref(storage, `chat/${id}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      await addDoc(collection(db, 'streams', id, 'messages'), {
-        userId: user.uid,
-        userName: user.displayName,
-        imageUrl: url,
-        createdAt: serverTimestamp(),
-      });
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setChatUploadProgress(p);
+        },
+        (error) => {
+          console.error('Error uploading chat image:', error);
+          setIsUploadingChatImage(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          await addDoc(collection(db, 'streams', id, 'messages'), {
+            userId: user.uid,
+            userName: user.displayName,
+            imageUrl: url,
+            createdAt: serverTimestamp(),
+          });
+          setIsUploadingChatImage(false);
+          setChatUploadProgress(0);
+          if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+        }
+      );
     } catch (error) {
-      console.error('Error uploading chat image:', error);
-    } finally {
+      console.error('Error starting chat image upload:', error);
       setIsUploadingChatImage(false);
-      if (chatImageInputRef.current) chatImageInputRef.current.value = '';
     }
   };
 
@@ -263,14 +350,12 @@ const StreamView: React.FC = () => {
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setShowControls(false)}
         >
-          {/* Simulated Video Element */}
+          {/* Real-time WebRTC Video Element */}
           <video
             ref={videoRef}
-            src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
             poster={stream.thumbnailUrl}
             className="w-full h-full object-cover"
             autoPlay
-            loop
             muted={isMuted}
             playsInline
           />
@@ -411,27 +496,30 @@ const StreamView: React.FC = () => {
             <div className="text-center py-4">
               <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">Comienzo del chat</p>
             </div>
-            {chat.map((msg) => (
-              <motion.div
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                key={msg.id}
-                className="space-y-1"
-              >
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
-                  {msg.userName}
-                </span>
-                {msg.imageUrl ? (
-                  <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px]">
-                    <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
-                  </div>
-                ) : (
-                  <p className={`text-sm p-3 rounded-2xl rounded-tl-none border ${msg.userId === user?.uid ? 'bg-emerald-500/10 text-emerald-50 border-emerald-500/20' : 'bg-white/5 text-white/80 border-white/5'}`}>
-                    {msg.text}
-                  </p>
-                )}
-              </motion.div>
-            ))}
+            <AnimatePresence initial={false}>
+              {chat.map((msg) => (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  key={msg.id}
+                  className="space-y-1"
+                >
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                    {msg.userName}
+                  </span>
+                  {msg.imageUrl ? (
+                    <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px]">
+                      <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
+                    </div>
+                  ) : (
+                    <p className={`text-sm p-3 rounded-2xl rounded-tl-none border ${msg.userId === user?.uid ? 'bg-emerald-500/10 text-emerald-50 border-emerald-500/20' : 'bg-white/5 text-white/80 border-white/5'}`}>
+                      {msg.text}
+                    </p>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
             <div ref={chatEndRef} />
           </div>
 
@@ -448,10 +536,16 @@ const StreamView: React.FC = () => {
                 type="button"
                 onClick={() => chatImageInputRef.current?.click()}
                 disabled={isUploadingChatImage}
-                className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-white/40"
+                className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-colors text-white/40 relative overflow-hidden"
               >
                 {isUploadingChatImage ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <div 
+                      className="absolute bottom-0 left-0 h-0.5 bg-[#ff4e00] transition-all duration-300"
+                      style={{ width: `${chatUploadProgress}%` }}
+                    />
+                  </>
                 ) : (
                   <ImageIcon className="w-5 h-5" />
                 )}

@@ -1,25 +1,28 @@
 import React, { useState, useRef } from 'react';
-import { storage, ref, uploadBytes, getDownloadURL, db, collection, addDoc, serverTimestamp } from '../firebase';
-import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { storage, ref, uploadBytesResumable, getDownloadURL, db, collection, addDoc, serverTimestamp } from '../firebase';
+import { Upload, X, Loader2, Image as ImageIcon, FileText, CheckCircle } from 'lucide-react';
 import { useAuth } from '../AuthContext';
+import { motion, AnimatePresence } from 'motion/react';
+import Toast from './Toast';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
   label?: string;
   currentImageUrl?: string | null;
   folder?: string;
+  accept?: string;
 }
-
-import Toast from './Toast';
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
   onUploadComplete, 
-  label = "Subir Imagen", 
+  label = "Subir Archivo", 
   currentImageUrl,
-  folder = "uploads"
+  folder = "uploads",
+  accept = "image/*,video/*,audio/*,application/pdf"
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -32,44 +35,70 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Local preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const sizeInMB = file.size / (1024 * 1024);
+
+    // Local preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
 
     // Upload to Firebase
     setUploading(true);
+    setProgress(0);
+    
     try {
       const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
-      
-      // Save metadata to Firestore if user is logged in
-      if (user) {
-        try {
-          await addDoc(collection(db, 'media'), {
-            userId: user.uid,
-            url,
-            folder,
-            fileName: file.name,
-            createdAt: serverTimestamp()
-          });
-        } catch (err) {
-          console.error('Error saving media metadata:', err);
-        }
-      }
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      onUploadComplete(url);
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(p);
+        }, 
+        (error) => {
+          console.error('Error uploading file:', error);
+          setToast({
+            message: 'Error al subir el archivo: ' + error.message,
+            type: 'error',
+            isVisible: true
+          });
+          setUploading(false);
+        }, 
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          // Save metadata to Firestore if user is logged in
+          if (user) {
+            try {
+              await addDoc(collection(db, 'media'), {
+                userId: user.uid,
+                url,
+                folder,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                createdAt: serverTimestamp()
+              });
+            } catch (err) {
+              console.error('Error saving media metadata:', err);
+            }
+          }
+
+          onUploadComplete(url);
+          setToast({
+            message: `Archivo subido con éxito (${sizeInMB.toFixed(1)} MB)`,
+            type: 'success',
+            isVisible: true
+          });
+          setUploading(false);
+        }
+      );
     } catch (error) {
-      console.error('Error uploading image:', error);
-      setToast({
-        message: 'Error al subir la imagen. Por favor, intenta de nuevo.',
-        type: 'error',
-        isVisible: true
-      });
-    } finally {
+      console.error('Error starting upload:', error);
       setUploading(false);
     }
   };
@@ -83,56 +112,118 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="space-y-2">
-      <label className="text-xs font-bold uppercase tracking-widest text-white/40">{label}</label>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-widest text-white/40">{label}</label>
+        {uploading && (
+          <span className="text-[10px] font-bold text-[#ff4e00] uppercase tracking-widest animate-pulse">
+            Subiendo: {Math.round(progress)}%
+          </span>
+        )}
+      </div>
+      
       <div 
-        className={`relative aspect-video rounded-2xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center ${
+        className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
           preview ? 'border-transparent' : 'border-white/10 hover:border-[#ff4e00]/50 bg-white/5'
-        }`}
+        } ${uploading ? 'border-[#ff4e00]/50 bg-[#ff4e00]/5' : ''}`}
       >
         {preview ? (
           <>
-            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 bg-white/10 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors"
-              >
-                <Upload className="w-5 h-5" />
-              </button>
-              <button 
-                type="button"
-                onClick={clearImage}
-                className="p-2 bg-red-500/20 backdrop-blur-md rounded-full hover:bg-red-500/40 transition-colors"
-              >
-                <X className="w-5 h-5 text-red-500" />
-              </button>
-            </div>
+            <img src={preview} alt="Preview" className={`w-full h-full object-cover transition-opacity ${uploading ? 'opacity-40' : 'opacity-100'}`} />
+            {!uploading && (
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button 
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 bg-white/10 backdrop-blur-md rounded-2xl hover:bg-white/20 transition-colors"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                <button 
+                  type="button"
+                  onClick={clearImage}
+                  className="p-3 bg-red-500/20 backdrop-blur-md rounded-2xl hover:bg-red-500/40 transition-colors"
+                >
+                  <X className="w-5 h-5 text-red-500" />
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <button
             type="button"
+            disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 text-white/20 hover:text-white/40 transition-colors"
+            className="flex flex-col items-center gap-4 text-white/20 hover:text-white/40 transition-all group-hover:scale-110"
           >
-            <Upload className="w-8 h-8" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Seleccionar Archivo</span>
+            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center">
+              <Upload className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <span className="text-xs font-bold uppercase tracking-widest block">Seleccionar Archivo</span>
+              <span className="text-[10px] opacity-50 uppercase tracking-widest mt-1 block">Soporta más de 80MB</span>
+            </div>
           </button>
         )}
 
         {uploading && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-            <Loader2 className="w-8 h-8 text-[#ff4e00] animate-spin" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white">Subiendo...</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="relative w-24 h-24">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle
+                  className="text-white/10 stroke-current"
+                  strokeWidth="8"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                ></circle>
+                <motion.circle
+                  className="text-[#ff4e00] stroke-current"
+                  strokeWidth="8"
+                  strokeDasharray={251.2}
+                  initial={{ strokeDashoffset: 251.2 }}
+                  animate={{ strokeDashoffset: 251.2 - (251.2 * progress) / 100 }}
+                  strokeLinecap="round"
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="transparent"
+                ></motion.circle>
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-sm font-bold">
+                {Math.round(progress)}%
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {uploading && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2"
+          >
+            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                className="h-full bg-[#ff4e00]"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <input 
         type="file" 
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/*"
+        accept={accept}
         className="hidden"
       />
       <Toast 
