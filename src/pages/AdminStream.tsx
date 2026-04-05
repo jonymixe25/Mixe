@@ -12,6 +12,7 @@ const AdminStream: React.FC = () => {
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('cultura');
   const [loading, setLoading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -304,6 +305,7 @@ const AdminStream: React.FC = () => {
         userName: user.displayName,
         title,
         description,
+        category,
         status: 'live',
         startedAt: serverTimestamp(),
         viewerCount: 0,
@@ -463,9 +465,9 @@ const AdminStream: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
         {/* Preview Area */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="xl:col-span-2 space-y-8">
           <div className="aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl shadow-[#ff4e00]/5 ring-1 ring-white/5">
             {activeStream || isPreviewing ? (
               <>
@@ -660,7 +662,7 @@ const AdminStream: React.FC = () => {
         <div className="space-y-8">
           {!activeStream ? (
             <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/10 shadow-2xl">
-              <div className="space-y-6">
+            <div className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40"><span>Título del Stream</span></label>
@@ -682,6 +684,19 @@ const AdminStream: React.FC = () => {
                   />
                 </div>
 
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1"><span>Categoría</span></label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all text-sm font-medium"
+                  >
+                    <option value="cultura">Cultura</option>
+                    <option value="musica">Música</option>
+                    <option value="tradicion">Tradición</option>
+                    <option value="noticias">Noticias</option>
+                  </select>
+                </div>
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1"><span>Descripción</span></label>
                   <textarea

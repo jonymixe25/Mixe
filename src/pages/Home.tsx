@@ -200,14 +200,14 @@ const Home: React.FC = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {news.map((article) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {news.map((article, index) => (
             <Link
               key={article.id}
               to="/news"
-              className="group glass rounded-[2.5rem] overflow-hidden glass-hover flex flex-col shadow-xl"
+              className={`group glass rounded-[2.5rem] overflow-hidden glass-hover flex flex-col shadow-xl ${index === 0 ? 'md:col-span-2 lg:col-span-2' : ''}`}
             >
-              <div className="aspect-[4/3] relative overflow-hidden">
+              <div className={`relative overflow-hidden ${index === 0 ? 'aspect-[21/9]' : 'aspect-[4/3]'}`}>
                 <img
                   src={article.imageUrl || `https://picsum.photos/seed/${article.id}/800/600`}
                   alt={article.title}
@@ -217,7 +217,7 @@ const Home: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent opacity-60" />
               </div>
               <div className="p-8 space-y-4">
-                <h3 className="text-xl font-display font-bold leading-tight group-hover:text-[#ff4e00] transition-colors duration-300 line-clamp-2">
+                <h3 className={`font-display font-bold leading-tight group-hover:text-[#ff4e00] transition-colors duration-300 ${index === 0 ? 'text-3xl' : 'text-xl'}`}>
                   {article.title}
                 </h3>
                 <p className="text-white/40 text-sm line-clamp-2 italic leading-relaxed">
