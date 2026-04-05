@@ -85,8 +85,8 @@ const Gallery: React.FC = () => {
             <ImageIcon className="w-6 h-6 text-[#ff4e00]" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight uppercase italic">Galería de Medios</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Tus archivos subidos</p>
+            <h1 className="text-3xl font-bold tracking-tight uppercase italic"><span>Galería de Medios</span></h1>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest"><span>Tus archivos subidos</span></p>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ const Gallery: React.FC = () => {
                     : 'bg-white/5 text-white/40 hover:bg-white/10'
                 }`}
               >
-                {f === 'all' ? 'Todo' : f}
+                <span>{f === 'all' ? 'Todo' : f}</span>
               </button>
             ))}
           </div>
@@ -112,7 +112,7 @@ const Gallery: React.FC = () => {
             className="bg-[#ff4e00] text-white px-6 py-2 rounded-2xl font-bold flex items-center gap-2 hover:bg-[#ff4e00]/90 transition-colors shadow-lg shadow-[#ff4e00]/20 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            Subir Archivo
+            <span>Subir Archivo</span>
           </button>
         </div>
       </div>
@@ -123,7 +123,7 @@ const Gallery: React.FC = () => {
         title="Subir Nuevo Archivo"
       >
         <div className="space-y-6">
-          <p className="text-white/60 text-sm italic">Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu galería personal. Soporta archivos de más de 80MB.</p>
+          <p className="text-white/60 text-sm italic"><span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu galería personal. Soporta archivos de más de 80MB.</span></p>
           <ImageUpload 
             onUploadComplete={() => setIsUploadModalOpen(false)}
             folder="gallery"
@@ -158,15 +158,15 @@ const Gallery: React.FC = () => {
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-6 flex flex-col justify-end gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs font-bold truncate">{item.fileName}</p>
+                    <p className="text-xs font-bold truncate"><span>{item.fileName}</span></p>
                     <div className="flex items-center gap-4 text-[10px] text-white/60 font-bold uppercase tracking-widest">
                       <span className="flex items-center gap-1">
                         <Folder className="w-3 h-3" />
-                        {item.folder}
+                        <span>{item.folder}</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Reciente'}
+                        <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Reciente'}</span>
                       </span>
                     </div>
                   </div>
@@ -179,7 +179,7 @@ const Gallery: React.FC = () => {
                       className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      Ver Original
+                      <span>Ver Original</span>
                     </a>
                     <button
                       onClick={() => confirmDelete(item.id)}
@@ -197,8 +197,8 @@ const Gallery: React.FC = () => {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-20 text-center space-y-4">
           <ImageIcon className="w-16 h-16 text-white/10 mx-auto" />
           <div className="space-y-2">
-            <h3 className="text-xl font-bold uppercase italic">No hay imágenes</h3>
-            <p className="text-white/40 text-sm italic">Las imágenes que subas en el perfil, noticias o transmisiones aparecerán aquí.</p>
+            <h3 className="text-xl font-bold uppercase italic"><span>No hay imágenes</span></h3>
+            <p className="text-white/40 text-sm italic"><span>Las imágenes que subas en el perfil, noticias o transmisiones aparecerán aquí.</span></p>
           </div>
         </div>
       )}
@@ -210,7 +210,7 @@ const Gallery: React.FC = () => {
         confirmText="Eliminar"
         confirmVariant="danger"
       >
-        <p className="text-white/60 italic">¿Estás seguro de que deseas eliminar esta imagen de tu galería? Esta acción no se puede deshacer.</p>
+        <p className="text-white/60 italic"><span>¿Estás seguro de que deseas eliminar esta imagen de tu galería? Esta acción no se puede deshacer.</span></p>
       </Modal>
 
       <Toast 

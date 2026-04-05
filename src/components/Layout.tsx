@@ -38,7 +38,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className="w-8 h-8 bg-[#ff4e00] rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform">
                   <Video className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold tracking-tighter uppercase italic">Voz Mixe Live</span>
+                <span className="text-xl font-bold tracking-tighter uppercase italic"><span>Voz Mixe Live</span></span>
               </Link>
             </div>
 
@@ -53,7 +53,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               ))}
               {user ? (
@@ -62,7 +62,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="flex items-center gap-2 text-sm font-medium text-white/60 hover:text-red-500 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
-                  Salir
+                  <span>Salir</span>
                 </button>
               ) : (
                 <button
@@ -70,7 +70,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="bg-[#ff4e00] px-4 py-2 rounded-full text-sm font-bold hover:bg-[#ff4e00]/90 transition-colors flex items-center gap-2"
                 >
                   <LogIn className="w-4 h-4" />
-                  Ingresar
+                  <span>Ingresar</span>
                 </button>
               )}
             </div>
@@ -107,7 +107,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               ))}
               {!user && (
@@ -116,7 +116,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-[#ff4e00] text-white font-bold"
                 >
                   <LogIn className="w-5 h-5" />
-                  Ingresar
+                  <span>Ingresar</span>
                 </button>
               )}
               {user && (
@@ -125,7 +125,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="w-full flex items-center gap-3 p-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors"
                 >
                   <LogOut className="w-5 h-5" />
-                  Salir
+                  <span>Salir</span>
                 </button>
               )}
             </motion.div>
@@ -149,7 +149,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       {/* Footer */}
       <footer className="border-top border-white/10 py-8 text-center text-white/40 text-xs">
-        <p>© 2026 Voz Mixe Live. La región de los jamás conquistados.</p>
+        <p><span>© 2026 Voz Mixe Live. La región de los jamás conquistados.</span></p>
       </footer>
     </div>
   );

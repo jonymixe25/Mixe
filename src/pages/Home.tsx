@@ -55,7 +55,7 @@ const Home: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="inline-block px-4 py-1.5 rounded-full bg-[#ff4e00]/20 border border-[#ff4e00]/30 text-[#ff4e00] text-[10px] font-bold uppercase tracking-[0.2em] mb-8"
           >
-            Cultura • Tradición • Comunidad
+            <span>Cultura • Tradición • Comunidad</span>
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
@@ -73,7 +73,7 @@ const Home: React.FC = () => {
             transition={{ delay: 0.4 }}
             className="text-lg sm:text-2xl text-white/70 font-medium italic max-w-2xl mx-auto leading-relaxed"
           >
-            "La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.
+            <span>"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.</span>
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -86,7 +86,7 @@ const Home: React.FC = () => {
               className="w-full sm:w-auto bg-white text-black px-10 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 shadow-xl shadow-white/5"
             >
               <Newspaper className="w-5 h-5" />
-              Explorar Noticias
+              <span>Explorar Noticias</span>
             </Link>
             {streams.length > 0 && (
               <Link 
@@ -94,7 +94,7 @@ const Home: React.FC = () => {
                 className="w-full sm:w-auto bg-white/10 backdrop-blur-md border border-white/20 text-white px-10 py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-white/20 transition-all transform hover:-translate-y-1 active:scale-95"
               >
                 <Radio className="w-5 h-5 text-[#ff4e00] animate-pulse" />
-                Ver Transmisión en Vivo
+                <span>Ver Transmisión en Vivo</span>
               </Link>
             )}
           </motion.div>
@@ -106,10 +106,10 @@ const Home: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Radio className="w-6 h-6 text-[#ff4e00] animate-pulse" />
-            <h2 className="text-2xl font-bold tracking-tight uppercase italic">En Vivo Ahora</h2>
+            <h2 className="text-2xl font-bold tracking-tight uppercase italic"><span>En Vivo Ahora</span></h2>
           </div>
           <span className="text-white/40 text-sm font-medium uppercase tracking-widest">
-            {streams.length} Transmisiones
+            <span>{streams.length} Transmisiones</span>
           </span>
         </div>
 
@@ -142,7 +142,7 @@ const Home: React.FC = () => {
                 <div className="absolute top-4 left-4">
                   <div className="bg-red-600 px-2 py-1 rounded-md flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
                     <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                    Live
+                    <span>Live</span>
                   </div>
                 </div>
 
@@ -169,9 +169,9 @@ const Home: React.FC = () => {
         ) : (
           <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
             <Video className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/40 font-medium italic">No hay transmisiones en vivo en este momento.</p>
+            <p className="text-white/40 font-medium italic"><span>No hay transmisiones en vivo en este momento.</span></p>
             <Link to="/admin" className="mt-4 inline-block text-[#ff4e00] font-bold hover:underline">
-              ¡Sé el primero en transmitir!
+              <span>¡Sé el primero en transmitir!</span>
             </Link>
           </div>
         )}
@@ -182,10 +182,10 @@ const Home: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Newspaper className="w-6 h-6 text-[#ff4e00]" />
-            <h2 className="text-2xl font-bold tracking-tight uppercase italic">Noticias Recientes</h2>
+            <h2 className="text-2xl font-bold tracking-tight uppercase italic"><span>Noticias Recientes</span></h2>
           </div>
           <Link to="/news" className="text-[#ff4e00] text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:underline">
-            Ver todas
+            <span>Ver todas</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -218,7 +218,7 @@ const Home: React.FC = () => {
           ))}
           {news.length === 0 && !loading && (
             <div className="col-span-full py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-              <p className="text-white/40 italic">No hay noticias recientes.</p>
+              <p className="text-white/40 italic"><span>No hay noticias recientes.</span></p>
             </div>
           )}
         </div>

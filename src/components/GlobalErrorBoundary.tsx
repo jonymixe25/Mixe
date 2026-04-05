@@ -34,7 +34,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
       const isQuotaError = (this.state.error as any)?.isQuotaError;
 
       return (
-        <div className="min-h-screen bg-[#0a0502] text-white flex items-center justify-center p-6">
+        <div translate="no" className="min-h-screen bg-[#0a0502] text-white flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-white/5 border border-white/10 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
             <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
               <AlertTriangle className="w-10 h-10 text-red-500" />
@@ -42,12 +42,12 @@ class GlobalErrorBoundary extends Component<Props, State> {
             
             <div className="space-y-2">
               <h1 className="text-2xl font-bold uppercase italic tracking-tight">
-                {isQuotaError ? 'Límite de Cuota Alcanzado' : 'Algo salió mal'}
+                <span>{isQuotaError ? 'Límite de Cuota Alcanzado' : 'Algo salió mal'}</span>
               </h1>
               <p className="text-white/60 italic leading-relaxed">
-                {isQuotaError 
+                <span>{isQuotaError 
                   ? 'Se ha alcanzado el límite diario de escritura en la base de datos gratuita. El servicio se restablecerá mañana.'
-                  : 'Ha ocurrido un error inesperado en la aplicación.'}
+                  : 'Ha ocurrido un error inesperado en la aplicación.'}</span>
               </p>
               {!isQuotaError && this.state.error && (
                 <div className="mt-4 p-4 bg-black/40 rounded-2xl text-left overflow-auto max-h-32">
@@ -63,11 +63,11 @@ class GlobalErrorBoundary extends Component<Props, State> {
               className="w-full bg-[#ff4e00] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-[#ff4e00]/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <RefreshCw className="w-5 h-5" />
-              Recargar Aplicación
+              <span>Recargar Aplicación</span>
             </button>
             
             <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
-              Voz Mixe • Soporte Técnico
+              <span>Voz Mixe • Soporte Técnico</span>
             </p>
           </div>
         </div>

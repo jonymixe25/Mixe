@@ -39,7 +39,7 @@ const News: React.FC = () => {
         <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
           <Newspaper className="w-6 h-6 text-[#ff4e00]" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight uppercase italic">Noticias y Cultura</h1>
+        <h1 className="text-3xl font-bold tracking-tight uppercase italic"><span>Noticias y Cultura</span></h1>
       </div>
 
       {loading ? (
@@ -72,11 +72,11 @@ const News: React.FC = () => {
                 <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/40 mb-3 lg:mb-4">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
-                    {article.createdAt?.seconds ? format(new Date(article.createdAt.seconds * 1000), 'dd MMM, yyyy', { locale: es }) : 'Reciente'}
+                    <span>{article.createdAt?.seconds ? format(new Date(article.createdAt.seconds * 1000), 'dd MMM, yyyy', { locale: es }) : 'Reciente'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <User className="w-3 h-3" />
-                    {article.authorName}
+                    <span>{article.authorName}</span>
                   </div>
                 </div>
 
@@ -93,7 +93,7 @@ const News: React.FC = () => {
                     onClick={() => setSelectedArticle(article)}
                     className="flex items-center gap-2 text-[#ff4e00] font-bold text-sm hover:gap-3 transition-all"
                   >
-                    Leer más
+                    <span>Leer más</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -104,7 +104,7 @@ const News: React.FC = () => {
       ) : (
         <div className="py-20 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
           <Newspaper className="w-12 h-12 text-white/20 mx-auto mb-4" />
-          <p className="text-white/40 font-medium italic">No hay noticias publicadas en este momento.</p>
+          <p className="text-white/40 font-medium italic"><span>No hay noticias publicadas en este momento.</span></p>
         </div>
       )}
 
@@ -153,11 +153,11 @@ const News: React.FC = () => {
                   <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-white/40">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-[#ff4e00]" />
-                      {selectedArticle.createdAt?.seconds ? format(new Date(selectedArticle.createdAt.seconds * 1000), 'dd MMMM, yyyy', { locale: es }) : 'Reciente'}
+                      <span>{selectedArticle.createdAt?.seconds ? format(new Date(selectedArticle.createdAt.seconds * 1000), 'dd MMMM, yyyy', { locale: es }) : 'Reciente'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-[#ff4e00]" />
-                      {selectedArticle.authorName}
+                      <span>{selectedArticle.authorName}</span>
                     </div>
                   </div>
 

@@ -307,7 +307,7 @@ const AdminStream: React.FC = () => {
         confirmText="Finalizar"
         confirmVariant="danger"
       >
-        <p className="text-white/60 italic">¿Estás seguro de que deseas terminar la transmisión en vivo? Esta acción no se puede deshacer.</p>
+        <p className="text-white/60 italic"><span>¿Estás seguro de que deseas terminar la transmisión en vivo? Esta acción no se puede deshacer.</span></p>
       </Modal>
 
       <div className="flex items-center justify-between">
@@ -315,16 +315,16 @@ const AdminStream: React.FC = () => {
           <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center">
             <Radio className={`w-6 h-6 ${activeStream ? 'text-red-500 animate-pulse' : 'text-[#ff4e00]'}`} />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight uppercase italic">Panel de Transmisión</h1>
+          <h1 className="text-3xl font-bold tracking-tight uppercase italic"><span>Panel de Transmisión</span></h1>
         </div>
         {activeStream && (
           <div className="flex items-center gap-4 bg-red-500/10 px-4 py-2 rounded-full border border-red-500/20">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-red-500 text-sm font-bold uppercase tracking-widest">En Vivo</span>
+            <span className="text-red-500 text-sm font-bold uppercase tracking-widest"><span>En Vivo</span></span>
             <div className="h-4 w-px bg-red-500/20" />
             <div className="flex items-center gap-2 text-red-500/60 text-xs font-bold">
               <Users className="w-3 h-3" />
-              {activeStream.viewerCount}
+              <span>{activeStream.viewerCount}</span>
             </div>
           </div>
         )}
@@ -345,14 +345,14 @@ const AdminStream: React.FC = () => {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                 <Video className="w-16 h-16 mb-4" />
-                <p className="font-medium italic">La cámara está apagada</p>
+                <p className="font-medium italic"><span>La cámara está apagada</span></p>
               </div>
             )}
             
             <div className="absolute top-6 left-6 flex gap-2">
               <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">REC</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest"><span>REC</span></span>
               </div>
             </div>
           </div>
@@ -360,8 +360,8 @@ const AdminStream: React.FC = () => {
           {activeStream ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
-                <h2 className="text-xl font-bold mb-2">{activeStream.title}</h2>
-                <p className="text-white/60 text-sm italic">{activeStream.description || 'Sin descripción'}</p>
+                <h2 className="text-xl font-bold mb-2"><span>{activeStream.title}</span></h2>
+                <p className="text-white/60 text-sm italic"><span>{activeStream.description || 'Sin descripción'}</span></p>
               </div>
               
               {/* Real-time Chat */}
@@ -369,22 +369,22 @@ const AdminStream: React.FC = () => {
                 <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
-                    Chat en Vivo
+                    <span>Chat en Vivo</span>
                   </h3>
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest">En vivo</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest"><span>En vivo</span></span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
                   {chatMessages.map(msg => (
                     <div key={msg.id} className="text-xs">
                       <span className={`font-bold mr-2 ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
-                        {msg.userName}:
+                        <span>{msg.userName}:</span>
                       </span>
                       {msg.imageUrl ? (
                         <div className="mt-1 rounded-lg overflow-hidden border border-white/10 max-w-[150px]">
                           <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
                         </div>
                       ) : (
-                        <span className="text-white/80 italic">{msg.text}</span>
+                        <span className="text-white/80 italic"><span>{msg.text}</span></span>
                       )}
                     </div>
                   ))}
@@ -433,8 +433,8 @@ const AdminStream: React.FC = () => {
             <div className="bg-gradient-to-br from-[#ff4e00]/5 to-transparent border border-white/10 rounded-3xl p-8 text-center space-y-4">
               <Radio className="w-12 h-12 text-[#ff4e00]/20 mx-auto" />
               <div className="space-y-2">
-                <h3 className="text-lg font-bold uppercase italic tracking-tight">Listo para transmitir</h3>
-                <p className="text-sm text-white/40 italic">Configura los detalles a la derecha para comenzar tu transmisión en vivo.</p>
+                <h3 className="text-lg font-bold uppercase italic tracking-tight"><span>Listo para transmitir</span></h3>
+                <p className="text-sm text-white/40 italic"><span>Configura los detalles a la derecha para comenzar tu transmisión en vivo.</span></p>
               </div>
             </div>
           )}
@@ -447,14 +447,14 @@ const AdminStream: React.FC = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/40">Miniatura del Stream</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Miniatura del Stream</span></label>
                     <button
                       onClick={handleGenerateThumbnail}
                       disabled={generatingImg}
                       className="text-[#ff4e00] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:underline disabled:opacity-50"
                     >
                       {generatingImg ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                      {generatingImg ? 'Generando...' : 'Generar con IA'}
+                      <span>{generatingImg ? 'Generando...' : 'Generar con IA'}</span>
                     </button>
                   </div>
                   <ImageUpload
@@ -467,14 +467,14 @@ const AdminStream: React.FC = () => {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/40">Título del Stream</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Título del Stream</span></label>
                     <button
                       onClick={suggestTitle}
                       disabled={suggesting}
                       className="text-[#ff4e00] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:underline disabled:opacity-50"
                     >
                       <Sparkles className="w-3 h-3" />
-                      Sugerir
+                      <span>Sugerir</span>
                     </button>
                   </div>
                   <input
@@ -487,7 +487,7 @@ const AdminStream: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-white/40">Descripción</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Descripción</span></label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -507,7 +507,7 @@ const AdminStream: React.FC = () => {
                 ) : (
                   <>
                     <Play className="w-5 h-5 fill-current" />
-                    Iniciar Transmisión
+                    <span>Iniciar Transmisión</span>
                   </>
                 )}
               </button>
@@ -515,8 +515,8 @@ const AdminStream: React.FC = () => {
           ) : (
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-6">
               <div className="text-center space-y-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-white/40">Tiempo Transcurrido</p>
-                <p className="text-3xl font-mono font-bold tracking-tighter">00:42:15</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Tiempo Transcurrido</span></p>
+                <p className="text-3xl font-mono font-bold tracking-tighter"><span>00:42:15</span></p>
               </div>
 
               <div className="h-px bg-white/10" />
@@ -531,7 +531,7 @@ const AdminStream: React.FC = () => {
                 ) : (
                   <>
                     <StopCircle className="w-5 h-5" />
-                    Finalizar Stream
+                    <span>Finalizar Stream</span>
                   </>
                 )}
               </button>
@@ -542,10 +542,10 @@ const AdminStream: React.FC = () => {
           <div className="bg-gradient-to-br from-[#ff4e00]/20 to-transparent border border-[#ff4e00]/20 rounded-3xl p-6">
             <h3 className="text-sm font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#ff4e00]" />
-              Consejo Pro
+              <span>Consejo Pro</span>
             </h3>
             <p className="text-xs text-white/60 leading-relaxed italic">
-              "Asegúrate de tener buena iluminación y una conexión estable para que tu audiencia disfrute de la cultura Mixe sin interrupciones."
+              <span>"Asegúrate de tener buena iluminación y una conexión estable para que tu audiencia disfrute de la cultura Mixe sin interrupciones."</span>
             </p>
           </div>
         </div>

@@ -365,11 +365,11 @@ const StreamView: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="bg-red-600 px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Live
+                <span>Live</span>
               </div>
               <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold">
                 <Users className="w-4 h-4" />
-                {stream.viewerCount}
+                <span>{stream.viewerCount}</span>
               </div>
             </div>
             <button
@@ -410,7 +410,7 @@ const StreamView: React.FC = () => {
                   </div>
 
                   <div className="text-xs font-bold tracking-widest text-white/60">
-                    00:42:15 / LIVE
+                    <span>00:42:15 / LIVE</span>
                   </div>
                 </div>
 
@@ -429,8 +429,8 @@ const StreamView: React.FC = () => {
           {/* Stream Info Overlay (Always visible when controls are hidden) */}
           <div className={`absolute bottom-6 left-6 transition-opacity duration-300 ${!showControls ? 'opacity-100' : 'opacity-0'}`}>
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight drop-shadow-lg">{stream.title}</h1>
-              <p className="text-xs font-bold text-white/60 uppercase tracking-widest">{stream.userName}</p>
+              <h1 className="text-2xl font-bold tracking-tight drop-shadow-lg"><span>{stream.title}</span></h1>
+              <p className="text-xs font-bold text-white/60 uppercase tracking-widest"><span>{stream.userName}</span></p>
             </div>
           </div>
         </div>
@@ -445,8 +445,8 @@ const StreamView: React.FC = () => {
               />
             </div>
             <div>
-              <h2 className="font-bold text-lg">{stream.userName}</h2>
-              <p className="text-xs text-white/40 font-bold uppercase tracking-widest">Streamer Mixe</p>
+              <h2 className="font-bold text-lg"><span>{stream.userName}</span></h2>
+              <p className="text-xs text-white/40 font-bold uppercase tracking-widest"><span>Streamer Mixe</span></p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -458,8 +458,8 @@ const StreamView: React.FC = () => {
             >
               <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
               <span className="flex items-center gap-1">
-                {isLiked ? '¡Me gusta!' : 'Me gusta'}
-                <span className="opacity-50 text-xs">({stream.likes || 0})</span>
+                <span>{isLiked ? '¡Me gusta!' : 'Me gusta'}</span>
+                <span className="opacity-50 text-xs"><span>({stream.likes || 0})</span></span>
               </span>
             </button>
             <button 
@@ -472,9 +472,9 @@ const StreamView: React.FC = () => {
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-4">Descripción</h2>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-white/40 mb-4"><span>Descripción</span></h2>
           <p className="text-white/80 leading-relaxed italic">
-            {stream.description || 'El streamer no ha proporcionado una descripción para esta transmisión.'}
+            <span>{stream.description || 'El streamer no ha proporcionado una descripción para esta transmisión.'}</span>
           </p>
         </div>
       </div>
@@ -485,7 +485,7 @@ const StreamView: React.FC = () => {
           <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
               <MessageSquare className="w-4 h-4" />
-              Chat en Vivo
+              <span>Chat en Vivo</span>
             </h3>
             <button onClick={() => speak('Bienvenidos al chat')} className="text-white/20 hover:text-[#ff4e00]">
               <Volume2 className="w-4 h-4" />
@@ -494,7 +494,7 @@ const StreamView: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
             <div className="text-center py-4">
-              <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">Comienzo del chat</p>
+              <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold"><span>Comienzo del chat</span></p>
             </div>
             <AnimatePresence initial={false}>
               {chat.map((msg) => (
@@ -506,7 +506,7 @@ const StreamView: React.FC = () => {
                   className="space-y-1"
                 >
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
-                    {msg.userName}
+                    <span>{msg.userName}</span>
                   </span>
                   {msg.imageUrl ? (
                     <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px]">
@@ -514,7 +514,7 @@ const StreamView: React.FC = () => {
                     </div>
                   ) : (
                     <p className={`text-sm p-3 rounded-2xl rounded-tl-none border ${msg.userId === user?.uid ? 'bg-emerald-500/10 text-emerald-50 border-emerald-500/20' : 'bg-white/5 text-white/80 border-white/5'}`}>
-                      {msg.text}
+                      <span>{msg.text}</span>
                     </p>
                   )}
                 </motion.div>
