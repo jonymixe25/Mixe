@@ -100,7 +100,7 @@ service cloud.firestore {
 
     function isValidStream(data) {
       return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount', 'likes']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'thumbnailUrl']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes']) &&
              data.userId is string &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
@@ -108,8 +108,7 @@ service cloud.firestore {
              data.startedAt is timestamp &&
              data.viewerCount is number && data.viewerCount >= 0 &&
              data.likes is number && data.likes >= 0 &&
-             isValidOptionalString('description', 2000) &&
-             isValidOptionalString('thumbnailUrl', 2000);
+             isValidOptionalString('description', 2000);
     }
 
     function isValidContact(data) {
@@ -163,6 +162,15 @@ service cloud.firestore {
              isValidOptionalString('imageUrl', 2000);
     }
 
+    function isValidCall(data) {
+      return hasRequiredFields(['callerId', 'receiverId', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['callerId', 'receiverId', 'status', 'offer', 'answer', 'createdAt']) &&
+             data.callerId is string &&
+             data.receiverId is string &&
+             data.status in ['calling', 'connected', 'ended'] &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -173,6 +181,24 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
         allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidPrivateMessage(request.resource.data);
+      }
+    }
+
+    match /calls/{chatId} {
+      // chatId is formatted as uid1_uid2
+      allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+      allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
+      allow update: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
+      allow delete: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+
+      match /callerCandidates/{candidateId} {
+        allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+        allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+      }
+
+      match /receiverCandidates/{candidateId} {
+        allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+        allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
       }
     }
 

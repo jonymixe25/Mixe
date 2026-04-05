@@ -127,16 +127,7 @@ const Home: React.FC = () => {
                 to={`/stream/${stream.id}`}
                 className="group relative aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10 hover:border-[#ff4e00]/50 transition-all flex flex-col items-center justify-center"
               >
-                {stream.thumbnailUrl ? (
-                  <img 
-                    src={stream.thumbnailUrl} 
-                    alt={stream.title} 
-                    className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#ff4e00]/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity" />
-                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#ff4e00]/10 to-transparent opacity-40 group-hover:opacity-60 transition-opacity" />
                 <Video className="w-12 h-12 text-white/10 group-hover:text-[#ff4e00]/20 transition-colors relative z-10" />
                 
                 <div className="absolute top-4 left-4">

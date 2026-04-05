@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -36,8 +36,15 @@ const StreamView: React.FC = () => {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [isCameraPreviewActive, setIsCameraPreviewActive] = useState(false);
+  const [localPreviewStream, setLocalPreviewStream] = useState<MediaStream | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const localPreviewVideoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
@@ -191,6 +198,9 @@ const StreamView: React.FC = () => {
       cleanupWebRTC.then(cleanup => cleanup?.());
       if (guestStream) {
         guestStream.getTracks().forEach(track => track.stop());
+      }
+      if (localPreviewStream) {
+        localPreviewStream.getTracks().forEach(track => track.stop());
       }
     };
   }, [id, navigate]);
@@ -413,6 +423,12 @@ const StreamView: React.FC = () => {
     });
   };
 
+  const shareToLinkedIn = () => {
+    const url = window.location.href;
+    const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    window.open(shareUrl, '_blank');
+  };
+
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -448,6 +464,80 @@ const StreamView: React.FC = () => {
         videoRef.current.parentElement?.requestFullscreen();
       }
     }
+  };
+
+  const togglePiP = async () => {
+    try {
+      if (videoRef.current) {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await videoRef.current.requestPictureInPicture();
+        }
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const handlePlaybackRateChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = rate;
+    }
+    setShowSpeedMenu(false);
+  };
+
+  const toggleCameraPreview = async () => {
+    if (isCameraPreviewActive) {
+      if (localPreviewStream) {
+        localPreviewStream.getTracks().forEach(track => track.stop());
+      }
+      setLocalPreviewStream(null);
+      setIsCameraPreviewActive(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        setLocalPreviewStream(stream);
+        setIsCameraPreviewActive(true);
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+        setToast({ message: 'No se pudo acceder a la cámara', type: 'error', isVisible: true });
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isCameraPreviewActive && localPreviewVideoRef.current && localPreviewStream) {
+      localPreviewVideoRef.current.srcObject = localPreviewStream;
+    }
+  }, [isCameraPreviewActive, localPreviewStream]);
+
+  const formatTime = (time: number) => {
+    if (isNaN(time) || time === Infinity) return 'LIVE';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const handleMouseMove = () => {
@@ -492,12 +582,28 @@ const StreamView: React.FC = () => {
           {/* Real-time WebRTC Video Element */}
           <video
             ref={videoRef}
-            poster={stream.thumbnailUrl}
             className="w-full h-full object-cover"
             autoPlay
             muted={isMuted}
             playsInline
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
           />
+
+          {isCameraPreviewActive && localPreviewStream && (
+            <div className="absolute top-24 right-6 w-1/5 aspect-video bg-black rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-2xl z-30">
+              <video
+                ref={localPreviewVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+              <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest text-emerald-400">
+                <span>Mi Cámara</span>
+              </div>
+            </div>
+          )}
 
           {guestStream && (
             <div className="absolute bottom-24 right-6 w-1/4 aspect-video bg-black rounded-2xl overflow-hidden border-2 border-[#ff4e00] shadow-2xl z-30">
@@ -577,9 +683,22 @@ const StreamView: React.FC = () => {
           {/* Overlay UI - Bottom Controls */}
           <div className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
             <div className="flex flex-col gap-4">
-              {/* Progress Bar (Simulated for Live) */}
-              <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full w-full bg-[#ff4e00] animate-pulse" />
+              {/* Seek Bar */}
+              <div className="relative group/seekbar h-6 flex items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 100}
+                  step="0.1"
+                  value={currentTime}
+                  onChange={handleSeek}
+                  className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#ff4e00] group-hover/seekbar:h-2 transition-all"
+                />
+                {/* Progress highlight */}
+                <div 
+                  className="absolute left-0 h-1 bg-[#ff4e00] rounded-full pointer-events-none group-hover/seekbar:h-2 transition-all"
+                  style={{ width: `${(currentTime / (duration || 100)) * 100}%` }}
+                />
               </div>
 
               <div className="flex items-center justify-between">
@@ -603,12 +722,60 @@ const StreamView: React.FC = () => {
                     />
                   </div>
 
-                  <div className="text-xs font-bold tracking-widest text-white/60">
-                    <span>00:42:15 / LIVE</span>
+                  <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-white/60">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-6">
+                  <button 
+                    onClick={toggleCameraPreview}
+                    className={`p-2 rounded-xl transition-all ${isCameraPreviewActive ? 'bg-emerald-500 text-white' : 'text-white hover:text-[#ff4e00]'}`}
+                    title="Mostrar mi cámara"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                      className="text-white hover:text-[#ff4e00] transition-colors flex items-center gap-1 text-xs font-bold"
+                    >
+                      <Gauge className="w-5 h-5" />
+                      <span>{playbackRate}x</span>
+                    </button>
+                    
+                    <AnimatePresence>
+                      {showSpeedMenu && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute bottom-full right-0 mb-4 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 min-w-[100px] z-50"
+                        >
+                          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                            <button
+                              key={rate}
+                              onClick={() => handlePlaybackRateChange(rate)}
+                              className={`w-full text-left px-4 py-2 rounded-xl text-xs font-bold transition-colors ${playbackRate === rate ? 'bg-[#ff4e00] text-white' : 'text-white/60 hover:bg-white/10'}`}
+                            >
+                              {rate}x
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button 
+                    onClick={togglePiP}
+                    className="text-white hover:text-[#ff4e00] transition-colors"
+                    title="Picture in Picture"
+                  >
+                    <PictureInPicture2 className="w-5 h-5" />
+                  </button>
+
                   <button className="text-white hover:text-[#ff4e00] transition-colors">
                     <Settings className="w-5 h-5" />
                   </button>
@@ -659,8 +826,16 @@ const StreamView: React.FC = () => {
             <button 
               onClick={handleShare}
               className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+              title="Copiar enlace"
             >
               <Share2 className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={shareToLinkedIn}
+              className="p-3 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-[#0077b5] hover:border-[#0077b5] transition-all"
+              title="Compartir en LinkedIn"
+            >
+              <Linkedin className="w-5 h-5" />
             </button>
           </div>
         </div>

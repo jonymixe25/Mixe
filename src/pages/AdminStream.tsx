@@ -5,19 +5,15 @@ import { StreamSession, OperationType, ChatMessage } from '../types';
 import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
-import { generateMixeThumbnail } from '../services/imageService';
 import Modal from '../components/Modal';
-import ImageUpload from '../components/ImageUpload';
 
 const AdminStream: React.FC = () => {
   const { user } = useAuth();
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
-  const [generatingImg, setGeneratingImg] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -274,7 +270,6 @@ const AdminStream: React.FC = () => {
         userName: user.displayName,
         title,
         description,
-        thumbnailUrl: thumbnailUrl || `https://picsum.photos/seed/${Date.now()}/1280/720`,
         status: 'live',
         startedAt: serverTimestamp(),
         viewerCount: 0,
@@ -286,15 +281,6 @@ const AdminStream: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGenerateThumbnail = async () => {
-    setGeneratingImg(true);
-    const url = await generateMixeThumbnail();
-    if (url) {
-      setThumbnailUrl(url);
-    }
-    setGeneratingImg(false);
   };
 
   const handleEndStream = async () => {
@@ -584,26 +570,6 @@ const AdminStream: React.FC = () => {
           {!activeStream ? (
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-6">
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Miniatura del Stream</span></label>
-                    <button
-                      onClick={handleGenerateThumbnail}
-                      disabled={generatingImg}
-                      className="text-[#ff4e00] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 hover:underline disabled:opacity-50"
-                    >
-                      {generatingImg ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
-                      <span>{generatingImg ? 'Generando...' : 'Generar con IA'}</span>
-                    </button>
-                  </div>
-                  <ImageUpload
-                    onUploadComplete={(url) => setThumbnailUrl(url)}
-                    currentImageUrl={thumbnailUrl || ''}
-                    label=""
-                    folder="thumbnails"
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-widest text-white/40"><span>Título del Stream</span></label>

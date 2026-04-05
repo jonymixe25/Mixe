@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc, deleteDoc, handleFirestoreError, limit } from '../firebase';
 import { Contact, UserProfile, OperationType } from '../types';
-import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle } from 'lucide-react';
+import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import Toast from '../components/Toast';
@@ -221,12 +221,21 @@ const Contacts: React.FC = () => {
                     <button 
                       onClick={() => navigate(`/chat/${contact.contactId}`)}
                       className="p-2 bg-white/5 rounded-xl hover:text-[#ff4e00] transition-colors"
+                      title="Chat"
                     >
                       <MessageCircle className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/chat/${contact.contactId}?startCall=true`)}
+                      className="p-2 bg-white/5 rounded-xl hover:text-[#ff4e00] transition-colors"
+                      title="Video Llamada"
+                    >
+                      <Video className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => removeContact(contact.contactId)}
                       className="p-2 bg-white/5 rounded-xl hover:text-red-500 transition-colors"
+                      title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

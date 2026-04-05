@@ -112,6 +112,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "status", "createdAt"]
+    },
+    "Call": {
+      "title": "Video Call Signaling",
+      "description": "Signaling data for a video call",
+      "type": "object",
+      "properties": {
+        "callerId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["calling", "connected", "ended"] },
+        "offer": { "type": "object" },
+        "answer": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callerId", "receiverId", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -150,6 +164,18 @@
     "/streams/{streamId}/guestSignaling/{guestId}": {
       "schema": "object",
       "description": "WebRTC signaling for guest streams"
+    },
+    "/calls/{chatId}": {
+      "schema": "Call",
+      "description": "Video call signaling documents"
+    },
+    "/calls/{chatId}/callerCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the caller"
+    },
+    "/calls/{chatId}/receiverCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the receiver"
     }
   }
 }
