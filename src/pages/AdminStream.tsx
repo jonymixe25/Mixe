@@ -14,6 +14,7 @@ const AdminStream: React.FC = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -100,7 +101,7 @@ const AdminStream: React.FC = () => {
   useEffect(() => {
     let unsubscribeSignaling: (() => void) | null = null;
 
-    if (activeStream && videoRef.current) {
+    if ((activeStream || isPreviewing) && videoRef.current) {
       navigator.mediaDevices.getUserMedia({ 
         video: { facingMode }, 
         audio: true 
@@ -110,24 +111,27 @@ const AdminStream: React.FC = () => {
           if (videoRef.current) videoRef.current.srcObject = stream;
           setCameraError(null);
           
-          // Listen for new viewers
-          const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
-          unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
-            snapshot.docChanges().forEach(async (change) => {
-              if (change.type === 'added') {
-                const viewerId = change.doc.id;
-                if (!peerConnections.current[viewerId]) {
-                  await createPeerConnection(activeStream.id, viewerId);
+          if (activeStream) {
+            // Listen for new viewers
+            const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
+            unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
+              snapshot.docChanges().forEach(async (change) => {
+                if (change.type === 'added') {
+                  const viewerId = change.doc.id;
+                  if (!peerConnections.current[viewerId]) {
+                    await createPeerConnection(activeStream.id, viewerId);
+                  }
                 }
-              }
+              });
+            }, (error) => {
+              console.error('Signaling error:', error);
             });
-          }, (error) => {
-            console.error('Signaling error:', error);
-          });
+          }
         })
         .catch(err => {
           console.error("Error accessing camera:", err);
           setCameraError(err.message || 'No se pudo acceder a la cámara');
+          setIsPreviewing(false);
         });
     }
 
@@ -141,7 +145,7 @@ const AdminStream: React.FC = () => {
       Object.values(peerConnections.current).forEach(pc => pc.close());
       peerConnections.current = {};
     };
-  }, [activeStream]);
+  }, [activeStream, isPreviewing, facingMode]);
 
   const createPeerConnection = async (streamId: string, viewerId: string) => {
     const pc = new RTCPeerConnection({
@@ -276,6 +280,7 @@ const AdminStream: React.FC = () => {
         likes: 0,
       };
       await addDoc(collection(db, 'streams'), streamData);
+      setIsPreviewing(false); // Camera will be handled by activeStream effect
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'streams');
     } finally {
@@ -294,11 +299,12 @@ const AdminStream: React.FC = () => {
       });
       
       // Stop camera
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+      if (localStream.current) {
+        localStream.current.getTracks().forEach(track => track.stop());
+        localStream.current = null;
       }
+      if (videoRef.current) videoRef.current.srcObject = null;
+      setIsPreviewing(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `streams/${activeStream.id}`);
     } finally {
@@ -420,7 +426,7 @@ const AdminStream: React.FC = () => {
         {/* Preview Area */}
         <div className="lg:col-span-2 space-y-6">
           <div className="aspect-video bg-black rounded-3xl overflow-hidden border border-white/10 relative group shadow-2xl shadow-[#ff4e00]/5">
-            {activeStream ? (
+            {activeStream || isPreviewing ? (
               <>
                 <video
                   ref={videoRef}
@@ -448,9 +454,19 @@ const AdminStream: React.FC = () => {
                   <button 
                     onClick={toggleCamera}
                     className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 hover:bg-white/10 transition-all group"
+                    title="Cambiar Cámara"
                   >
                     <Sparkles className="w-5 h-5 text-white/60 group-hover:text-[#ff4e00]" />
                   </button>
+                  {!activeStream && (
+                    <button 
+                      onClick={() => setIsPreviewing(false)}
+                      className="bg-red-500/80 backdrop-blur-md p-3 rounded-2xl border border-white/10 hover:bg-red-500 transition-all group"
+                      title="Apagar Cámara"
+                    >
+                      <StopCircle className="w-5 h-5 text-white" />
+                    </button>
+                  )}
                 </div>
 
                 {cameraError && (
@@ -459,7 +475,10 @@ const AdminStream: React.FC = () => {
                     <p className="text-red-500 font-bold mb-2"><span>Error de Cámara</span></p>
                     <p className="text-white/60 text-xs italic"><span>{cameraError}</span></p>
                     <button 
-                      onClick={() => window.location.reload()}
+                      onClick={() => {
+                        setCameraError(null);
+                        setIsPreviewing(true);
+                      }}
                       className="mt-4 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
                     >
                       <span>Reintentar</span>
@@ -470,16 +489,26 @@ const AdminStream: React.FC = () => {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                 <Video className="w-16 h-16 mb-4" />
-                <p className="font-medium italic"><span>La cámara está apagada</span></p>
+                <p className="font-medium italic mb-4"><span>La cámara está apagada</span></p>
+                <button 
+                  onClick={() => setIsPreviewing(true)}
+                  className="bg-[#ff4e00] text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-[#ff4e00]/90 transition-colors"
+                >
+                  <span>Encender Cámara</span>
+                </button>
               </div>
             )}
             
-            <div className="absolute top-6 left-6 flex gap-2">
-              <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-widest"><span>REC</span></span>
+            {(activeStream || isPreviewing) && (
+              <div className="absolute top-6 left-6 flex gap-2">
+                <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${activeStream ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                    <span>{activeStream ? 'REC' : 'VISTA PREVIA'}</span>
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {activeStream ? (
