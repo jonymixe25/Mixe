@@ -34,6 +34,8 @@ const AdminStream: React.FC = () => {
   
   // WebRTC Broadcaster State
   const peerConnections = useRef<{ [viewerId: string]: RTCPeerConnection }>({});
+  const signalingUnsubscribes = useRef<{ [viewerId: string]: (() => void)[] }>({});
+  const guestSignalingUnsubscribes = useRef<(() => void)[]>([]);
   const localStream = useRef<MediaStream | null>(null);
 
   useEffect(() => {
@@ -141,9 +143,15 @@ const AdminStream: React.FC = () => {
         localStream.current.getTracks().forEach(track => track.stop());
         localStream.current = null;
       }
-      // Close all peer connections
+      // Close all peer connections and signaling
       Object.values(peerConnections.current).forEach(pc => pc.close());
       peerConnections.current = {};
+      
+      Object.values(signalingUnsubscribes.current).forEach(unsubs => unsubs.forEach(unsub => unsub()));
+      signalingUnsubscribes.current = {};
+
+      guestSignalingUnsubscribes.current.forEach(unsub => unsub());
+      guestSignalingUnsubscribes.current = [];
     };
   }, [activeStream, isPreviewing, facingMode]);
 
@@ -179,6 +187,8 @@ const AdminStream: React.FC = () => {
       status: 'offered'
     });
 
+    const unsubs: (() => void)[] = [];
+
     // Listen for answer
     const unsubscribeAnswer = onSnapshot(viewerRef, async (snapshot) => {
       const data = snapshot.data();
@@ -186,7 +196,10 @@ const AdminStream: React.FC = () => {
         const answer = new RTCSessionDescription(data.answer);
         await pc.setRemoteDescription(answer);
       }
+    }, (error) => {
+      console.error('Answer signaling error:', error);
     });
+    unsubs.push(unsubscribeAnswer);
 
     // Listen for viewer ICE candidates
     const viewerCandidatesRef = collection(db, 'streams', streamId, 'signaling', viewerId, 'viewerCandidates');
@@ -196,12 +209,12 @@ const AdminStream: React.FC = () => {
           pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
         }
       });
+    }, (error) => {
+      console.error('ICE signaling error:', error);
     });
+    unsubs.push(unsubscribeIce);
 
-    return () => {
-      unsubscribeAnswer();
-      unsubscribeIce();
-    };
+    signalingUnsubscribes.current[viewerId] = unsubs;
   };
 
   const toggleCamera = () => {
@@ -236,7 +249,7 @@ const AdminStream: React.FC = () => {
     // Signaling for guest stream (Admin is the receiver here)
     const guestSignalingRef = doc(db, 'streams', streamId, 'guestSignaling', guestId);
     
-    onSnapshot(guestSignalingRef, async (snapshot) => {
+    const unsubOffer = onSnapshot(guestSignalingRef, async (snapshot) => {
       const data = snapshot.data();
       if (data?.offer && pc.signalingState === 'stable') {
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
@@ -246,16 +259,22 @@ const AdminStream: React.FC = () => {
           answer: { type: answer.type, sdp: answer.sdp }
         });
       }
+    }, (error) => {
+      console.error('Guest offer signaling error:', error);
     });
+    guestSignalingUnsubscribes.current.push(unsubOffer);
 
     const guestCandidatesRef = collection(db, 'streams', streamId, 'guestSignaling', guestId, 'guestCandidates');
-    onSnapshot(guestCandidatesRef, (snapshot) => {
+    const unsubIce = onSnapshot(guestCandidatesRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
         }
       });
+    }, (error) => {
+      console.error('Guest ICE signaling error:', error);
     });
+    guestSignalingUnsubscribes.current.push(unsubIce);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {

@@ -35,6 +35,7 @@ const Chat: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
+  const signalingUnsubscribes = useRef<(() => void)[]>([]);
 
   // Generate a consistent chatId for two users
   const getChatId = (uid1: string, uid2: string) => {
@@ -111,9 +112,22 @@ const Chat: React.FC = () => {
           endCall(false);
         }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `calls/${chatId}`);
     });
 
-    return () => unsubscribeCall();
+    return () => {
+      unsubscribeCall();
+      signalingUnsubscribes.current.forEach(unsub => unsub());
+      signalingUnsubscribes.current = [];
+      if (peerConnection.current) {
+        peerConnection.current.close();
+        peerConnection.current = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [user, contactId]);
 
   const startCall = async () => {
@@ -159,23 +173,29 @@ const Chat: React.FC = () => {
       });
 
       // Listen for answer
-      onSnapshot(doc(db, 'calls', chatId), async (snapshot) => {
+      const unsubAnswer = onSnapshot(doc(db, 'calls', chatId), async (snapshot) => {
         const data = snapshot.data();
         if (data?.answer && !pc.currentRemoteDescription) {
           const answerDescription = new RTCSessionDescription(data.answer);
           await pc.setRemoteDescription(answerDescription);
         }
+      }, (error) => {
+        console.error('Answer signaling error:', error);
       });
+      signalingUnsubscribes.current.push(unsubAnswer);
 
       // Listen for receiver candidates
-      onSnapshot(collection(db, 'calls', chatId, 'receiverCandidates'), (snapshot) => {
+      const unsubIce = onSnapshot(collection(db, 'calls', chatId, 'receiverCandidates'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const candidate = new RTCIceCandidate(change.doc.data());
             pc.addIceCandidate(candidate);
           }
         });
+      }, (error) => {
+        console.error('ICE signaling error:', error);
       });
+      signalingUnsubscribes.current.push(unsubIce);
 
     } catch (error) {
       console.error('Error starting call:', error);
@@ -227,14 +247,17 @@ const Chat: React.FC = () => {
       }
 
       // Listen for caller candidates
-      onSnapshot(collection(db, 'calls', chatId, 'callerCandidates'), (snapshot) => {
+      const unsubIce = onSnapshot(collection(db, 'calls', chatId, 'callerCandidates'), (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             const candidate = new RTCIceCandidate(change.doc.data());
             pc.addIceCandidate(candidate);
           }
         });
+      }, (error) => {
+        console.error('ICE signaling error:', error);
       });
+      signalingUnsubscribes.current.push(unsubIce);
 
     } catch (error) {
       console.error('Error answering call:', error);
@@ -245,8 +268,15 @@ const Chat: React.FC = () => {
   const endCall = async (notify = true) => {
     if (notify && user && contactId) {
       const chatId = getChatId(user.uid, contactId);
-      await updateDoc(doc(db, 'calls', chatId), { status: 'ended' });
+      try {
+        await updateDoc(doc(db, 'calls', chatId), { status: 'ended' });
+      } catch (error) {
+        console.error('Error updating call status:', error);
+      }
     }
+
+    signalingUnsubscribes.current.forEach(unsub => unsub());
+    signalingUnsubscribes.current = [];
 
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());

@@ -50,6 +50,8 @@ const StreamView: React.FC = () => {
   
   // WebRTC Viewer State
   const pc = useRef<RTCPeerConnection | null>(null);
+  const guestPc = useRef<RTCPeerConnection | null>(null);
+  const signalingUnsubscribes = useRef<(() => void)[]>([]);
   const signalingId = user?.uid || Math.random().toString(36).substring(7);
 
   useEffect(() => {
@@ -154,7 +156,7 @@ const StreamView: React.FC = () => {
       });
 
       // Listen for offer
-      const unsubscribeOffer = onSnapshot(viewerRef, async (snapshot) => {
+      const unsubOffer = onSnapshot(viewerRef, async (snapshot) => {
         const data = snapshot.data();
         if (data?.offer && peerConnection.signalingState === 'stable') {
           const offer = new RTCSessionDescription(data.offer);
@@ -169,21 +171,25 @@ const StreamView: React.FC = () => {
             status: 'answered'
           });
         }
+      }, (error) => {
+        console.error('Offer signaling error:', error);
       });
 
       // Listen for admin ICE candidates
       const adminCandidatesRef = collection(db, 'streams', id, 'signaling', signalingId, 'adminCandidates');
-      const unsubscribeIce = onSnapshot(adminCandidatesRef, (snapshot) => {
+      const unsubIce = onSnapshot(adminCandidatesRef, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
           }
         });
+      }, (error) => {
+        console.error('ICE signaling error:', error);
       });
 
       return () => {
-        unsubscribeOffer();
-        unsubscribeIce();
+        unsubOffer();
+        unsubIce();
         peerConnection.close();
       };
     };
@@ -195,7 +201,19 @@ const StreamView: React.FC = () => {
       unsubscribeChat();
       unsubscribeRequest();
       updateViewerCount(-1);
+      
       cleanupWebRTC.then(cleanup => cleanup?.());
+      signalingUnsubscribes.current.forEach(unsub => unsub());
+      signalingUnsubscribes.current = [];
+
+      if (pc.current) {
+        pc.current.close();
+        pc.current = null;
+      }
+      if (guestPc.current) {
+        guestPc.current.close();
+        guestPc.current = null;
+      }
       if (guestStream) {
         guestStream.getTracks().forEach(track => track.stop());
       }
@@ -220,6 +238,7 @@ const StreamView: React.FC = () => {
       const peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
+      guestPc.current = peerConnection;
 
       stream.getTracks().forEach(track => {
         peerConnection.addTrack(track, stream);
@@ -241,21 +260,27 @@ const StreamView: React.FC = () => {
         createdAt: serverTimestamp()
       });
 
-      onSnapshot(guestSignalingRef, async (snapshot) => {
+      const unsubAnswer = onSnapshot(guestSignalingRef, async (snapshot) => {
         const data = snapshot.data();
         if (data?.answer && peerConnection.signalingState !== 'stable') {
           await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
+      }, (error) => {
+        console.error('Guest answer signaling error:', error);
       });
+      signalingUnsubscribes.current.push(unsubAnswer);
 
       const adminCandidatesRef = collection(db, 'streams', id, 'guestSignaling', user.uid, 'adminCandidates');
-      onSnapshot(adminCandidatesRef, (snapshot) => {
+      const unsubIce = onSnapshot(adminCandidatesRef, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
           }
         });
+      }, (error) => {
+        console.error('Guest ICE signaling error:', error);
       });
+      signalingUnsubscribes.current.push(unsubIce);
 
     } catch (error) {
       console.error('Error setting up guest sender:', error);
@@ -684,22 +709,24 @@ const StreamView: React.FC = () => {
           <div className={`absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
             <div className="flex flex-col gap-4">
               {/* Seek Bar */}
-              <div className="relative group/seekbar h-6 flex items-center">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 100}
-                  step="0.1"
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#ff4e00] group-hover/seekbar:h-2 transition-all"
-                />
-                {/* Progress highlight */}
-                <div 
-                  className="absolute left-0 h-1 bg-[#ff4e00] rounded-full pointer-events-none group-hover/seekbar:h-2 transition-all"
-                  style={{ width: `${(currentTime / (duration || 100)) * 100}%` }}
-                />
-              </div>
+              {duration !== Infinity && duration > 0 && (
+                <div className="relative group/seekbar h-6 flex items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max={duration || 100}
+                    step="0.1"
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#ff4e00] group-hover/seekbar:h-2 transition-all"
+                  />
+                  {/* Progress highlight */}
+                  <div 
+                    className="absolute left-0 h-1 bg-[#ff4e00] rounded-full pointer-events-none group-hover/seekbar:h-2 transition-all"
+                    style={{ width: `${(currentTime / (duration || 100)) * 100}%` }}
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
@@ -723,8 +750,17 @@ const StreamView: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-white/60">
-                    <Clock className="w-3 h-3" />
-                    <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+                    {duration === Infinity ? (
+                      <div className="flex items-center gap-2 bg-red-600 px-2 py-1 rounded-md text-white">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                        <span>LIVE</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
