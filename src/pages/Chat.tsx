@@ -3,7 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, setDoc, deleteDoc, handleFirestoreError } from '../firebase';
 import { UserProfile, OperationType } from '../types';
-import { Send, ArrowLeft, Loader2, User as UserIcon, Image as ImageIcon, Video, Phone, X, Camera, Mic, MicOff, VideoOff, Maximize2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, User as UserIcon, Image as ImageIcon, Video, Phone, X, Camera, Mic, MicOff, VideoOff, Maximize2, MessageCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface PrivateMessage {

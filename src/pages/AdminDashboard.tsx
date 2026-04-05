@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 

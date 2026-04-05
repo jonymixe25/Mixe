@@ -5,6 +5,7 @@ import { OperationType } from '../types';
 import { User, Mail, Shield, Calendar, Edit3, Save, X, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Toast from '../components/Toast';
 
@@ -218,14 +219,6 @@ const Profile: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
-
-      <Toast 
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={() => setToast({ ...toast, isVisible: false })}
-      />
-    </div>
 
       <Toast 
         message={toast.message}

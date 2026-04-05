@@ -296,13 +296,6 @@ const Contacts: React.FC = () => {
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </div>
-      <Toast 
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={() => setToast({ ...toast, isVisible: false })}
-      />
-    </div>
   );
 };
 
