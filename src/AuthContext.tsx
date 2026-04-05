@@ -34,7 +34,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newUser: UserProfile = {
               uid: firebaseUser.uid,
               displayName: firebaseUser.displayName || 'Anonymous',
+              displayNameLowercase: (firebaseUser.displayName || 'Anonymous').toLowerCase(),
               email: firebaseUser.email || '',
+              emailLowercase: (firebaseUser.email || '').toLowerCase(),
               photoURL: firebaseUser.photoURL || '',
               role: firebaseUser.email === 'jonyoax95@gmail.com' ? 'admin' : 'user',
               createdAt: serverTimestamp(),
@@ -47,12 +49,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             // If the document exists but the role is not admin and it should be
             const currentData = userDoc.data() as UserProfile;
+            const updates: any = {};
+            
             if (firebaseUser.email === 'jonyoax95@gmail.com' && currentData.role !== 'admin') {
-               try {
-                 await updateDoc(userDocRef, { role: 'admin' });
-               } catch (error) {
-                 handleFirestoreError(error, OperationType.UPDATE, `users/${firebaseUser.uid}`);
-               }
+               updates.role = 'admin';
+            }
+            
+            // Ensure lowercase fields exist for existing users
+            if (!currentData.displayNameLowercase || !currentData.emailLowercase) {
+              updates.displayNameLowercase = currentData.displayName.toLowerCase();
+              updates.emailLowercase = currentData.email.toLowerCase();
+            }
+
+            if (Object.keys(updates).length > 0) {
+              try {
+                await updateDoc(userDocRef, updates);
+              } catch (error) {
+                handleFirestoreError(error, OperationType.UPDATE, `users/${firebaseUser.uid}`);
+              }
             }
           }
         } catch (error) {

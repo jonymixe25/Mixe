@@ -1,7 +1,9 @@
 export interface UserProfile {
   uid: string;
   displayName: string;
+  displayNameLowercase?: string;
   email: string;
+  emailLowercase?: string;
   photoURL?: string;
   bio?: string;
   role: 'admin' | 'user';

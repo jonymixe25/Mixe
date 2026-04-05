@@ -7,7 +7,9 @@
       "properties": {
         "uid": { "type": "string" },
         "displayName": { "type": "string" },
+        "displayNameLowercase": { "type": "string" },
         "email": { "type": "string" },
+        "emailLowercase": { "type": "string" },
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "user"] },
@@ -85,6 +87,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "text", "createdAt"]
+    },
+    "PrivateMessage": {
+      "title": "Private Message",
+      "description": "Direct message between users",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -111,6 +126,10 @@
     "/media/{mediaId}": {
       "schema": "Media",
       "description": "Media items collection"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "PrivateMessage",
+      "description": "Private messages subcollection"
     }
   }
 }
