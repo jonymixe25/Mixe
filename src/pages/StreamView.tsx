@@ -220,6 +220,9 @@ const StreamView: React.FC = () => {
       if (localPreviewStream) {
         localPreviewStream.getTracks().forEach(track => track.stop());
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
   }, [id, navigate]);
 
@@ -227,7 +230,7 @@ const StreamView: React.FC = () => {
     if (!id || !user) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: guestFacingMode }, 
+        video: { facingMode: { ideal: guestFacingMode } }, 
         audio: true 
       });
       setGuestStream(stream);
@@ -312,7 +315,7 @@ const StreamView: React.FC = () => {
     if (guestStream) {
       guestStream.getTracks().forEach(track => track.stop());
       const newStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: newMode }, 
+        video: { facingMode: { ideal: newMode } }, 
         audio: true 
       });
       setGuestStream(newStream);

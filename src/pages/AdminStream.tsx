@@ -101,11 +101,22 @@ const AdminStream: React.FC = () => {
   }, [chatMessages]);
 
   useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      if (localStream.current) {
+        localStream.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     let unsubscribeSignaling: (() => void) | null = null;
 
     if ((activeStream || isPreviewing) && videoRef.current) {
       navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode }, 
+        video: { facingMode: { ideal: facingMode } }, 
         audio: true 
       })
         .then(stream => {

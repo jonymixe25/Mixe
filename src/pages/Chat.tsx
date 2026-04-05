@@ -97,6 +97,17 @@ const Chat: React.FC = () => {
   };
 
   useEffect(() => {
+    return () => {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user || !contactId) return;
     const chatId = getChatId(user.uid, contactId);
     
