@@ -4,6 +4,7 @@
  */
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider } from './AuthContext';
 import Layout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
@@ -37,6 +38,7 @@ export default function App() {
             </Routes>
           </Layout>
         </Router>
+        <Analytics />
       </AuthProvider>
     </GlobalErrorBoundary>
   );

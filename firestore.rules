@@ -112,6 +112,13 @@ service cloud.firestore {
              isValidOptionalString('description', 2000);
     }
 
+    function isStreamUpdateValid(newData, oldData) {
+      return isValidStream(newData) &&
+             newData.userId == oldData.userId &&
+             newData.userName == oldData.userName &&
+             newData.startedAt == oldData.startedAt;
+    }
+
     function isValidContact(data) {
       return hasRequiredFields(['userId', 'contactId', 'contactName', 'addedAt']) &&
              hasOnlyAllowedFields(['userId', 'contactId', 'contactName', 'contactPhoto', 'addedAt']) &&
@@ -220,7 +227,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid && 'category' in request.resource.data;
       allow update: if isAuthenticated() && (
         // Owner/Admin can update everything
-        (isValidStream(request.resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
+        (isStreamUpdateValid(request.resource.data, resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
         // Viewers can ONLY update viewerCount or likes
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount', 'likes']) && 
          (

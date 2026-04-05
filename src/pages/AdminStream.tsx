@@ -218,7 +218,11 @@ const AdminStream: React.FC = () => {
     const unsubscribeIce = onSnapshot(viewerCandidatesRef, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+          } else {
+            console.warn('Remote description not set yet, ignoring ICE candidate');
+          }
         }
       });
     }, (error) => {

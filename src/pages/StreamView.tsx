@@ -180,7 +180,11 @@ const StreamView: React.FC = () => {
       const unsubIce = onSnapshot(adminCandidatesRef, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
-            peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+            if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+              peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+            } else {
+              console.warn('Remote description not set yet, ignoring ICE candidate');
+            }
           }
         });
       }, (error) => {
