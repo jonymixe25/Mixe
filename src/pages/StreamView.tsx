@@ -30,18 +30,19 @@ const StreamView: React.FC = () => {
   // Video Controls State
   const [isPlaying, setIsPlaying] = useState(true);
   const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [showControls, setShowControls] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   // WebRTC Viewer State
   const pc = useRef<RTCPeerConnection | null>(null);
-  const viewerId = useRef<string>(Math.random().toString(36).substring(7));
+  const signalingId = user?.uid || Math.random().toString(36).substring(7);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user) return;
     // ... existing stream and chat listeners ...
 
     const streamRef = doc(db, 'streams', id);
@@ -96,21 +97,32 @@ const StreamView: React.FC = () => {
 
       // Handle incoming tracks
       peerConnection.ontrack = (event) => {
+        console.log('Received remote tracks:', event.streams);
         if (videoRef.current) {
           videoRef.current.srcObject = event.streams[0];
+          setConnectionStatus('connected');
+        }
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          setConnectionStatus('connected');
+        } else if (peerConnection.connectionState === 'failed') {
+          setConnectionStatus('failed');
         }
       };
 
       // Handle ICE candidates
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          const candidatesRef = collection(db, 'streams', id, 'signaling', viewerId.current, 'viewerCandidates');
+          const candidatesRef = collection(db, 'streams', id, 'signaling', signalingId, 'viewerCandidates');
           addDoc(candidatesRef, event.candidate.toJSON());
         }
       };
 
       // Create signaling document
-      const viewerRef = doc(db, 'streams', id, 'signaling', viewerId.current);
+      const viewerRef = doc(db, 'streams', id, 'signaling', signalingId);
       await setDoc(viewerRef, {
         status: 'new',
         createdAt: serverTimestamp()
@@ -135,7 +147,7 @@ const StreamView: React.FC = () => {
       });
 
       // Listen for admin ICE candidates
-      const adminCandidatesRef = collection(db, 'streams', id, 'signaling', viewerId.current, 'adminCandidates');
+      const adminCandidatesRef = collection(db, 'streams', id, 'signaling', signalingId, 'adminCandidates');
       const unsubscribeIce = onSnapshot(adminCandidatesRef, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
@@ -339,6 +351,18 @@ const StreamView: React.FC = () => {
     </div>
   );
 
+  if (!user) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
+      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
+        <Users className="w-10 h-10 text-white/20" />
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold uppercase italic"><span>Inicia sesión para ver</span></h2>
+        <p className="text-white/40 italic"><span>Debes estar registrado para unirte a las transmisiones en vivo.</span></p>
+      </div>
+    </div>
+  );
+
   if (!stream) return null;
 
   return (
@@ -359,6 +383,26 @@ const StreamView: React.FC = () => {
             muted={isMuted}
             playsInline
           />
+
+          {connectionStatus !== 'connected' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-[#ff4e00]/20 rounded-full animate-spin border-t-[#ff4e00]" />
+                <Radio className="w-6 h-6 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
+              </div>
+              <p className="mt-4 text-white font-bold uppercase tracking-widest text-xs">
+                <span>{connectionStatus === 'connecting' ? 'Conectando con el anfitrión...' : 'Error de conexión'}</span>
+              </p>
+              {connectionStatus === 'failed' && (
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="mt-4 bg-[#ff4e00] px-6 py-2 rounded-full text-xs font-bold hover:bg-[#ff4e00]/90 transition-colors"
+                >
+                  <span>Reintentar</span>
+                </button>
+              )}
+            </div>
+          )}
           
           {/* Overlay UI - Top */}
           <div className={`absolute top-0 left-0 right-0 p-6 flex items-center justify-between transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>

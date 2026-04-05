@@ -29,6 +29,8 @@ const AdminStream: React.FC = () => {
   const [chatUploadProgress, setChatUploadProgress] = useState(0);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  
   // WebRTC Broadcaster State
   const peerConnections = useRef<{ [viewerId: string]: RTCPeerConnection }>({});
   const localStream = useRef<MediaStream | null>(null);
@@ -84,15 +86,18 @@ const AdminStream: React.FC = () => {
   }, [chatMessages]);
 
   useEffect(() => {
+    let unsubscribeSignaling: (() => void) | null = null;
+
     if (activeStream && videoRef.current) {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
           localStream.current = stream;
           if (videoRef.current) videoRef.current.srcObject = stream;
+          setCameraError(null);
           
           // Listen for new viewers
           const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
-          const unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
+          unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
             snapshot.docChanges().forEach(async (change) => {
               if (change.type === 'added') {
                 const viewerId = change.doc.id;
@@ -101,11 +106,26 @@ const AdminStream: React.FC = () => {
                 }
               }
             });
+          }, (error) => {
+            console.error('Signaling error:', error);
           });
-          return () => unsubscribeSignaling();
         })
-        .catch(err => console.error("Error accessing camera:", err));
+        .catch(err => {
+          console.error("Error accessing camera:", err);
+          setCameraError(err.message || 'No se pudo acceder a la cámara');
+        });
     }
+
+    return () => {
+      if (unsubscribeSignaling) unsubscribeSignaling();
+      if (localStream.current) {
+        localStream.current.getTracks().forEach(track => track.stop());
+        localStream.current = null;
+      }
+      // Close all peer connections
+      Object.values(peerConnections.current).forEach(pc => pc.close());
+      peerConnections.current = {};
+    };
   }, [activeStream]);
 
   const createPeerConnection = async (streamId: string, viewerId: string) => {
@@ -335,13 +355,28 @@ const AdminStream: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="aspect-video bg-black rounded-3xl overflow-hidden border border-white/10 relative group shadow-2xl shadow-[#ff4e00]/5">
             {activeStream ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                {cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-center p-6">
+                    <Video className="w-12 h-12 text-red-500 mb-4" />
+                    <p className="text-red-500 font-bold mb-2"><span>Error de Cámara</span></p>
+                    <p className="text-white/60 text-xs italic"><span>{cameraError}</span></p>
+                    <button 
+                      onClick={() => window.location.reload()}
+                      className="mt-4 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                    >
+                      <span>Reintentar</span>
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                 <Video className="w-16 h-16 mb-4" />

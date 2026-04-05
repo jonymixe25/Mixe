@@ -190,6 +190,16 @@ service cloud.firestore {
         allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
         allow update: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow delete: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+
+        match /adminCandidates/{candidateId} {
+          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        }
+
+        match /viewerCandidates/{candidateId} {
+          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
+        }
       }
 
       match /messages/{messageId} {
