@@ -120,6 +120,7 @@ const AdminStream: React.FC = () => {
         video: { facingMode: { ideal: facingMode } }, 
         audio: true 
       })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }))
         .then(stream => {
           localStream.current = stream;
           if (videoRef.current) videoRef.current.srcObject = stream;

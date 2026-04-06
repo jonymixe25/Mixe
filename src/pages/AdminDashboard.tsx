@@ -79,25 +79,34 @@ const AdminDashboard: React.FC = () => {
   const handleCreateNews = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newsTitle || !newsContent) return;
-    setSavingNews(true);
-    try {
-      await addDoc(collection(db, 'news'), {
-        title: newsTitle,
-        content: newsContent,
-        imageUrl: newsImage,
-        authorId: user.uid,
-        authorName: user.displayName,
-        createdAt: serverTimestamp(),
-      });
-      setNewsTitle('');
-      setNewsContent('');
-      setNewsImage('');
-      setToast({ message: 'Noticia publicada con éxito', type: 'success', isVisible: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'news');
-    } finally {
-      setSavingNews(false);
-    }
+
+    showConfirm({
+      title: '¿Publicar noticia?',
+      message: '¿Estás seguro de que deseas publicar esta noticia? Será visible para todos los usuarios.',
+      confirmText: 'Publicar',
+      confirmVariant: 'primary',
+      onConfirm: async () => {
+        setSavingNews(true);
+        try {
+          await addDoc(collection(db, 'news'), {
+            title: newsTitle,
+            content: newsContent,
+            imageUrl: newsImage,
+            authorId: user.uid,
+            authorName: user.displayName,
+            createdAt: serverTimestamp(),
+          });
+          setNewsTitle('');
+          setNewsContent('');
+          setNewsImage('');
+          setToast({ message: 'Noticia publicada con éxito', type: 'success', isVisible: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.CREATE, 'news');
+        } finally {
+          setSavingNews(false);
+        }
+      }
+    });
   };
 
   const handleDeleteNews = (newsId: string) => {
