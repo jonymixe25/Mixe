@@ -6,6 +6,8 @@ import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image a
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
+import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
+import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
 const AdminStream: React.FC = () => {
   const { user } = useAuth();
@@ -19,6 +21,8 @@ const AdminStream: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const roomRef = useRef<Room | null>(null);
+  const { token } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
 
   // Real-time Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -34,9 +38,6 @@ const AdminStream: React.FC = () => {
   const guestVideoRef = useRef<HTMLVideoElement>(null);
   
   // WebRTC Broadcaster State
-  const peerConnections = useRef<{ [viewerId: string]: RTCPeerConnection }>({});
-  const signalingUnsubscribes = useRef<{ [viewerId: string]: (() => void)[] }>({});
-  const guestSignalingUnsubscribes = useRef<(() => void)[]>([]);
   const localStream = useRef<MediaStream | null>(null);
 
   useEffect(() => {
@@ -113,192 +114,54 @@ const AdminStream: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let unsubscribeSignaling: (() => void) | null = null;
-
     if ((activeStream || isPreviewing) && videoRef.current) {
-      navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: { ideal: facingMode } }, 
-        audio: true 
-      })
-        .catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }))
-        .then(stream => {
+      const setupRoom = async () => {
+        if (!token) return;
+        
+        const room = new Room();
+        roomRef.current = room;
+        
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { ideal: facingMode } }, 
+            audio: true 
+          });
           localStream.current = stream;
           if (videoRef.current) videoRef.current.srcObject = stream;
           setCameraError(null);
           
-          if (activeStream) {
-            // Listen for new viewers
-            const signalingRef = collection(db, 'streams', activeStream.id, 'signaling');
-            unsubscribeSignaling = onSnapshot(signalingRef, (snapshot) => {
-              snapshot.docChanges().forEach(async (change) => {
-                if (change.type === 'added') {
-                  const viewerId = change.doc.id;
-                  if (!peerConnections.current[viewerId]) {
-                    await createPeerConnection(activeStream.id, viewerId);
-                  }
-                }
-              });
-            }, (error) => {
-              console.error('Signaling error:', error);
-            });
+          const liveKitUrl = process.env.LIVEKIT_URL;
+          if (!liveKitUrl) {
+            throw new Error('LIVEKIT_URL is not configured');
           }
-        })
-        .catch(err => {
-          console.error("Error accessing camera:", err);
-          setCameraError(err.message || 'No se pudo acceder a la cámara');
+          await room.connect(liveKitUrl, token);
+          await room.localParticipant.publishTrack(stream.getVideoTracks()[0]);
+          await room.localParticipant.publishTrack(stream.getAudioTracks()[0]);
+          
+        } catch (err) {
+          console.error("Error accessing camera or connecting to LiveKit:", err);
+          setCameraError(err instanceof Error ? err.message : 'Error de conexión');
           setIsPreviewing(false);
-        });
+        }
+      };
+
+      setupRoom();
     }
 
     return () => {
-      if (unsubscribeSignaling) unsubscribeSignaling();
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+        roomRef.current = null;
+      }
       if (localStream.current) {
         localStream.current.getTracks().forEach(track => track.stop());
         localStream.current = null;
       }
-      // Close all peer connections and signaling
-      Object.values(peerConnections.current).forEach(pc => pc.close());
-      peerConnections.current = {};
-      
-      Object.values(signalingUnsubscribes.current).forEach(unsubs => unsubs.forEach(unsub => unsub()));
-      signalingUnsubscribes.current = {};
-
-      guestSignalingUnsubscribes.current.forEach(unsub => unsub());
-      guestSignalingUnsubscribes.current = [];
     };
-  }, [activeStream, isPreviewing, facingMode]);
-
-  const createPeerConnection = async (streamId: string, viewerId: string) => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    peerConnections.current[viewerId] = pc;
-
-    // Add local tracks to the peer connection
-    localStream.current?.getTracks().forEach(track => {
-      pc.addTrack(track, localStream.current!);
-    });
-
-    // Handle ICE candidates
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        const candidatesRef = collection(db, 'streams', streamId, 'signaling', viewerId, 'adminCandidates');
-        addDoc(candidatesRef, event.candidate.toJSON());
-      }
-    };
-
-    // Create offer
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    const viewerRef = doc(db, 'streams', streamId, 'signaling', viewerId);
-    await updateDoc(viewerRef, {
-      offer: {
-        type: offer.type,
-        sdp: offer.sdp
-      },
-      status: 'offered'
-    });
-
-    const unsubs: (() => void)[] = [];
-
-    // Listen for answer
-    const unsubscribeAnswer = onSnapshot(viewerRef, async (snapshot) => {
-      const data = snapshot.data();
-      if (data?.answer && pc.signalingState !== 'stable') {
-        const answer = new RTCSessionDescription(data.answer);
-        await pc.setRemoteDescription(answer);
-      }
-    }, (error) => {
-      console.error('Answer signaling error:', error);
-    });
-    unsubs.push(unsubscribeAnswer);
-
-    // Listen for viewer ICE candidates
-    const viewerCandidatesRef = collection(db, 'streams', streamId, 'signaling', viewerId, 'viewerCandidates');
-    const unsubscribeIce = onSnapshot(viewerCandidatesRef, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          if (pc.remoteDescription && pc.remoteDescription.type) {
-            pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-          } else {
-            console.warn('Remote description not set yet, ignoring ICE candidate');
-          }
-        }
-      });
-    }, (error) => {
-      console.error('ICE signaling error:', error);
-    });
-    unsubs.push(unsubscribeIce);
-
-    signalingUnsubscribes.current[viewerId] = unsubs;
-  };
+  }, [activeStream, isPreviewing, facingMode, token]);
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  };
-
-  const handleAcceptJoin = async (requestId: string, guestId: string) => {
-    if (!activeStream) return;
-    try {
-      await updateDoc(doc(db, 'streams', activeStream.id, 'joinRequests', requestId), {
-        status: 'accepted'
-      });
-      // The guest will now initiate a WebRTC connection to send their stream to the admin
-      setupGuestReceiver(activeStream.id, guestId);
-    } catch (error) {
-      console.error('Error accepting join request:', error);
-    }
-  };
-
-  const setupGuestReceiver = async (streamId: string, guestId: string) => {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-
-    pc.ontrack = (event) => {
-      setGuestStream(event.streams[0]);
-      if (guestVideoRef.current) {
-        guestVideoRef.current.srcObject = event.streams[0];
-      }
-    };
-
-    // Signaling for guest stream (Admin is the receiver here)
-    const guestSignalingRef = doc(db, 'streams', streamId, 'guestSignaling', guestId);
-    
-    const unsubOffer = onSnapshot(guestSignalingRef, async (snapshot) => {
-      const data = snapshot.data();
-      if (data?.offer && pc.signalingState === 'stable') {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        await updateDoc(guestSignalingRef, {
-          answer: { type: answer.type, sdp: answer.sdp }
-        });
-      }
-    }, (error) => {
-      console.error('Guest offer signaling error:', error);
-    });
-    guestSignalingUnsubscribes.current.push(unsubOffer);
-
-    const guestCandidatesRef = collection(db, 'streams', streamId, 'guestSignaling', guestId, 'guestCandidates');
-    const unsubIce = onSnapshot(guestCandidatesRef, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-        }
-      });
-    }, (error) => {
-      console.error('Guest ICE signaling error:', error);
-    });
-    guestSignalingUnsubscribes.current.push(unsubIce);
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        const adminCandidatesRef = collection(db, 'streams', streamId, 'guestSignaling', guestId, 'adminCandidates');
-        addDoc(adminCandidatesRef, event.candidate.toJSON());
-      }
-    };
   };
 
   const handleStartStream = async () => {
@@ -782,12 +645,6 @@ const AdminStream: React.FC = () => {
                       </div>
                       <span className="text-xs font-bold text-white/80"><span>{request.userName}</span></span>
                     </div>
-                    <button 
-                      onClick={() => handleAcceptJoin(request.id, request.userId)}
-                      className="bg-[#ff4e00] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl hover:bg-[#ff4e00]/90 transition-all shadow-lg shadow-[#ff4e00]/20 active:scale-95"
-                    >
-                      <span>Aceptar</span>
-                    </button>
                   </motion.div>
                 ))
               )}

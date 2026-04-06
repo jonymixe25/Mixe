@@ -17,6 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import News from './pages/News';
 import Chat from './pages/Chat';
 import Gallery from './pages/Gallery';
+import Register from './pages/Register';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
               <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
               <Route path="/stream/:id" element={<StreamView />} />
+              <Route path="/register" element={<Register />} />
             </Routes>
           </Layout>
         </Router>

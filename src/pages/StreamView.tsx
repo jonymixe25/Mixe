@@ -99,7 +99,11 @@ const StreamView: React.FC = () => {
       });
 
       try {
-        await room.connect(process.env.LIVEKIT_URL || '', token);
+        const liveKitUrl = process.env.LIVEKIT_URL;
+        if (!liveKitUrl) {
+          throw new Error('LIVEKIT_URL is not configured');
+        }
+        await room.connect(liveKitUrl, token);
         console.log('Connected to LiveKit room', room.name);
       } catch (error) {
         console.error('LiveKit connection error:', error);

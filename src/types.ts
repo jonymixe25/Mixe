@@ -8,6 +8,10 @@ export interface UserProfile {
   bio?: string;
   role: 'admin' | 'user';
   createdAt: any;
+  city?: string;
+  neighborhood?: string;
+  streetAndNumber?: string;
+  dateOfBirth?: string;
 }
 
 export interface StreamSession {

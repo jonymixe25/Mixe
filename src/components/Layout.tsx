@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import LoginModal from './LoginModal';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, login, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const navItems = [
     { path: '/', label: 'Inicio', icon: Home },
@@ -22,9 +24,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     ] : []),
   ];
 
-  const handleLogin = async () => {
-    await login();
-    navigate('/profile');
+  const handleLoginClick = () => {
+    setIsLoginModalOpen(true);
   };
 
   return (
@@ -100,7 +101,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
               ) : (
                 <button
-                  onClick={handleLogin}
+                  onClick={handleLoginClick}
                   className="bg-[#ff4e00] px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-[#ff4e00]/30 flex items-center gap-3 group"
                 >
                   <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -158,7 +159,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </button>
                   ) : (
                     <button
-                      onClick={() => { handleLogin(); setIsMenuOpen(false); }}
+                      onClick={() => { handleLoginClick(); setIsMenuOpen(false); }}
                       className="w-full flex items-center gap-4 p-5 rounded-2xl bg-[#ff4e00] text-white shadow-xl shadow-[#ff4e00]/20 transition-all duration-500"
                     >
                       <LogIn className="w-6 h-6" />
@@ -171,6 +172,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           )}
         </AnimatePresence>
       </nav>
+
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
       <main className="pt-32 pb-24 px-6 relative z-10">
         <AnimatePresence mode="wait">
