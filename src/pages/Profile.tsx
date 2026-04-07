@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, doc, updateDoc, handleFirestoreError } from '../firebase';
 import { OperationType } from '../types';
-import { User, Mail, Shield, Calendar, Edit3, Save, X, Camera } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Edit3, Save, X, Camera, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Toast from '../components/Toast';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ const Profile: React.FC = () => {
   const [neighborhood, setNeighborhood] = useState(user?.neighborhood || '');
   const [streetAndNumber, setStreetAndNumber] = useState(user?.streetAndNumber || '');
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || '');
+  const [socialLinks, setSocialLinks] = useState(user?.socialLinks || []);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -39,6 +42,7 @@ const Profile: React.FC = () => {
         neighborhood,
         streetAndNumber,
         dateOfBirth,
+        socialLinks,
       });
       setToast({ message: 'Perfil actualizado con éxito.', type: 'success', isVisible: true });
       setIsEditing(false);
@@ -48,6 +52,20 @@ const Profile: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addSocialLink = () => {
+    setSocialLinks([...socialLinks, { platform: '', url: '' }]);
+  };
+
+  const updateSocialLink = (index: number, field: 'platform' | 'url', value: string) => {
+    const newLinks = [...socialLinks];
+    newLinks[index][field] = value;
+    setSocialLinks(newLinks);
+  };
+
+  const removeSocialLink = (index: number) => {
+    setSocialLinks(socialLinks.filter((_, i) => i !== index));
   };
 
   const handlePhotoUpdate = async (url: string) => {
@@ -164,12 +182,41 @@ const Profile: React.FC = () => {
                   </div>
                   <div className="space-y-4">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Biografía</label>
-                    <textarea 
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all min-h-[150px] resize-none leading-relaxed placeholder:text-white/20"
-                      placeholder="Cuéntanos un poco sobre ti, tus gustos o tu conexión con la cultura Mixe..."
-                    />
+                    <div className="react-quill-container">
+                      <ReactQuill 
+                        theme="snow" 
+                        value={bio} 
+                        onChange={setBio}
+                        className="bg-white/5 border border-white/10 rounded-2xl text-sm font-medium focus:border-[#ff4e00] outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Redes Sociales</label>
+                    <div className="space-y-2">
+                      {socialLinks.map((link, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={link.platform} 
+                            onChange={(e) => updateSocialLink(index, 'platform', e.target.value)} 
+                            placeholder="Plataforma (ej. Twitter)"
+                            className="w-1/3 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-sm"
+                          />
+                          <input 
+                            type="text" 
+                            value={link.url} 
+                            onChange={(e) => updateSocialLink(index, 'url', e.target.value)} 
+                            placeholder="URL"
+                            className="w-2/3 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-sm"
+                          />
+                          <button onClick={() => removeSocialLink(index)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      ))}
+                      <button onClick={addSocialLink} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00] mt-2">
+                        <Plus className="w-4 h-4" /> Añadir Red Social
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Ciudad</label>
@@ -216,10 +263,24 @@ const Profile: React.FC = () => {
               >
                 <div className="space-y-4 max-w-2xl">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Biografía</h3>
-                  <p className="text-xl text-white/60 italic leading-relaxed font-medium">
-                    <span>{user.bio || 'Este usuario aún no ha escrito su biografía. ¡Anímate a compartir algo sobre ti!'}</span>
-                  </p>
+                  <div 
+                    className="text-xl text-white/60 italic leading-relaxed font-medium"
+                    dangerouslySetInnerHTML={{ __html: bio || 'Este usuario aún no ha escrito su biografía. ¡Anímate a compartir algo sobre ti!' }}
+                  />
                 </div>
+
+                {socialLinks.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Redes Sociales</h3>
+                    <div className="flex flex-wrap gap-4">
+                      {socialLinks.map((link, index) => (
+                        <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white/5 rounded-xl text-sm font-medium hover:bg-[#ff4e00]/20 transition-colors">
+                          {link.platform}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-white/10">
                   {[

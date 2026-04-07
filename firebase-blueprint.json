@@ -12,6 +12,16 @@
         "emailLowercase": { "type": "string" },
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
+        "socialLinks": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
         "role": { "type": "string", "enum": ["admin", "user"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },

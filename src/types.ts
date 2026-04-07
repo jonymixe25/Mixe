@@ -12,6 +12,7 @@ export interface UserProfile {
   neighborhood?: string;
   streetAndNumber?: string;
   dateOfBirth?: string;
+  socialLinks?: { platform: string; url: string }[];
 }
 
 export interface StreamSession {
