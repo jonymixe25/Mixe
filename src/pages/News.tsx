@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { db, collection, query, orderBy, onSnapshot } from '../firebase';
-import { Newspaper, Calendar, User, ArrowRight, X } from 'lucide-react';
+import { db, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from '../firebase';
+import { Newspaper, Calendar, User, ArrowRight, X, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Comment } from '../types';
+import { useAuth } from '../AuthContext';
 
 interface NewsArticle {
   id: string;
@@ -15,9 +17,39 @@ interface NewsArticle {
 }
 
 const News: React.FC = () => {
+  const { user } = useAuth();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    if (!selectedArticle) return;
+    const q = query(collection(db, 'news', selectedArticle.id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const commentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+      setComments(commentList);
+    });
+    return () => unsubscribe();
+  }, [selectedArticle]);
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedArticle || !newComment.trim()) return;
+    try {
+      await addDoc(collection(db, 'news', selectedArticle.id, 'comments'), {
+        newsId: selectedArticle.id,
+        userId: user.uid,
+        userName: user.displayName,
+        text: newComment,
+        createdAt: serverTimestamp(),
+      });
+      setNewComment('');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    }
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
@@ -203,6 +235,31 @@ const News: React.FC = () => {
                     >
                       <span>Cerrar Artículo</span>
                     </button>
+                  </div>
+                  
+                  <div className="pt-12 border-t border-white/10 space-y-8">
+                    <h3 className="text-2xl font-display font-black uppercase italic">Comentarios</h3>
+                    {user ? (
+                      <form onSubmit={handlePostComment} className="space-y-4">
+                        <textarea
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-[#ff4e00] outline-none"
+                          placeholder="Escribe un comentario..."
+                        />
+                        <button type="submit" className="bg-[#ff4e00] text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs">Publicar</button>
+                      </form>
+                    ) : (
+                      <p className="text-white/40 italic">Inicia sesión para comentar.</p>
+                    )}
+                    <div className="space-y-6">
+                      {comments.map(comment => (
+                        <div key={comment.id} className="bg-white/5 p-4 rounded-2xl space-y-2">
+                          <p className="text-[#ff4e00] font-black text-xs uppercase">{comment.userName}</p>
+                          <p className="text-sm text-white/80">{comment.text}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

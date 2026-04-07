@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,16 +16,22 @@ const Register: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { registerWithEmail } = useAuth();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.repeatPassword) {
       alert('Las contraseñas no coinciden');
       return;
     }
-    // Handle registration logic here
-    console.log('Registering:', formData);
-    navigate('/profile');
+    try {
+      await registerWithEmail(formData.email, formData.password, formData.username);
+      // Handle additional user profile data here if needed
+      navigate('/profile');
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('Error al registrarse');
+    }
   };
 
   return (

@@ -25,6 +25,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
   const [selectedFile, setSelectedFile] = useState<{ name: string; type: string } | null>(null);
+  const [tags, setTags] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -85,6 +86,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,
+                tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
                 createdAt: serverTimestamp()
               });
             } catch (err) {
@@ -136,6 +138,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         )}
       </div>
       
+      <input 
+        type="text"
+        value={tags}
+        onChange={(e) => setTags(e.target.value)}
+        placeholder="Etiquetas (separadas por comas)..."
+        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-[#ff4e00] outline-none"
+      />
+
       <div 
         className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
           preview || selectedFile ? 'border-transparent' : 'border-white/10 hover:border-[#ff4e00]/50 bg-white/5'

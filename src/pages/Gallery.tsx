@@ -184,6 +184,7 @@ const Gallery: React.FC = () => {
                     alt={item.fileName} 
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors duration-500">

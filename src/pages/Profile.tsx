@@ -14,6 +14,10 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(user?.bio || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [city, setCity] = useState(user?.city || '');
+  const [neighborhood, setNeighborhood] = useState(user?.neighborhood || '');
+  const [streetAndNumber, setStreetAndNumber] = useState(user?.streetAndNumber || '');
+  const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || '');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -31,6 +35,10 @@ const Profile: React.FC = () => {
         displayName,
         displayNameLowercase: displayName.toLowerCase(),
         bio,
+        city,
+        neighborhood,
+        streetAndNumber,
+        dateOfBirth,
       });
       setToast({ message: 'Perfil actualizado con éxito.', type: 'success', isVisible: true });
       setIsEditing(false);
@@ -163,6 +171,22 @@ const Profile: React.FC = () => {
                       placeholder="Cuéntanos un poco sobre ti, tus gustos o tu conexión con la cultura Mixe..."
                     />
                   </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Ciudad</label>
+                    <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Colonia</label>
+                    <input type="text" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Calle y número</label>
+                    <input type="text" value={streetAndNumber} onChange={(e) => setStreetAndNumber(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Fecha de nacimiento</label>
+                    <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                  </div>
                 </div>
                 
                 <div className="flex justify-end">
@@ -201,7 +225,11 @@ const Profile: React.FC = () => {
                   {[
                     { icon: Mail, label: 'Correo Electrónico', value: user.email, color: 'text-blue-500' },
                     { icon: Shield, label: 'Rol en la Plataforma', value: user.role, color: 'text-[#ff4e00]', capitalize: true },
-                    { icon: Calendar, label: 'Miembro Desde', value: user.createdAt ? format(user.createdAt.toDate(), "d 'de' MMMM, yyyy", { locale: es }) : 'Reciente', color: 'text-purple-500' }
+                    { icon: Calendar, label: 'Miembro Desde', value: user.createdAt ? format(user.createdAt.toDate(), "d 'de' MMMM, yyyy", { locale: es }) : 'Reciente', color: 'text-purple-500' },
+                    { icon: User, label: 'Ciudad', value: user.city || 'No especificada', color: 'text-green-500' },
+                    { icon: User, label: 'Colonia', value: user.neighborhood || 'No especificada', color: 'text-yellow-500' },
+                    { icon: User, label: 'Calle y número', value: user.streetAndNumber || 'No especificada', color: 'text-orange-500' },
+                    { icon: Calendar, label: 'Fecha de nacimiento', value: user.dateOfBirth || 'No especificada', color: 'text-pink-500' }
                   ].map((item, i) => (
                     <div key={item.label} className="space-y-4 group">
                       <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#ff4e00]/30 transition-all duration-500`}>

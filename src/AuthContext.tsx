@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError } from './firebase';
+import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError, createUserWithEmailAndPassword, signInWithEmailAndPassword } from './firebase';
 import { UserProfile, OperationType } from './types';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -13,6 +15,8 @@ export const AuthContext = React.createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => {},
+  loginWithEmail: async () => {},
+  registerWithEmail: async () => {},
   logout: async () => {},
 });
 
@@ -99,11 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      // The onAuthStateChanged listener will handle the user state update
-      // We can't easily use navigate() here because this is outside the Router context
-      // But we can use window.location if needed, or handle it in the component that calls login
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('El usuario cerró la ventana de inicio de sesión.');
+      } else {
+        console.error('Login error:', error);
+      }
     }
   };
 
@@ -115,8 +120,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithEmail = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error('Email login error:', error);
+      throw error;
+    }
+  };
+
+  const registerWithEmail = async (email: string, password: string, displayName: string) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Optionally update profile
+      // await updateProfile(userCredential.user, { displayName });
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithEmail, registerWithEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );

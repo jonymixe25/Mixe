@@ -12,17 +12,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { loginWithEmail } = useAuth();
   const navigate = useNavigate();
 
   if (!isOpen) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Assuming login handles authentication
-    await login(); 
-    navigate('/profile');
-    onClose();
+    try {
+      await loginWithEmail(email, password);
+      navigate('/profile');
+      onClose();
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Error al iniciar sesión');
+    }
   };
 
   return (

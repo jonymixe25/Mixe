@@ -62,6 +62,16 @@ export interface MediaItem {
   fileName: string;
   fileType?: string;
   fileSize?: number;
+  tags?: string[];
+  createdAt: any;
+}
+
+export interface Comment {
+  id: string;
+  newsId: string;
+  userId: string;
+  userName: string;
+  text: string;
   createdAt: any;
 }
 

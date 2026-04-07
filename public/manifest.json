@@ -1,0 +1,21 @@
+{
+  "name": "Voz Mixe Live",
+  "short_name": "VozMixe",
+  "description": "Plataforma Digital de la Región Mixe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0502",
+  "theme_color": "#ff4e00",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

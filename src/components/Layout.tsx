@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
 
@@ -57,6 +57,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-2">
+              <div className="relative group mr-4">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-[#ff4e00] transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar..." 
+                  className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-xs font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all w-48 focus:w-64"
+                />
+              </div>
               {navItems.map((item) => (
                 <Link
                   key={item.path}
