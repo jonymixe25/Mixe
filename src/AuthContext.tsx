@@ -109,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.error('Login error:', error);
       }
+      throw error;
     }
   };
 

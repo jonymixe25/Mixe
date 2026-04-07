@@ -205,6 +205,7 @@ const AdminStream: React.FC = () => {
       }
       if (videoRef.current) videoRef.current.srcObject = null;
       setIsPreviewing(false);
+      setIsModalOpen(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `streams/${activeStream.id}`);
     } finally {
