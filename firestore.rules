@@ -302,5 +302,10 @@ service cloud.firestore {
       allow update: if isAdmin() && isValidNews(request.resource.data);
       allow delete: if isAdmin();
     }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

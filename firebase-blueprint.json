@@ -136,6 +136,17 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["callerId", "receiverId", "status", "createdAt"]
+    },
+    "Settings": {
+      "title": "Global Settings",
+      "description": "Global application configuration settings",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "contactEmail": { "type": "string" }
+      },
+      "required": ["appName"]
     }
   },
   "firestore": {
@@ -186,6 +197,10 @@
     "/calls/{chatId}/receiverCandidates/{candidateId}": {
       "schema": "object",
       "description": "ICE candidates from the receiver"
+    },
+    "/settings/global": {
+      "schema": "Settings",
+      "description": "Global application settings"
     }
   }
 }

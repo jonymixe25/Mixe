@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 
@@ -218,6 +218,9 @@ const AdminDashboard: React.FC = () => {
               {tab === 'streams' ? 'Streams' : tab === 'users' ? 'Usuarios' : 'Noticias'}
             </button>
           ))}
+          <a href="/settings" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2">
+            <SettingsIcon className="w-4 h-4" /> Ajustes
+          </a>
         </div>
       </div>
 

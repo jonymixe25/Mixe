@@ -9,18 +9,21 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './AuthContext';
 import Layout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
-import Home from './pages/Home';
-import Profile from './pages/Profile';
-import Contacts from './pages/Contacts';
-import AdminStream from './pages/AdminStream';
-import StreamView from './pages/StreamView';
-import AdminDashboard from './pages/AdminDashboard';
-import News from './pages/News';
-import Chat from './pages/Chat';
-import Gallery from './pages/Gallery';
-import Register from './pages/Register';
-import FileStorage from './pages/FileStorage';
+import React, { Suspense, lazy } from 'react';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
+
+const Home = lazy(() => import('./pages/Home'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const AdminStream = lazy(() => import('./pages/AdminStream'));
+const StreamView = lazy(() => import('./pages/StreamView'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const News = lazy(() => import('./pages/News'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const Register = lazy(() => import('./pages/Register'));
+const FileStorage = lazy(() => import('./pages/FileStorage'));
+const GlobalSettings = lazy(() => import('./pages/GlobalSettings'));
 
 export default function App() {
   return (
@@ -29,19 +32,22 @@ export default function App() {
         <HelmetProvider>
           <Router>
             <Layout>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/news" element={<News />} />
-                <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
-                <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
-                <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
-                <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
-                <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
-                <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
-                <Route path="/stream/:id" element={<StreamView />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
-              </Routes>
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Cargando...</div>}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/news" element={<News />} />
+                  <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
+                  <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
+                  <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
+                  <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
+                  <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
+                  <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
+                  <Route path="/settings" element={<AuthGuard requireAdmin><GlobalSettings /></AuthGuard>} />
+                  <Route path="/stream/:id" element={<StreamView />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
+                </Routes>
+              </Suspense>
             </Layout>
           </Router>
           <Analytics />

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Toast from './Toast';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -12,8 +13,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { loginWithEmail, login } = useAuth();
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
+  const { loginWithEmail, login, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && isOpen) {
+      navigate('/profile');
+      onClose();
+    }
+  }, [user, isOpen, navigate, onClose]);
 
   if (!isOpen) return null;
 
@@ -21,22 +34,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     try {
       await loginWithEmail(email, password);
-      navigate('/profile');
-      onClose();
     } catch (error) {
       console.error('Login error:', error);
-      alert('Error al iniciar sesión');
+      setToast({ message: 'Error al iniciar sesión', type: 'error', isVisible: true });
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
       await login();
-      navigate('/profile');
-      onClose();
     } catch (error) {
       console.error('Google login error:', error);
-      alert('Error al iniciar sesión con Google');
+      setToast({ message: 'Error al iniciar sesión con Google', type: 'error', isVisible: true });
     }
   };
 
@@ -103,6 +112,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
         </form>
+        <Toast 
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.isVisible}
+          onClose={() => setToast({ ...toast, isVisible: false })}
+        />
       </div>
     </div>
   );
