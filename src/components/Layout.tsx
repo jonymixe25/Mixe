@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
+import Toast from './Toast';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
@@ -11,6 +12,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [showWelcomeToast, setShowWelcomeToast] = useState(false);
+  const [prevUser, setPrevUser] = useState<any>(null);
+
+  React.useEffect(() => {
+    if (user && !prevUser) {
+      setShowWelcomeToast(true);
+    }
+    setPrevUser(user);
+  }, [user, prevUser]);
 
   const navItems = [
     { path: '/', label: 'Inicio', icon: Home },
@@ -90,6 +100,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               
               {user ? (
                 <div className="flex items-center gap-4">
+                  <div className="hidden xl:flex flex-col items-end mr-2">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Bienvenido</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00] italic">{user.displayName}</span>
+                  </div>
                   <Link to="/profile" className="flex items-center gap-3 group">
                     <div className="w-10 h-10 rounded-xl bg-white/5 p-0.5 border border-white/10 group-hover:border-[#ff4e00]/50 transition-all duration-500">
                       <img 
@@ -182,6 +196,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </nav>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+      
+      <Toast 
+        message={`¡Bienvenido, ${user?.displayName || 'Usuario'}!`}
+        type="success"
+        isVisible={showWelcomeToast}
+        onClose={() => setShowWelcomeToast(false)}
+      />
 
       <main className="pt-32 pb-24 px-6 relative z-10">
         <AnimatePresence mode="wait">

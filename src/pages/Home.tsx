@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder } from 'lucide-react';
+import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
   const [streams, setStreams] = useState<StreamSession[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,48 @@ const Home: React.FC = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Welcome Message Section */}
+      {user && (
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="px-2"
+        >
+          <div className="glass p-8 md:p-12 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 border-white/10 shadow-2xl">
+            <div className="space-y-4 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 text-[#ff4e00]">
+                <Sparkles className="w-5 h-5" />
+                <span className="text-xs font-black uppercase tracking-[0.3em]">Bienvenido de nuevo</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic leading-none">
+                <span>¡Hola, {user.displayName}!</span>
+              </h2>
+              <p className="text-white/40 text-lg italic max-w-xl">
+                <span>Es un gusto tenerte de vuelta en la comunidad. Explora las últimas noticias y transmisiones en vivo de nuestra región.</span>
+              </p>
+            </div>
+            <Link 
+              to="/profile"
+              className="group relative flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 pr-8 rounded-[2rem] transition-all duration-500 border border-white/10"
+            >
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#ff4e00]/30 group-hover:border-[#ff4e00] transition-colors">
+                <img 
+                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                  alt={user.displayName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tu Perfil</p>
+                <p className="font-bold text-white group-hover:text-[#ff4e00] transition-colors">Ver mi cuenta</p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-[#ff4e00] transform group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </div>
+        </motion.section>
+      )}
 
       {/* Live Streams Grid */}
       <section className="space-y-12">
