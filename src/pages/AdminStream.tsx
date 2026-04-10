@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc } from '../firebase';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
 import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,6 +24,7 @@ const AdminStream: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [autoModerate, setAutoModerate] = useState(true);
+  const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -33,7 +34,7 @@ const AdminStream: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
-  const { token } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
+  const { token, error: tokenError } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
 
   // Real-time Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -63,8 +64,16 @@ const AdminStream: React.FC = () => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        const streamDoc = snapshot.docs[0];
-        setActiveStream({ id: streamDoc.id, ...streamDoc.data() } as StreamSession);
+        // Sort in memory to avoid index requirement for now, or just pick the first
+        // In a real app, we'd use orderBy('startedAt', 'desc') with a composite index
+        const streams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession));
+        const latestStream = streams.sort((a, b) => {
+          const timeA = a.startedAt?.toMillis?.() || 0;
+          const timeB = b.startedAt?.toMillis?.() || 0;
+          return timeB - timeA;
+        })[0];
+        
+        setActiveStream(latestStream);
       } else {
         setActiveStream(null);
       }
@@ -125,6 +134,15 @@ const AdminStream: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setModerationSensitivity(snapshot.data().moderationSensitivity || 'medium');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const setupCamera = async () => {
       if ((activeStream || isPreviewing) && videoRef.current) {
         try {
@@ -175,7 +193,7 @@ const AdminStream: React.FC = () => {
 
   useEffect(() => {
     const connectToLiveKit = async () => {
-      if (activeStream && token && localStream.current) {
+      if (activeStream && token && localStream.current && !roomRef.current) {
         setConnectionStatus('connecting');
         const room = new Room();
         roomRef.current = room;
@@ -183,7 +201,7 @@ const AdminStream: React.FC = () => {
         try {
           const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
           if (!liveKitUrl) {
-            throw new Error('VITE_LIVEKIT_URL is not configured in Secrets');
+            throw new Error('VITE_LIVEKIT_URL no está configurada en los Secretos');
           }
           await room.connect(liveKitUrl, token);
           
@@ -204,6 +222,7 @@ const AdminStream: React.FC = () => {
             type: 'error',
             isVisible: true
           });
+          roomRef.current = null;
         }
       }
     };
@@ -217,7 +236,7 @@ const AdminStream: React.FC = () => {
       }
       setConnectionStatus('idle');
     };
-  }, [activeStream, token]);
+  }, [activeStream, token, localStream.current]);
 
   // Handle track updates when localStream changes (e.g. camera switch)
   useEffect(() => {
@@ -257,6 +276,20 @@ const AdminStream: React.FC = () => {
     if (!user || !title) return;
     setLoading(true);
     try {
+      // First, end any existing live streams for this user to avoid conflicts
+      const q = query(
+        collection(db, 'streams'),
+        where('userId', '==', user.uid),
+        where('status', '==', 'live')
+      );
+      const existingStreams = await getDocs(q);
+      for (const streamDoc of existingStreams.docs) {
+        await updateDoc(doc(db, 'streams', streamDoc.id), {
+          status: 'ended',
+          endedAt: serverTimestamp()
+        });
+      }
+
       const streamData = {
         userId: user.uid,
         userName: user.displayName,
@@ -272,11 +305,13 @@ const AdminStream: React.FC = () => {
         likes: 0,
       };
       await addDoc(collection(db, 'streams'), streamData);
-      setIsPreviewing(false); 
+      // Don't set isPreviewing(false) immediately to keep camera running
+      // The activeStream listener will trigger the UI switch
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'streams');
     } finally {
-      setLoading(false);
+      // Keep loading true for a moment to allow the listener to catch up
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
@@ -359,9 +394,14 @@ const AdminStream: React.FC = () => {
     if (autoModerate) {
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+        const sensitivityPrompt = 
+          moderationSensitivity === 'high' ? 'Sé extremadamente estricto: bloquea cualquier mensaje que pueda ser remotamente ofensivo, spam, o que use lenguaje informal inapropiado.' :
+          moderationSensitivity === 'low' ? 'Sé permisivo: bloquea solo insultos graves o spam evidente.' :
+          'Bloquea mensajes ofensivos, spam o lenguaje inapropiado para una comunidad cultural.';
+
         const response = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
-          contents: `Analiza si este mensaje de chat es ofensivo, spam o inapropiado para una comunidad cultural. Responde solo con "SI" o "NO": "${msgText}"`,
+          contents: `Actúa como moderador de chat. ${sensitivityPrompt} Responde solo con "SI" (si debe ser bloqueado) o "NO" (si es aceptable): "${msgText}"`,
         });
         if (response.text?.trim().toUpperCase() === 'SI') {
           setToast({ message: 'Mensaje bloqueado por moderación automática.', type: 'error', isVisible: true });
@@ -460,6 +500,12 @@ const AdminStream: React.FC = () => {
             <span className="text-xs font-black uppercase tracking-[0.3em]">Transmisión</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Panel de Control</span></h1>
+          {tokenError && (
+            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 text-red-500 text-xs mt-4">
+              <X className="w-4 h-4" />
+              <p>Error de Token: {tokenError}</p>
+            </div>
+          )}
           <p className="text-white/40 text-sm font-medium italic max-w-md">
             <span>Configura y gestiona tu transmisión en vivo para conectar con tu audiencia.</span>
           </p>

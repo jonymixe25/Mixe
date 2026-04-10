@@ -38,9 +38,9 @@ const GlobalSettings: React.FC = () => {
           setMaintenanceMode(data.maintenanceMode || false);
           setRegistrationEnabled(data.registrationEnabled ?? true);
           setModerationSensitivity(data.moderationSensitivity || 'medium');
-          setFacebookUrl(data.facebookUrl || '');
-          setTwitterUrl(data.twitterUrl || '');
-          setInstagramUrl(data.instagramUrl || '');
+          setFacebookUrl(data.socialLinks?.facebook || '');
+          setTwitterUrl(data.socialLinks?.twitter || '');
+          setInstagramUrl(data.socialLinks?.instagram || '');
         }
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'settings/global');
@@ -62,9 +62,11 @@ const GlobalSettings: React.FC = () => {
         maintenanceMode,
         registrationEnabled,
         moderationSensitivity,
-        facebookUrl,
-        twitterUrl,
-        instagramUrl
+        socialLinks: {
+          facebook: facebookUrl,
+          twitter: twitterUrl,
+          instagram: instagramUrl
+        }
       });
       setToast({ message: 'Configuración guardada.', type: 'success', isVisible: true });
     } catch (error) {
@@ -87,7 +89,7 @@ const GlobalSettings: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="space-y-4">
-        <div className="flex items-center gap-3 text-[#ff4e00]">
+        <div className="flex items-center gap-3 text-brand">
           <SettingsIcon className="w-5 h-5" />
           <span className="text-xs font-black uppercase tracking-[0.3em]">Configuración Global</span>
         </div>
@@ -100,7 +102,7 @@ const GlobalSettings: React.FC = () => {
         <div className="space-y-8">
           {/* General Section */}
           <div className="glass p-10 rounded-[3rem] space-y-8">
-            <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4e00] mb-4">General</h3>
+            <h3 className="text-sm font-black uppercase tracking-widest text-brand mb-4">General</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Nombre de la App</label>
@@ -108,7 +110,7 @@ const GlobalSettings: React.FC = () => {
                   type="text"
                   value={appName}
                   onChange={(e) => setAppName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] outline-none transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all"
                 />
               </div>
               <div className="space-y-3">

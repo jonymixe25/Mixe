@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, collection, query, where, onSnapshot, orderBy, limit } from '../firebase';
+import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
 import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, Clock, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -12,6 +12,16 @@ const Home: React.FC = () => {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mixeWord, setMixeWord] = useState({ mixe: 'Määy', spanish: 'Buenos días', pronunciation: 'Ma-ai' });
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setGlobalSettings(snapshot.data());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const words = [
@@ -71,7 +81,7 @@ const Home: React.FC = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="inline-block px-5 py-2 rounded-full bg-[#ff4e00]/10 border border-[#ff4e00]/30 text-[#ff4e00] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-10 backdrop-blur-md"
+            className="inline-block px-5 py-2 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-10 backdrop-blur-md"
           >
             <span>Cultura • Tradición • Comunidad</span>
           </motion.div>
@@ -81,9 +91,9 @@ const Home: React.FC = () => {
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className="text-6xl sm:text-8xl md:text-[10rem] font-display font-black tracking-tighter uppercase italic leading-[0.8] mb-10"
           >
-            <span className="block">La Voz</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff4e00] via-[#ff8c00] to-[#ff4e00] bg-[length:200%_auto] animate-gradient">
-              Mixe
+            <span className="block">{globalSettings?.appName?.split(' ')[0] || 'La Voz'}</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-brand/80 to-brand bg-[length:200%_auto] animate-gradient">
+              {globalSettings?.appName?.split(' ').slice(1).join(' ') || 'Mixe'}
             </span>
           </motion.h1>
           <motion.p 

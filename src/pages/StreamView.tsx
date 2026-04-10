@@ -38,9 +38,19 @@ const StreamView: React.FC = () => {
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   
   const { token, error: tokenError } = useLiveKitToken(id || '', user?.uid || '');
   const roomRef = useRef<Room | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setModerationSensitivity(snapshot.data().moderationSensitivity || 'medium');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!id || !user) return;
@@ -181,6 +191,26 @@ const StreamView: React.FC = () => {
 
     const msgText = message.trim();
     setMessage('');
+
+    // Auto-moderation logic
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const sensitivityPrompt = 
+        moderationSensitivity === 'high' ? 'Sé extremadamente estricto: bloquea cualquier mensaje que pueda ser remotamente ofensivo, spam, o que use lenguaje informal inapropiado.' :
+        moderationSensitivity === 'low' ? 'Sé permisivo: bloquea solo insultos graves o spam evidente.' :
+        'Bloquea mensajes ofensivos, spam o lenguaje inapropiado para una comunidad cultural.';
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Actúa como moderador de chat. ${sensitivityPrompt} Responde solo con "SI" (si debe ser bloqueado) o "NO" (si es aceptable): "${msgText}"`,
+      });
+      if (response.text?.trim().toUpperCase() === 'SI') {
+        setToast({ message: 'Mensaje bloqueado por moderación automática.', type: 'error', isVisible: true });
+        return;
+      }
+    } catch (error) {
+      console.error('Moderation error:', error);
+    }
 
     try {
       await addDoc(collection(db, 'streams', id, 'messages'), {
