@@ -8,8 +8,8 @@ import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Toast from '../components/Toast';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();

@@ -270,125 +270,246 @@ const StreamView: React.FC = () => {
     </div>
   );
 
-  if (!stream) return null;
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-      {/* Video Player Section */}
-      <div className="lg:col-span-3 space-y-8">
-        <div 
-          className="aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden border border-white/10 relative shadow-2xl shadow-[#ff4e00]/5 group ring-1 ring-white/5"
-        >
-          {/* LiveKit Video Container */}
-          <div
-            ref={videoRef}
-            className="w-full h-full object-cover"
-          />
+    <div className="max-w-[1600px] mx-auto space-y-8">
+      {/* Immersive Stream Container */}
+      <div className="relative w-full aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden shadow-2xl shadow-black/50 group ring-1 ring-white/5">
+        {/* LiveKit Video Container */}
+        <div
+          ref={videoRef}
+          className="w-full h-full object-cover"
+        />
 
-          {connectionStatus !== 'connected' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0502]/80 backdrop-blur-md z-20">
-              <div className="relative">
-                <div className="w-20 h-20 border-4 border-[#ff4e00]/10 rounded-full animate-spin border-t-[#ff4e00] shadow-[0_0_20px_rgba(255,78,0,0.2)]" />
-                <Radio className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
-              </div>
-              <p className="mt-6 text-white font-black uppercase tracking-[0.3em] text-[10px]">
-                <span>{connectionStatus === 'connecting' ? 'Conectando con el anfitrión...' : 'Error de conexión'}</span>
-              </p>
-              {connectionStatus === 'failed' && (
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="mt-6 bg-[#ff4e00] px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 active:scale-95"
-                >
-                  <span>Reintentar</span>
-                </button>
-              )}
+        {/* Connection Status Overlay */}
+        {connectionStatus !== 'connected' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0502]/80 backdrop-blur-md z-50">
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-[#ff4e00]/10 rounded-full animate-spin border-t-[#ff4e00] shadow-[0_0_20px_rgba(255,78,0,0.2)]" />
+              <Radio className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
             </div>
-          )}
-          
-          {/* Overlay UI - Top */}
-          <div className="absolute top-0 left-0 right-0 p-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-red-600/90 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl border border-red-500/20">
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+            <p className="mt-6 text-white font-black uppercase tracking-[0.3em] text-[10px]">
+              <span>{connectionStatus === 'connecting' ? 'Conectando con el anfitrión...' : 'Error de conexión'}</span>
+            </p>
+            {connectionStatus === 'failed' && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-6 bg-[#ff4e00] px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 active:scale-95"
+              >
+                <span>Reintentar</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Top Overlay Bar */}
+        <div className="absolute top-0 left-0 right-0 p-6 md:p-8 flex items-start justify-between z-30 bg-gradient-to-b from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-600 px-3 py-1 rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg">
+                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 <span>Live</span>
               </div>
-              <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest border border-white/10 shadow-xl">
-                <Users className="w-4 h-4 text-[#ff4e00]" />
-                <span className="font-mono">{stream.viewerCount}</span>
+              <div className="glass px-3 py-1 rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-white/10">
+                <Users className="w-3 h-3 text-[#ff4e00]" />
+                <span>{stream.viewerCount}</span>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/')}
-              className="bg-black/40 backdrop-blur-md p-3 rounded-2xl hover:bg-red-500 transition-all border border-white/10 shadow-xl group active:scale-90"
-            >
-              <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            </button>
+            <h1 className="text-2xl md:text-3xl font-display font-black tracking-tighter uppercase italic text-white drop-shadow-lg">
+              {stream.title}
+            </h1>
           </div>
-        </div>
+          <button
+            onClick={() => navigate('/')}
+            className="glass p-3 rounded-2xl hover:bg-red-500 transition-all border-white/10 shadow-xl group active:scale-90"
+          >
+            <X className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          </button>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between bg-white/5 border border-white/10 rounded-[2.5rem] p-8 gap-8 shadow-xl">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-[#ff4e00] p-0.5 shadow-2xl shadow-[#ff4e00]/20">
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
-                alt="avatar"
-                className="w-full h-full rounded-[1.4rem] bg-[#0a0502]"
-              />
+        {/* Chat Overlay (Desktop) */}
+        <div className="absolute top-8 right-8 bottom-8 w-80 z-40 hidden lg:flex flex-col glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+          <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
             </div>
-            <div className="space-y-1">
-              <h2 className="font-display font-black text-2xl uppercase italic tracking-tight"><span>{stream.userName}</span></h2>
-              <div className="flex items-center gap-2">
-                <Shield className="w-3.5 h-3.5 text-[#ff4e00]" />
-                <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em]"><span>Streamer Mixe • Verificado</span></p>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+            {chat.map((msg) => (
+              <motion.div 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                key={msg.id} 
+                className="flex flex-col gap-1"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-[#ff4e00] uppercase tracking-wider">{msg.userName}</span>
+                  <span className="text-[8px] text-white/20 uppercase tracking-widest">
+                    {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                </div>
+                <div className="bg-white/5 rounded-2xl rounded-tl-none p-3 border border-white/5">
+                  {msg.text && <p className="text-xs text-white/80 leading-relaxed italic">{msg.text}</p>}
+                  {msg.imageUrl && (
+                    <img 
+                      src={msg.imageUrl} 
+                      alt="chat" 
+                      className="mt-2 rounded-xl w-full object-cover border border-white/10"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSendMessage} className="p-4 bg-white/5 border-t border-white/10">
+            <div className="relative">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Escribe algo..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-4 pr-12 text-xs focus:border-[#ff4e00] outline-none transition-all"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => chatImageInputRef.current?.click()}
+                  className="p-2 text-white/30 hover:text-[#ff4e00] transition-colors"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+                <button
+                  type="submit"
+                  className="p-2 text-[#ff4e00] hover:scale-110 transition-transform"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={handleLike}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all duration-500 shadow-xl ${
-                isLiked 
-                  ? 'bg-red-500 text-white scale-105 shadow-red-500/20' 
-                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10'
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="flex items-center gap-2">
-                <span>{isLiked ? '¡Me gusta!' : 'Me gusta'}</span>
-                <span className="opacity-40 text-xs font-mono"><span>({stream.likes || 0})</span></span>
-              </span>
-            </button>
-            <div className="flex gap-3">
+            <input
+              type="file"
+              ref={chatImageInputRef}
+              onChange={handleChatImageUpload}
+              className="hidden"
+              accept="image/*"
+            />
+          </form>
+        </div>
+
+        {/* Bottom Controls Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-30 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#ff4e00] p-0.5 shadow-xl">
+                  <img
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
+                    alt="avatar"
+                    className="w-full h-full rounded-[0.9rem] bg-[#0a0502]"
+                  />
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-display font-bold uppercase italic tracking-tight">{stream.userName}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-[#ff4e00]">Streamer Verificado</p>
+                </div>
+              </div>
+              
+              <div className="h-8 w-px bg-white/10 hidden sm:block" />
+              
+              <div className="flex items-center gap-2">
+                <button className="p-2 text-white/60 hover:text-white transition-colors">
+                  <Volume2 className="w-5 h-5" />
+                </button>
+                <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden hidden sm:block">
+                  <div className="w-2/3 h-full bg-[#ff4e00]" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleLike}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all duration-500 ${
+                  isLiked 
+                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' 
+                    : 'glass text-white/60 hover:bg-white/10 border-white/10'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                <span>{stream.likes || 0}</span>
+              </button>
               <button 
                 onClick={handleShare}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-all shadow-xl active:scale-90"
-                title="Copiar enlace"
+                className="glass p-3 rounded-2xl border-white/10 text-white/60 hover:text-white transition-all active:scale-90"
               >
-                <Share2 className="w-5 h-5" />
+                <Share2 className="w-4 h-4" />
               </button>
-              <button 
-                onClick={shareToLinkedIn}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:bg-[#0077b5] hover:border-[#0077b5] hover:text-white transition-all shadow-xl active:scale-90"
-                title="Compartir en LinkedIn"
-              >
-                <Linkedin className="w-5 h-5" />
+              <button className="glass p-3 rounded-2xl border-white/10 text-white/60 hover:text-white transition-all active:scale-90">
+                <Maximize className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 shadow-xl relative overflow-hidden group">
-          <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#ff4e00]/5 rounded-full blur-[100px] group-hover:bg-[#ff4e00]/10 transition-all duration-1000" />
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-6 flex items-center gap-3">
-            <Radio className="w-4 h-4 text-[#ff4e00]" />
-            <span>Descripción de la Transmisión</span>
-          </h2>
-          <p className="text-white/70 text-lg leading-relaxed italic font-medium max-w-4xl">
-            <span>{stream.description || 'El streamer no ha proporcionado una descripción para esta transmisión.'}</span>
-          </p>
+      {/* Mobile Info & Chat Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="glass p-8 rounded-[2.5rem] border-white/10 shadow-xl">
+            <div className="flex items-center gap-3 text-[#ff4e00] mb-4">
+              <Radio className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Descripción</span>
+            </div>
+            <p className="text-white/70 text-lg leading-relaxed italic font-medium">
+              {stream.description || 'Sin descripción disponible.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile Chat (visible only on small screens) */}
+        <div className="lg:hidden glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-xl flex flex-col h-[400px]">
+          <div className="p-6 border-b border-white/10 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {chat.map((msg) => (
+              <div key={msg.id} className="space-y-1">
+                <p className="text-[10px] font-black text-[#ff4e00] uppercase tracking-wider">{msg.userName}</p>
+                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                  <p className="text-xs text-white/80 italic">{msg.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
+            <div className="relative">
+              <input
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Escribe algo..."
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-4 pr-12 text-xs outline-none"
+              />
+              <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#ff4e00]">
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </form>
         </div>
       </div>
+
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
+    </div>
   );
 };
 
