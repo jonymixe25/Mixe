@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -32,6 +32,11 @@ const StreamView: React.FC = () => {
   
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
   const videoRef = useRef<HTMLDivElement>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  
+  const [reactions, setReactions] = useState<{ id: number; x: number }[]>([]);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   
   const { token, error: tokenError } = useLiveKitToken(id || '', user?.uid || '');
   const roomRef = useRef<Room | null>(null);
@@ -93,15 +98,27 @@ const StreamView: React.FC = () => {
       room.on(RoomEvent.TrackSubscribed, (track: Track, publication: any, participant: any) => {
         if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
           const element = track.attach();
-          videoRef.current?.appendChild(element);
+          if (track.kind === Track.Kind.Video) {
+            videoElementRef.current = element as HTMLVideoElement;
+          }
+          if (videoRef.current) {
+            // Check if element is already a child to avoid duplicates
+            if (!videoRef.current.contains(element)) {
+              videoRef.current.appendChild(element);
+            }
+          }
           setConnectionStatus('connected');
         }
       });
 
+      room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
+        track.detach().forEach((element) => element.remove());
+      });
+
       try {
-        const liveKitUrl = process.env.LIVEKIT_URL;
+        const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
         if (!liveKitUrl) {
-          throw new Error('LIVEKIT_URL is not configured');
+          throw new Error('VITE_LIVEKIT_URL is not configured');
         }
         await room.connect(liveKitUrl, token);
         console.log('Connected to LiveKit room', room.name);
@@ -252,6 +269,46 @@ const StreamView: React.FC = () => {
     window.open(shareUrl, '_blank');
   };
 
+  const handleReaction = () => {
+    const id = Date.now();
+    const x = Math.random() * 100;
+    setReactions(prev => [...prev, { id, x }]);
+    setTimeout(() => {
+      setReactions(prev => prev.filter(r => r.id !== id));
+    }, 2000);
+  };
+
+  const togglePiP = async () => {
+    try {
+      if (videoElementRef.current) {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await videoElementRef.current.requestPictureInPicture();
+        }
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+    }
+  };
+
+  const generateSummary = async () => {
+    if (!stream?.description) return;
+    setIsSummarizing(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Resume de forma muy breve y atractiva esta transmisión sobre cultura Mixe: ${stream.description}`,
+      });
+      setSummary(response.text || 'No se pudo generar el resumen.');
+    } catch (error) {
+      console.error('Summary error:', error);
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff4e00]"></div>
@@ -274,6 +331,24 @@ const StreamView: React.FC = () => {
     <div className="max-w-[1600px] mx-auto space-y-8">
       {/* Immersive Stream Container */}
       <div className="relative w-full aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden shadow-2xl shadow-black/50 group ring-1 ring-white/5">
+        {/* Floating Reactions Container */}
+        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+          <AnimatePresence>
+            {reactions.map(r => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: '100%', x: `${r.x}%` }}
+                animate={{ opacity: 1, y: '-20%', x: `${r.x + (Math.random() * 20 - 10)}%` }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 2, ease: "easeOut" }}
+                className="absolute bottom-0"
+              >
+                <Heart className="w-8 h-8 text-[#ff4e00] fill-current drop-shadow-[0_0_10px_rgba(255,78,0,0.5)]" />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
         {/* LiveKit Video Container */}
         <div
           ref={videoRef}
@@ -345,7 +420,12 @@ const StreamView: React.FC = () => {
                 className="flex flex-col gap-1"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-[#ff4e00] uppercase tracking-wider">{msg.userName}</span>
+                  <span className={`text-[10px] font-black uppercase tracking-wider ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-emerald-400'}`}>
+                    {msg.userName}
+                  </span>
+                  {msg.userId === stream?.userId && (
+                    <Shield className="w-3 h-3 text-[#ff4e00]" />
+                  )}
                   <span className="text-[8px] text-white/20 uppercase tracking-widest">
                     {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </span>
@@ -375,6 +455,13 @@ const StreamView: React.FC = () => {
                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-4 pr-12 text-xs focus:border-[#ff4e00] outline-none transition-all"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleReaction}
+                  className="p-2 text-white/30 hover:text-red-500 transition-colors"
+                >
+                  <Heart className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => chatImageInputRef.current?.click()}
@@ -448,6 +535,13 @@ const StreamView: React.FC = () => {
               >
                 <Share2 className="w-4 h-4" />
               </button>
+              <button 
+                onClick={togglePiP}
+                className="glass p-3 rounded-2xl border-white/10 text-white/60 hover:text-white transition-all active:scale-90"
+                title="Picture in Picture"
+              >
+                <PictureInPicture2 className="w-4 h-4" />
+              </button>
               <button className="glass p-3 rounded-2xl border-white/10 text-white/60 hover:text-white transition-all active:scale-90">
                 <Maximize className="w-4 h-4" />
               </button>
@@ -459,11 +553,34 @@ const StreamView: React.FC = () => {
       {/* Mobile Info & Chat Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="glass p-8 rounded-[2.5rem] border-white/10 shadow-xl">
-            <div className="flex items-center gap-3 text-[#ff4e00] mb-4">
-              <Radio className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Descripción</span>
+          <div className="glass p-8 rounded-[2.5rem] border-white/10 shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3 text-[#ff4e00]">
+                <Radio className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Descripción</span>
+              </div>
+              <button 
+                onClick={generateSummary}
+                disabled={isSummarizing || !stream?.description}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#ff4e00] transition-colors disabled:opacity-50"
+              >
+                {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                <span>Resumen IA</span>
+              </button>
             </div>
+            
+            <AnimatePresence>
+              {summary && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mb-6 p-4 bg-[#ff4e00]/5 border border-[#ff4e00]/20 rounded-2xl italic text-sm text-white/80"
+                >
+                  <p>{summary}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <p className="text-white/70 text-lg leading-relaxed italic font-medium">
               {stream.description || 'Sin descripción disponible.'}
             </p>

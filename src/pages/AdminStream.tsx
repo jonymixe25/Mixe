@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2 } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -19,6 +19,7 @@ const AdminStream: React.FC = () => {
   const [suggesting, setSuggesting] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [autoModerate, setAutoModerate] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
@@ -130,9 +131,9 @@ const AdminStream: React.FC = () => {
           if (videoRef.current) videoRef.current.srcObject = stream;
           setCameraError(null);
           
-          const liveKitUrl = process.env.LIVEKIT_URL;
+          const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
           if (!liveKitUrl) {
-            throw new Error('LIVEKIT_URL is not configured');
+            throw new Error('VITE_LIVEKIT_URL is not configured');
           }
           await room.connect(liveKitUrl, token);
           await room.localParticipant.publishTrack(stream.getVideoTracks()[0]);
@@ -239,6 +240,12 @@ const AdminStream: React.FC = () => {
     const msgText = newMessage.trim();
     setNewMessage('');
 
+    // Auto-moderation logic (mock)
+    if (autoModerate && (msgText.includes('spam') || msgText.includes('badword'))) {
+      console.log('Message blocked by auto-moderation');
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
         userId: user.uid,
@@ -315,6 +322,29 @@ const AdminStream: React.FC = () => {
           </p>
         </div>
         
+        {activeStream && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Likes', value: activeStream.likes || 0, icon: Heart, color: 'text-red-500' },
+              { label: 'Espectadores', value: activeStream.viewerCount, icon: Users, color: 'text-[#ff4e00]' },
+              { label: 'Mensajes', value: chatMessages.length, icon: MessageSquare, color: 'text-emerald-500' },
+              { label: 'Duración', value: '00:42:15', icon: Clock, color: 'text-blue-500' },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="glass p-4 rounded-2xl border-white/10 flex flex-col items-center justify-center gap-1"
+              >
+                <stat.icon className={`w-4 h-4 ${stat.color} opacity-60`} />
+                <span className="text-xl font-mono font-black">{stat.value}</span>
+                <span className="text-[8px] font-black uppercase tracking-widest text-white/20">{stat.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
         {activeStream && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
@@ -452,6 +482,15 @@ const AdminStream: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                     <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">En vivo</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Auto-Mod</span>
+                    <button 
+                      onClick={() => setAutoModerate(!autoModerate)}
+                      className={`w-8 h-4 rounded-full transition-colors relative ${autoModerate ? 'bg-[#ff4e00]' : 'bg-white/10'}`}
+                    >
+                      <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${autoModerate ? 'left-4.5' : 'left-0.5'}`} />
+                    </button>
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
