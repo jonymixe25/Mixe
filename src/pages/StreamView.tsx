@@ -98,9 +98,15 @@ const StreamView: React.FC = () => {
       room.on(RoomEvent.TrackSubscribed, (track: Track, publication: any, participant: any) => {
         if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
           const element = track.attach();
-          if (track.kind === Track.Kind.Video) {
-            videoElementRef.current = element as HTMLVideoElement;
+          
+          // Ensure video elements have necessary attributes for autoplay
+          if (element instanceof HTMLVideoElement) {
+            element.playsInline = true;
+            element.muted = true; // Often required for autoplay
+            element.autoplay = true;
+            videoElementRef.current = element;
           }
+
           if (videoRef.current) {
             // Check if element is already a child to avoid duplicates
             if (!videoRef.current.contains(element)) {

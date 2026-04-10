@@ -6,6 +6,7 @@ import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image a
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
+import Toast from '../components/Toast';
 import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
 import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
@@ -20,6 +21,11 @@ const AdminStream: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [autoModerate, setAutoModerate] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
@@ -115,51 +121,96 @@ const AdminStream: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if ((activeStream || isPreviewing) && videoRef.current) {
-      const setupRoom = async () => {
-        if (!token) return;
-        
-        const room = new Room();
-        roomRef.current = room;
-        
+    const setupCamera = async () => {
+      if ((activeStream || isPreviewing) && videoRef.current) {
         try {
+          // If we already have a stream and it's active, don't restart it unless facingMode changed
+          if (localStream.current && localStream.current.active) {
+            // Check if facingMode matches
+            const videoTrack = localStream.current.getVideoTracks()[0];
+            const settings = videoTrack.getSettings();
+            // This is a rough check as settings.facingMode might not be supported everywhere
+            if (settings.facingMode && settings.facingMode !== facingMode) {
+              localStream.current.getTracks().forEach(track => track.stop());
+            } else {
+              if (videoRef.current.srcObject !== localStream.current) {
+                videoRef.current.srcObject = localStream.current;
+              }
+              return;
+            }
+          }
+
           const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { facingMode: { ideal: facingMode } }, 
             audio: true 
           });
           localStream.current = stream;
-          if (videoRef.current) videoRef.current.srcObject = stream;
-          setCameraError(null);
-          
-          const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
-          if (!liveKitUrl) {
-            throw new Error('VITE_LIVEKIT_URL is not configured');
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
           }
-          await room.connect(liveKitUrl, token);
-          await room.localParticipant.publishTrack(stream.getVideoTracks()[0]);
-          await room.localParticipant.publishTrack(stream.getAudioTracks()[0]);
-          
+          setCameraError(null);
         } catch (err) {
-          console.error("Error accessing camera or connecting to LiveKit:", err);
-          setCameraError(err instanceof Error ? err.message : 'Error de conexión');
+          console.error("Error accessing camera:", err);
+          setCameraError(err instanceof Error ? err.message : 'Error al acceder a la cámara');
           setIsPreviewing(false);
         }
-      };
+      } else {
+        // Stop camera if not previewing and no active stream
+        if (localStream.current) {
+          localStream.current.getTracks().forEach(track => track.stop());
+          localStream.current = null;
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+      }
+    };
 
-      setupRoom();
-    }
+    setupCamera();
+  }, [activeStream, isPreviewing, facingMode]);
+
+  useEffect(() => {
+    const connectToLiveKit = async () => {
+      if (activeStream && token && localStream.current) {
+        const room = new Room();
+        roomRef.current = room;
+        
+        try {
+          const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
+          if (!liveKitUrl) {
+            throw new Error('VITE_LIVEKIT_URL is not configured in Secrets');
+          }
+          await room.connect(liveKitUrl, token);
+          
+          // Publish tracks from the already running localStream
+          const videoTrack = localStream.current.getVideoTracks()[0];
+          const audioTrack = localStream.current.getAudioTracks()[0];
+          
+          if (videoTrack) await room.localParticipant.publishTrack(videoTrack);
+          if (audioTrack) await room.localParticipant.publishTrack(audioTrack);
+          
+          console.log('Connected and publishing to LiveKit');
+        } catch (err) {
+          console.error("Error connecting to LiveKit:", err);
+          // We don't stop the local preview, just show an error for the stream
+          setToast({
+            message: `Error de streaming: ${err instanceof Error ? err.message : 'No se pudo conectar'}`,
+            type: 'error',
+            isVisible: true
+          });
+        }
+      }
+    };
+
+    connectToLiveKit();
 
     return () => {
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
-      if (localStream.current) {
-        localStream.current.getTracks().forEach(track => track.stop());
-        localStream.current = null;
-      }
     };
-  }, [activeStream, isPreviewing, facingMode, token]);
+  }, [activeStream, token]);
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
@@ -309,6 +360,13 @@ const AdminStream: React.FC = () => {
       >
         <p className="text-white/60 italic"><span>¿Estás seguro de que deseas terminar la transmisión en vivo? Esta acción no se puede deshacer.</span></p>
       </Modal>
+
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
 
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-4">
