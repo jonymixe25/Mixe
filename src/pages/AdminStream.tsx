@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit } from '../firebase';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -16,6 +16,9 @@ const AdminStream: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('cultura');
+  const [privacy, setPrivacy] = useState<'public' | 'private'>('public');
+  const [latency, setLatency] = useState<'normal' | 'low'>('normal');
+  const [resolution, setResolution] = useState<'720p' | '1080p'>('720p');
   const [loading, setLoading] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -226,13 +229,16 @@ const AdminStream: React.FC = () => {
         title,
         description,
         category,
+        privacy,
+        latency,
+        resolution,
         status: 'live',
         startedAt: serverTimestamp(),
         viewerCount: 0,
         likes: 0,
       };
       await addDoc(collection(db, 'streams'), streamData);
-      setIsPreviewing(false); // Camera will be handled by activeStream effect
+      setIsPreviewing(false); 
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'streams');
     } finally {
@@ -284,6 +290,30 @@ const AdminStream: React.FC = () => {
     }
   };
 
+  const handleAcceptRequest = async (requestId: string) => {
+    if (!activeStream) return;
+    try {
+      await updateDoc(doc(db, 'streams', activeStream.id, 'joinRequests', requestId), {
+        status: 'accepted'
+      });
+      setToast({ message: 'Solicitud aceptada', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error accepting request:', error);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    if (!activeStream) return;
+    try {
+      await updateDoc(doc(db, 'streams', activeStream.id, 'joinRequests', requestId), {
+        status: 'rejected'
+      });
+      setToast({ message: 'Solicitud rechazada', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !activeStream) return;
@@ -291,10 +321,21 @@ const AdminStream: React.FC = () => {
     const msgText = newMessage.trim();
     setNewMessage('');
 
-    // Auto-moderation logic (mock)
-    if (autoModerate && (msgText.includes('spam') || msgText.includes('badword'))) {
-      console.log('Message blocked by auto-moderation');
-      return;
+    // Auto-moderation logic with Gemini
+    if (autoModerate) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: `Analiza si este mensaje de chat es ofensivo, spam o inapropiado para una comunidad cultural. Responde solo con "SI" o "NO": "${msgText}"`,
+        });
+        if (response.text?.trim().toUpperCase() === 'SI') {
+          setToast({ message: 'Mensaje bloqueado por moderación automática.', type: 'error', isVisible: true });
+          return;
+        }
+      } catch (error) {
+        console.error('Moderation error:', error);
+      }
     }
 
     try {
@@ -306,6 +347,16 @@ const AdminStream: React.FC = () => {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `streams/${activeStream.id}/messages`);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!activeStream) return;
+    try {
+      await deleteDoc(doc(db, 'streams', activeStream.id, 'messages', messageId));
+      setToast({ message: 'Mensaje eliminado.', type: 'success', isVisible: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `streams/${activeStream.id}/messages/${messageId}`);
     }
   };
 
@@ -554,10 +605,19 @@ const AdminStream: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                   {chatMessages.map(msg => (
                     <div key={msg.id} className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
-                          {msg.userName}
-                        </span>
+                      <div className="flex items-center justify-between group/msg">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                            {msg.userName}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => deleteMessage(msg.id)}
+                          className="opacity-0 group-hover/msg:opacity-100 p-1 hover:text-red-500 transition-all"
+                          title="Eliminar mensaje"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
                       {msg.imageUrl ? (
                         <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px] shadow-lg">
@@ -663,6 +723,70 @@ const AdminStream: React.FC = () => {
                     <option value="noticias">Noticias</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                      <Lock className="w-3 h-3" />
+                      Privacidad
+                    </label>
+                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                      <button 
+                        onClick={() => setPrivacy('public')}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${privacy === 'public' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Público
+                      </button>
+                      <button 
+                        onClick={() => setPrivacy('private')}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${privacy === 'private' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Privado
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                      <Zap className="w-3 h-3" />
+                      Latencia
+                    </label>
+                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                      <button 
+                        onClick={() => setLatency('normal')}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${latency === 'normal' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Normal
+                      </button>
+                      <button 
+                        onClick={() => setLatency('low')}
+                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${latency === 'low' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      >
+                        Baja
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                    <Monitor className="w-3 h-3" />
+                    Resolución Máxima
+                  </label>
+                  <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                    <button 
+                      onClick={() => setResolution('720p')}
+                      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${resolution === '720p' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                    >
+                      720p (HD)
+                    </button>
+                    <button 
+                      onClick={() => setResolution('1080p')}
+                      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${resolution === '1080p' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                    >
+                      1080p (Full HD)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1"><span>Descripción</span></label>
                   <textarea
@@ -742,6 +866,22 @@ const AdminStream: React.FC = () => {
                         />
                       </div>
                       <span className="text-xs font-bold text-white/80"><span>{request.userName}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleAcceptRequest(request.id)}
+                        className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
+                        title="Aceptar"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleRejectRequest(request.id)}
+                        className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                        title="Rechazar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </motion.div>
                 ))

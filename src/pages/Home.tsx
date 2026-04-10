@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles } from 'lucide-react';
+import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, Clock, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -11,6 +11,18 @@ const Home: React.FC = () => {
   const [streams, setStreams] = useState<StreamSession[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mixeWord, setMixeWord] = useState({ mixe: 'Määy', spanish: 'Buenos días', pronunciation: 'Ma-ai' });
+
+  useEffect(() => {
+    const words = [
+      { mixe: 'Määy', spanish: 'Buenos días', pronunciation: 'Ma-ai' },
+      { mixe: 'Tsä’äm', spanish: 'Fruta', pronunciation: 'Tsa-am' },
+      { mixe: 'Poj', spanish: 'Viento', pronunciation: 'Poj' },
+      { mixe: 'Kääw', spanish: 'Caballo', pronunciation: 'Ka-aw' },
+      { mixe: 'Mëj', spanish: 'Grande', pronunciation: 'Mej' }
+    ];
+    setMixeWord(words[Math.floor(Math.random() * words.length)]);
+  }, []);
 
   useEffect(() => {
     const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'));
@@ -113,44 +125,75 @@ const Home: React.FC = () => {
 
       {/* Welcome Message Section */}
       {user && (
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="px-2"
-        >
-          <div className="glass p-8 md:p-12 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 border-white/10 shadow-2xl">
-            <div className="space-y-4 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-3 text-[#ff4e00]">
-                <Sparkles className="w-5 h-5" />
-                <span className="text-xs font-black uppercase tracking-[0.3em]">Bienvenido de nuevo</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-2">
+          <motion.section 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="lg:col-span-2"
+          >
+            <div className="glass p-8 md:p-12 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 border-white/10 shadow-2xl h-full">
+              <div className="space-y-4 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-3 text-[#ff4e00]">
+                  <Sparkles className="w-5 h-5" />
+                  <span className="text-xs font-black uppercase tracking-[0.3em]">Bienvenido de nuevo</span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic leading-none">
+                  <span>¡Hola, {user.displayName}!</span>
+                </h2>
+                <p className="text-white/40 text-lg italic max-w-xl">
+                  <span>Es un gusto tenerte de vuelta en la comunidad. Explora las últimas noticias y transmisiones en vivo de nuestra región.</span>
+                </p>
               </div>
-              <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic leading-none">
-                <span>¡Hola, {user.displayName}!</span>
-              </h2>
-              <p className="text-white/40 text-lg italic max-w-xl">
-                <span>Es un gusto tenerte de vuelta en la comunidad. Explora las últimas noticias y transmisiones en vivo de nuestra región.</span>
-              </p>
+              <Link 
+                to="/profile"
+                className="group relative flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 pr-8 rounded-[2rem] transition-all duration-500 border border-white/10"
+              >
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#ff4e00]/30 group-hover:border-[#ff4e00] transition-colors">
+                  <img 
+                    src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                    alt={user.displayName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tu Perfil</p>
+                  <p className="font-bold text-white group-hover:text-[#ff4e00] transition-colors">Ver mi cuenta</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-[#ff4e00] transform group-hover:translate-x-2 transition-transform" />
+              </Link>
             </div>
-            <Link 
-              to="/profile"
-              className="group relative flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 pr-8 rounded-[2rem] transition-all duration-500 border border-white/10"
-            >
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#ff4e00]/30 group-hover:border-[#ff4e00] transition-colors">
-                <img 
-                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
-                  alt={user.displayName}
-                  className="w-full h-full object-cover"
-                />
+          </motion.section>
+
+          {/* Mixe Word of the Day */}
+          <motion.section
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="h-full"
+          >
+            <div className="glass p-8 md:p-10 rounded-[3rem] border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/5 h-full flex flex-col justify-center relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff4e00]/10 rounded-full blur-3xl group-hover:bg-[#ff4e00]/20 transition-all duration-700" />
+              <div className="flex items-center gap-3 text-[#ff4e00] mb-6">
+                <Languages className="w-5 h-5" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Palabra del Día (Mixe)</span>
               </div>
-              <div className="text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tu Perfil</p>
-                <p className="font-bold text-white group-hover:text-[#ff4e00] transition-colors">Ver mi cuenta</p>
+              <div className="space-y-2">
+                <h3 className="text-5xl font-display font-black text-white italic tracking-tighter uppercase leading-none group-hover:text-[#ff4e00] transition-colors">
+                  {mixeWord.mixe}
+                </h3>
+                <p className="text-white/40 text-sm font-medium italic">
+                  Pronunciación: <span className="text-white/60">{mixeWord.pronunciation}</span>
+                </p>
               </div>
-              <ArrowRight className="w-5 h-5 text-[#ff4e00] transform group-hover:translate-x-2 transition-transform" />
-            </Link>
-          </div>
-        </motion.section>
+              <div className="mt-8 pt-8 border-t border-white/5">
+                <p className="text-2xl font-display font-bold text-white/80 italic">
+                  "{mixeWord.spanish}"
+                </p>
+              </div>
+            </div>
+          </motion.section>
+        </div>
       )}
 
       {/* Live Streams Grid */}
@@ -233,6 +276,70 @@ const Home: React.FC = () => {
             </Link>
           </div>
         )}
+      </section>
+
+      {/* Mixe Radio Section */}
+      <section className="space-y-12">
+        <div className="flex items-center justify-between px-2">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 text-[#ff4e00]">
+              <Volume2 className="w-5 h-5" />
+              <span className="text-xs font-black uppercase tracking-[0.3em]">Radio en Línea</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic"><span>Radio Ayuujk</span></h2>
+          </div>
+        </div>
+        <div className="glass p-8 md:p-12 rounded-[3rem] border-white/10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Radio className="w-64 h-64 text-[#ff4e00]" />
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
+            <div className="w-48 h-48 bg-[#ff4e00] rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-[#ff4e00]/30 group-hover:rotate-6 transition-transform duration-700">
+              <Radio className="w-24 h-24 text-white" />
+            </div>
+            <div className="flex-1 space-y-6 text-center md:text-left">
+              <div className="space-y-2">
+                <h3 className="text-3xl font-display font-black uppercase italic tracking-tight">Sintonía Directa</h3>
+                <p className="text-white/40 text-lg italic">Escucha la música y las voces de nuestra tierra en cualquier parte del mundo.</p>
+              </div>
+              <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                <button className="bg-white text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all shadow-xl">
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>Escuchar Ahora</span>
+                </button>
+                <div className="glass px-8 py-5 rounded-2xl border-white/10 flex items-center gap-4">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/60">124 Oyentes en línea</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stream Schedule Section */}
+      <section className="space-y-12">
+        <div className="flex items-center gap-3 text-[#ff4e00] px-2">
+          <Clock className="w-5 h-5" />
+          <span className="text-xs font-black uppercase tracking-[0.3em]">Programación</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+          {[
+            { day: 'Lunes', time: '18:00', title: 'Música Tradicional', host: 'Juan P.' },
+            { day: 'Miércoles', time: '19:30', title: 'Historias Ayuujk', host: 'María G.' },
+            { day: 'Viernes', time: '20:00', title: 'Noticias de la Región', host: 'Pedro S.' },
+            { day: 'Domingo', time: '10:00', title: 'Misa y Comunidad', host: 'Padre Luis' }
+          ].map((item, i) => (
+            <div key={i} className="glass p-6 rounded-[2rem] border-white/10 hover:border-[#ff4e00]/30 transition-all group">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">{item.day}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{item.time}</span>
+              </div>
+              <h4 className="font-bold text-sm group-hover:text-[#ff4e00] transition-colors mb-2">{item.title}</h4>
+              <p className="text-[10px] text-white/20 font-black uppercase tracking-widest italic">{item.host}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Latest News Section */}

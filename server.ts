@@ -21,7 +21,7 @@ async function startServer() {
       return res.status(400).json({ error: "Missing room or identity" });
     }
 
-    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
 
     if (!apiKey || !apiSecret) {

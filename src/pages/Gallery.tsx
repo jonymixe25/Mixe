@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, orderBy, deleteDoc, doc, handleFirestoreError } from '../firebase';
 import { MediaItem, OperationType } from '../types';
-import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText } from 'lucide-react';
+import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Modal from '../components/Modal';
@@ -18,6 +18,8 @@ const Gallery: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [uploadFolder, setUploadFolder] = useState('General');
+  const [isPublic, setIsPublic] = useState(false);
+  const [viewMode, setViewMode] = useState<'private' | 'public'>('private');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -27,11 +29,22 @@ const Gallery: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'media'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
+    const baseQuery = collection(db, 'media');
+    let q;
+
+    if (viewMode === 'private') {
+      q = query(
+        baseQuery,
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      q = query(
+        baseQuery,
+        where('isPublic', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({
@@ -46,7 +59,7 @@ const Gallery: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, viewMode]);
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
@@ -95,10 +108,23 @@ const Gallery: React.FC = () => {
             <Folder className="w-5 h-5" />
             <span className="text-xs font-black uppercase tracking-[0.3em]">Almacenamiento</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Mis Archivos</span></h1>
-          <p className="text-white/40 text-sm font-medium italic max-w-md">
-            <span>Organiza y gestiona tus documentos, fotos y videos en carpetas seguras.</span>
-          </p>
+          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic">
+            <span>{viewMode === 'private' ? 'Mis Archivos' : 'Galería Pública'}</span>
+          </h1>
+          <div className="flex items-center gap-4 mt-4">
+            <button 
+              onClick={() => setViewMode('private')}
+              className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${viewMode === 'private' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+            >
+              Privado
+            </button>
+            <button 
+              onClick={() => setViewMode('public')}
+              className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${viewMode === 'public' ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}
+            >
+              Comunidad
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -147,6 +173,18 @@ const Gallery: React.FC = () => {
               />
             </div>
           </div>
+          <div className="flex items-center justify-between glass p-4 rounded-2xl border-white/10">
+            <div className="flex items-center gap-3">
+              <Users className="w-4 h-4 text-[#ff4e00]" />
+              <span className="text-xs font-bold uppercase italic">Hacer público</span>
+            </div>
+            <button 
+              onClick={() => setIsPublic(!isPublic)}
+              className={`w-10 h-5 rounded-full transition-colors relative ${isPublic ? 'bg-[#ff4e00]' : 'bg-white/10'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isPublic ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
           <div className="glass rounded-2xl p-6 border-dashed border-white/10">
             <p className="text-white/60 text-sm italic leading-relaxed text-center">
               <span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu carpeta personal.</span>
@@ -155,6 +193,7 @@ const Gallery: React.FC = () => {
           <ImageUpload 
             onUploadComplete={() => setIsUploadModalOpen(false)}
             folder={uploadFolder || 'General'}
+            isPublic={isPublic}
             label="Selecciona un archivo"
           />
         </div>
@@ -212,6 +251,12 @@ const Gallery: React.FC = () => {
                         <Calendar className="w-3 h-3 text-[#ff4e00]" />
                         <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Reciente'}</span>
                       </div>
+                      {item.isPublic && (
+                        <div className="bg-[#ff4e00]/20 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-[#ff4e00]">
+                          <Users className="w-3 h-3" />
+                          <span>Público</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -227,7 +272,12 @@ const Gallery: React.FC = () => {
                     </a>
                     <button
                       onClick={() => confirmDelete(item.id)}
-                      className="p-3 bg-red-500/10 backdrop-blur-md hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all duration-300"
+                      disabled={viewMode === 'public' && item.userId !== user.uid}
+                      className={`p-3 backdrop-blur-md rounded-xl transition-all duration-300 ${
+                        viewMode === 'public' && item.userId !== user.uid 
+                          ? 'bg-white/5 text-white/10 cursor-not-allowed' 
+                          : 'bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white'
+                      }`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

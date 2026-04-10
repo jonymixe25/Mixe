@@ -11,6 +11,7 @@ interface ImageUploadProps {
   currentImageUrl?: string | null;
   folder?: string;
   accept?: string;
+  isPublic?: boolean;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
@@ -18,7 +19,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   label = "Subir Archivo", 
   currentImageUrl,
   folder = "uploads",
-  accept = "image/*,video/*,audio/*,application/pdf"
+  accept = "image/*,video/*,audio/*,application/pdf",
+  isPublic = false
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -86,6 +88,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,
+                isPublic,
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
                 createdAt: serverTimestamp()
               });

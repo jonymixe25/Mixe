@@ -64,6 +64,7 @@ export interface MediaItem {
   fileType?: string;
   fileSize?: number;
   tags?: string[];
+  isPublic?: boolean;
   createdAt: any;
 }
 

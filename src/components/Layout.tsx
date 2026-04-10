@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search } from 'lucide-react';
+import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
@@ -14,6 +15,76 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showWelcomeToast, setShowWelcomeToast] = useState(false);
   const [prevUser, setPrevUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ news: any[], streams: any[] }>({ news: [], streams: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const [enableMixe, setEnableMixe] = useState(false);
+  const [isAnyStreamLive, setIsAnyStreamLive] = useState(false);
+
+  React.useEffect(() => {
+    const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'), firestoreLimit(1));
+    const unsubscribe = onSnapshot(streamsQuery, (snapshot) => {
+      setIsAnyStreamLive(!snapshot.empty);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  React.useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      try {
+        const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
+        if (settingsDoc.exists()) {
+          setEnableMixe(settingsDoc.data().enableMixe || false);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+    fetchGlobalSettings();
+  }, []);
+
+  React.useEffect(() => {
+    const performSearch = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults({ news: [], streams: [] });
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        // Search News (simple prefix search)
+        const newsQ = query(
+          collection(db, 'news'),
+          where('title', '>=', searchQuery),
+          where('title', '<=', searchQuery + '\uf8ff'),
+          firestoreLimit(5)
+        );
+        const newsSnap = await getDocs(newsQ);
+        const newsResults = newsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Search Streams
+        const streamsQ = query(
+          collection(db, 'streams'),
+          where('status', '==', 'live'),
+          where('title', '>=', searchQuery),
+          where('title', '<=', searchQuery + '\uf8ff'),
+          firestoreLimit(5)
+        );
+        const streamsSnap = await getDocs(streamsQ);
+        const streamsResults = streamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        setSearchResults({ news: newsResults, streams: streamsResults });
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(performSearch, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   React.useEffect(() => {
     if (user && !prevUser) {
@@ -55,12 +126,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className="w-12 h-12 bg-[#ff4e00] rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-[#ff4e00]/30 relative overflow-hidden">
                   <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Video className="w-6 h-6 text-white relative z-10" />
+                  {isAnyStreamLive && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_#ef4444]" />
+                  )}
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl md:text-3xl font-display font-black tracking-tighter uppercase italic leading-none">
                     Voz <span className="text-[#ff4e00]">Mixe</span>
                   </span>
-                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-1">Plataforma Digital</span>
+                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-1">
+                    {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
+                  </span>
                 </div>
               </Link>
             </div>
@@ -71,9 +147,78 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-[#ff4e00] transition-colors" />
                 <input 
                   type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar..." 
                   className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-xs font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all w-48 focus:w-64"
                 />
+                
+                {/* Search Results Overlay */}
+                <AnimatePresence>
+                  {(searchQuery.length >= 2) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute top-full mt-4 left-0 w-[400px] glass rounded-[2rem] border-white/10 shadow-2xl overflow-hidden z-[200]"
+                    >
+                      <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar">
+                        {isSearching ? (
+                          <div className="py-8 text-center text-white/40 text-xs font-black uppercase tracking-widest animate-pulse">Buscando...</div>
+                        ) : (searchResults.news.length === 0 && searchResults.streams.length === 0) ? (
+                          <div className="py-8 text-center text-white/40 text-xs font-black uppercase tracking-widest">No hay resultados</div>
+                        ) : (
+                          <>
+                            {searchResults.streams.length > 0 && (
+                              <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">En Vivo</p>
+                                {searchResults.streams.map(stream => (
+                                  <Link 
+                                    key={stream.id} 
+                                    to={`/stream/${stream.id}`}
+                                    onClick={() => setSearchQuery('')}
+                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                                  >
+                                    <div className="w-12 h-12 rounded-lg bg-red-600/20 flex items-center justify-center relative">
+                                      <Play className="w-4 h-4 text-red-600 fill-current" />
+                                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-bold truncate group-hover:text-[#ff4e00] transition-colors">{stream.title}</p>
+                                      <p className="text-[10px] text-white/40 uppercase tracking-widest">{stream.userName}</p>
+                                    </div>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {searchResults.news.length > 0 && (
+                              <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">Noticias</p>
+                                {searchResults.news.map(article => (
+                                  <Link 
+                                    key={article.id} 
+                                    to="/news"
+                                    onClick={() => setSearchQuery('')}
+                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                                  >
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden">
+                                      <img src={article.imageUrl || `https://picsum.photos/seed/${article.id}/100/100`} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-bold truncate group-hover:text-[#ff4e00] transition-colors">{article.title}</p>
+                                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Artículo</p>
+                                    </div>
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               {navItems.map((item) => (
                 <Link
