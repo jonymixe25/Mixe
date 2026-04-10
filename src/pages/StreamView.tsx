@@ -103,7 +103,10 @@ const StreamView: React.FC = () => {
     const setupLiveKit = async () => {
       if (!token) return;
       
-      const room = new Room();
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+      });
       roomRef.current = room;
 
       room.on(RoomEvent.TrackSubscribed, (track: Track, publication: any, participant: any) => {

@@ -195,7 +195,18 @@ const AdminStream: React.FC = () => {
     const connectToLiveKit = async () => {
       if (activeStream && token && localStream.current && !roomRef.current) {
         setConnectionStatus('connecting');
-        const room = new Room();
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+          publishDefaults: {
+            simulcast: true,
+            videoCodec: 'vp8',
+            stopMicTrackOnMute: true,
+          },
+          videoCaptureDefaults: {
+            resolution: { width: 1280, height: 720 },
+          }
+        });
         roomRef.current = room;
         
         try {
@@ -221,13 +232,23 @@ const AdminStream: React.FC = () => {
 
           console.log('Conectando a LiveKit con URL procesada:', liveKitUrl);
           await room.connect(liveKitUrl, token);
+          console.log('Conectado a LiveKit, preparando publicación...');
           
+          // Pequeña espera para estabilizar la conexión antes de publicar
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           // Publish tracks from the already running localStream
           const videoTrack = localStream.current.getVideoTracks()[0];
           const audioTrack = localStream.current.getAudioTracks()[0];
           
-          if (videoTrack) await room.localParticipant.publishTrack(videoTrack);
-          if (audioTrack) await room.localParticipant.publishTrack(audioTrack);
+          if (videoTrack) {
+            console.log('Publicando track de video...');
+            await room.localParticipant.publishTrack(videoTrack, { name: 'camera' });
+          }
+          if (audioTrack) {
+            console.log('Publicando track de audio...');
+            await room.localParticipant.publishTrack(audioTrack, { name: 'microphone' });
+          }
           
           setConnectionStatus('connected');
           console.log('Connected and publishing to LiveKit');

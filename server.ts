@@ -42,7 +42,13 @@ async function startServer() {
       }
 
       const at = new AccessToken(apiKey, apiSecret, { identity: identity as string });
-      at.addGrant({ roomJoin: true, room: room as string });
+      at.addGrant({ 
+        roomJoin: true, 
+        room: room as string,
+        canPublish: true,
+        canSubscribe: true,
+        canPublishData: true
+      });
 
       const token = await at.toJwt();
       console.log(`[API] Token generated successfully for room ${room}`);
