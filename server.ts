@@ -9,20 +9,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const NODE_ENV = process.env.NODE_ENV || 'development';
 
-  app.use("/api", (req, res, next) => {
-    console.log(`[API] ${req.method} ${req.url}`);
+  console.log(`[Server] Starting in ${NODE_ENV} mode...`);
+
+  const apiRouter = express.Router();
+
+  apiRouter.use((req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path}`);
     next();
   });
 
-  app.get("/api/health", (req, res) => {
+  apiRouter.get("/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
-  app.get("/api/livekit/token", async (req, res) => {
+  apiRouter.get("/livekit/token", async (req, res) => {
     try {
       const { room, identity } = req.query;
-      console.log(`Token request for room: ${room}, identity: ${identity}`);
+      console.log(`[API] Token request - Room: ${room}, Identity: ${identity}`);
       
       if (!room || !identity) {
         return res.status(400).json({ error: "Missing room or identity" });
@@ -32,7 +37,7 @@ async function startServer() {
       const apiSecret = process.env.LIVEKIT_API_SECRET;
 
       if (!apiKey || !apiSecret) {
-        console.error("LiveKit credentials missing. Required: LIVEKIT_API_KEY and LIVEKIT_API_SECRET");
+        console.error("[API] LiveKit credentials missing. Required: LIVEKIT_API_KEY and LIVEKIT_API_SECRET");
         return res.status(500).json({ error: "LiveKit credentials not configured in Secrets" });
       }
 
@@ -40,7 +45,7 @@ async function startServer() {
       at.addGrant({ roomJoin: true, room: room as string });
 
       const token = await at.toJwt();
-      console.log(`[API] Token generated for room ${room}`);
+      console.log(`[API] Token generated successfully for room ${room}`);
       res.json({ token });
     } catch (error) {
       console.error("[API] Error generating LiveKit token:", error);
@@ -48,11 +53,13 @@ async function startServer() {
     }
   });
 
-  // Catch-all for unmatched API routes
-  app.use("/api/*", (req, res) => {
-    console.warn(`[API] Route not found: ${req.originalUrl}`);
-    res.status(404).json({ error: `API route not found: ${req.originalUrl}` });
+  // API 404 handler
+  apiRouter.use((req, res) => {
+    console.warn(`[API] Route not found: ${req.method} ${req.path}`);
+    res.status(404).json({ error: `API route not found: ${req.path}` });
   });
+
+  app.use("/api", apiRouter);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
