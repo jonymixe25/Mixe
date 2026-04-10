@@ -135,7 +135,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       <div className="flex items-center justify-between">
         <label className="text-xs font-bold uppercase tracking-widest text-white/40">{label}</label>
         {uploading && (
-          <span className="text-[10px] font-bold text-[#ff4e00] uppercase tracking-widest animate-pulse">
+          <span className="text-[10px] font-bold text-brand uppercase tracking-widest animate-pulse">
             Subiendo: {Math.round(progress)}%
           </span>
         )}
@@ -146,13 +146,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         placeholder="Etiquetas (separadas por comas)..."
-        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-[#ff4e00] outline-none"
+        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-brand outline-none"
       />
 
       <div 
         className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
-          preview || selectedFile ? 'border-transparent' : 'border-white/10 hover:border-[#ff4e00]/50 bg-white/5'
-        } ${uploading ? 'border-[#ff4e00]/50 bg-[#ff4e00]/5' : ''}`}
+          preview || selectedFile ? 'border-transparent' : 'border-white/10 hover:border-brand/50 bg-white/5'
+        } ${uploading ? 'border-brand/50 bg-brand/5' : ''}`}
       >
         {preview ? (
           <>
@@ -178,7 +178,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </>
         ) : selectedFile ? (
           <div className="flex flex-col items-center gap-4 p-6 text-center">
-            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-[#ff4e00]">
+            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-brand">
               {getFileIcon(selectedFile.type)}
             </div>
             <div className="space-y-1">
@@ -225,7 +225,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   fill="transparent"
                 ></circle>
                 <motion.circle
-                  className="text-[#ff4e00] stroke-current"
+                  className="text-brand stroke-current"
                   strokeWidth="8"
                   strokeDasharray={251.2}
                   initial={{ strokeDashoffset: 251.2 }}
@@ -255,7 +255,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           >
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
               <motion.div 
-                className="h-full bg-[#ff4e00]"
+                className="h-full bg-brand"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.3 }}

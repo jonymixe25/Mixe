@@ -51,7 +51,7 @@ const FileStorage: React.FC = () => {
     <div className="max-w-4xl mx-auto p-8 bg-[#0a0502] border border-white/10 rounded-3xl mt-10">
       <h2 className="text-3xl font-bold mb-6">Mis Archivos</h2>
       <div className="mb-6">
-        <label className="cursor-pointer bg-[#ff4e00] p-3 rounded-xl font-bold flex items-center gap-2 w-fit">
+        <label className="cursor-pointer bg-brand p-3 rounded-xl font-bold flex items-center gap-2 w-fit">
           <Upload className="w-5 h-5" />
           {uploading ? 'Subiendo...' : 'Subir Archivo'}
           <input type="file" onChange={handleUpload} className="hidden" />
@@ -61,7 +61,7 @@ const FileStorage: React.FC = () => {
         {files.map((file, index) => (
           <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
             <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6 text-[#ff4e00]" />
+              <FileText className="w-6 h-6 text-brand" />
               <span>{file.name}</span>
             </div>
             <a href={file.url} download className="p-2 bg-white/10 rounded-lg hover:bg-white/20">

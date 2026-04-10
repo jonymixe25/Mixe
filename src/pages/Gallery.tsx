@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, orderBy, deleteDoc, doc, handleFirestoreError } from '../firebase';
 import { MediaItem, OperationType } from '../types';
-import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText, Users } from 'lucide-react';
+import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText, Users, Download, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Modal from '../components/Modal';
@@ -16,6 +16,7 @@ const Gallery: React.FC = () => {
   const [filter, setFilter] = useState<string>('all');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [uploadFolder, setUploadFolder] = useState('General');
   const [isPublic, setIsPublic] = useState(false);
@@ -104,7 +105,7 @@ const Gallery: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-12">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3 text-[#ff4e00]">
+          <div className="flex items-center gap-3 text-brand">
             <Folder className="w-5 h-5" />
             <span className="text-xs font-black uppercase tracking-[0.3em]">Almacenamiento</span>
           </div>
@@ -135,7 +136,7 @@ const Gallery: React.FC = () => {
                 onClick={() => setFilter(f)}
                 className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
                   filter === f 
-                    ? 'bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20' 
+                    ? 'bg-brand text-white shadow-lg shadow-brand/20' 
                     : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -146,7 +147,7 @@ const Gallery: React.FC = () => {
           
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="w-full sm:w-auto bg-white text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all duration-500 shadow-xl shadow-white/5 active:scale-95"
+            className="w-full sm:w-auto bg-white text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand hover:text-white transition-all duration-500 shadow-xl shadow-white/5 active:scale-95"
           >
             <Plus className="w-5 h-5" />
             <span>Subir</span>
@@ -163,24 +164,24 @@ const Gallery: React.FC = () => {
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Carpeta de destino</label>
             <div className="relative group">
-              <Folder className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-[#ff4e00] transition-colors" />
+              <Folder className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-brand transition-colors" />
               <input 
                 type="text"
                 value={uploadFolder}
                 onChange={(e) => setUploadFolder(e.target.value)}
                 placeholder="Ej: Documentos, Fotos, Trabajo..."
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm focus:border-[#ff4e00] focus:bg-white/10 transition-all outline-none font-medium"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-sm focus:border-brand focus:bg-white/10 transition-all outline-none font-medium"
               />
             </div>
           </div>
           <div className="flex items-center justify-between glass p-4 rounded-2xl border-white/10">
             <div className="flex items-center gap-3">
-              <Users className="w-4 h-4 text-[#ff4e00]" />
+              <Users className="w-4 h-4 text-brand" />
               <span className="text-xs font-bold uppercase italic">Hacer público</span>
             </div>
             <button 
               onClick={() => setIsPublic(!isPublic)}
-              className={`w-10 h-5 rounded-full transition-colors relative ${isPublic ? 'bg-[#ff4e00]' : 'bg-white/10'}`}
+              className={`w-10 h-5 rounded-full transition-colors relative ${isPublic ? 'bg-brand' : 'bg-white/10'}`}
             >
               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isPublic ? 'left-6' : 'left-1'}`} />
             </button>
@@ -215,7 +216,8 @@ const Gallery: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 key={item.id}
-                className="group relative glass rounded-[2.5rem] overflow-hidden aspect-square shadow-xl hover:shadow-2xl hover:shadow-[#ff4e00]/5 transition-all duration-500"
+                onClick={() => setSelectedMedia(item)}
+                className="group relative glass rounded-[2.5rem] overflow-hidden aspect-square shadow-xl hover:shadow-2xl hover:shadow-brand/5 transition-all duration-500 cursor-pointer"
               >
                 {item.fileType?.startsWith('image/') ? (
                   <img 
@@ -227,14 +229,21 @@ const Gallery: React.FC = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-white/5 group-hover:bg-white/10 transition-colors duration-500">
-                    <div className="w-20 h-20 bg-[#ff4e00]/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner">
-                      <div className="text-[#ff4e00]">
+                    <div className="w-20 h-20 bg-brand/10 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner">
+                      <div className="text-brand">
                         {getFileIcon(item.fileType)}
                       </div>
                     </div>
                     <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] px-6 text-center truncate w-full">
                       {item.fileName}
                     </p>
+                    {item.fileType?.startsWith('video/') && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 bg-brand/80 rounded-full flex items-center justify-center shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Play className="w-6 h-6 text-white fill-current" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 
@@ -244,15 +253,15 @@ const Gallery: React.FC = () => {
                     <p className="text-lg font-display font-bold truncate leading-none"><span>{item.fileName}</span></p>
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/60">
-                        <Folder className="w-3 h-3 text-[#ff4e00]" />
+                        <Folder className="w-3 h-3 text-brand" />
                         <span>{item.folder || 'General'}</span>
                       </div>
                       <div className="bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/60">
-                        <Calendar className="w-3 h-3 text-[#ff4e00]" />
+                        <Calendar className="w-3 h-3 text-brand" />
                         <span>{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Reciente'}</span>
                       </div>
                       {item.isPublic && (
-                        <div className="bg-[#ff4e00]/20 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-[#ff4e00]">
+                        <div className="bg-brand/20 backdrop-blur-md px-2.5 py-1 rounded-lg flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-brand">
                           <Users className="w-3 h-3" />
                           <span>Público</span>
                         </div>
@@ -260,12 +269,12 @@ const Gallery: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                     <a 
                       href={item.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex-1 bg-white text-black hover:bg-[#ff4e00] hover:text-white py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg"
+                      className="flex-1 bg-white text-black hover:bg-brand hover:text-white py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>Abrir</span>
@@ -300,6 +309,66 @@ const Gallery: React.FC = () => {
           </div>
         </div>
       )}
+      <Modal
+        isOpen={!!selectedMedia}
+        onClose={() => setSelectedMedia(null)}
+        title={selectedMedia?.fileName || 'Detalles del Archivo'}
+      >
+        <div className="space-y-6">
+          <div className="aspect-video bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-white/10">
+            {selectedMedia?.fileType?.startsWith('image/') ? (
+              <img src={selectedMedia.url} className="w-full h-full object-contain" alt="" referrerPolicy="no-referrer" />
+            ) : selectedMedia?.fileType?.startsWith('video/') ? (
+              <video src={selectedMedia.url} controls className="w-full h-full" />
+            ) : selectedMedia?.fileType?.startsWith('audio/') ? (
+              <audio src={selectedMedia.url} controls className="w-full" />
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <FileText className="w-16 h-16 text-white/20" />
+                <p className="text-white/40 text-sm">Vista previa no disponible</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="glass p-4 rounded-2xl border-white/10">
+              <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tipo</p>
+              <p className="text-xs font-bold truncate">{selectedMedia?.fileType || 'Desconocido'}</p>
+            </div>
+            <div className="glass p-4 rounded-2xl border-white/10">
+              <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tamaño</p>
+              <p className="text-xs font-bold">
+                {selectedMedia?.fileSize ? `${(selectedMedia.fileSize / (1024 * 1024)).toFixed(2)} MB` : 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <a 
+              href={selectedMedia?.url} 
+              download={selectedMedia?.fileName}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 bg-brand text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand/90 transition-all shadow-xl shadow-brand/20"
+            >
+              <Download className="w-5 h-5" />
+              <span>Descargar</span>
+            </a>
+            <button 
+              onClick={() => {
+                if (selectedMedia) {
+                  confirmDelete(selectedMedia.id);
+                  setSelectedMedia(null);
+                }
+              }}
+              className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

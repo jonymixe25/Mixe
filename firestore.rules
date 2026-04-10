@@ -101,11 +101,14 @@ service cloud.firestore {
 
     function isValidStream(data) {
       return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount', 'likes']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'category', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'category', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'privacy', 'latency', 'resolution']) &&
              data.userId is string &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              (!('category' in data) || (data.category is string && data.category in ['cultura', 'musica', 'tradicion', 'noticias'])) &&
+             (!('privacy' in data) || data.privacy in ['public', 'private']) &&
+             (!('latency' in data) || data.latency in ['normal', 'low']) &&
+             (!('resolution' in data) || data.resolution in ['720p', '1080p']) &&
              data.status in ['live', 'ended'] &&
              data.startedAt is timestamp &&
              data.viewerCount is number && data.viewerCount >= 0 &&
@@ -225,7 +228,7 @@ service cloud.firestore {
 
     match /streams/{streamId} {
       allow read: if true; // Publicly readable for live streams
-      allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid && 'category' in request.resource.data;
+      allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && (
         // Owner/Admin can update everything
         (isStreamUpdateValid(request.resource.data, resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||

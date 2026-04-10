@@ -203,6 +203,11 @@ const AdminStream: React.FC = () => {
           if (!liveKitUrl) {
             throw new Error('VITE_LIVEKIT_URL no está configurada en los Secretos');
           }
+
+          if (!liveKitUrl.startsWith('wss://') && !liveKitUrl.startsWith('ws://')) {
+            throw new Error('VITE_LIVEKIT_URL debe comenzar con wss:// o ws:// (Ej: wss://tu-servidor.livekit.cloud)');
+          }
+
           await room.connect(liveKitUrl, token);
           
           // Publish tracks from the already running localStream
