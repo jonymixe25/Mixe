@@ -32,8 +32,8 @@ async function startServer() {
       const apiSecret = process.env.LIVEKIT_API_SECRET;
 
       if (!apiKey || !apiSecret) {
-        console.error("LiveKit credentials missing in environment");
-        return res.status(500).json({ error: "LiveKit credentials not configured" });
+        console.error("LiveKit credentials missing. Required: LIVEKIT_API_KEY and LIVEKIT_API_SECRET");
+        return res.status(500).json({ error: "LiveKit credentials not configured in Secrets" });
       }
 
       const at = new AccessToken(apiKey, apiSecret, { identity: identity as string });

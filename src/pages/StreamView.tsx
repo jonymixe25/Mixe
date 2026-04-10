@@ -135,7 +135,7 @@ const StreamView: React.FC = () => {
       try {
         let liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
         if (!liveKitUrl || liveKitUrl.trim() === '') {
-          throw new Error('VITE_LIVEKIT_URL is not configured in Secrets');
+          throw new Error('Missing VITE_LIVEKIT_URL in Secrets. Please add it in Settings > Secrets.');
         }
 
         // Deep cleaning of the URL

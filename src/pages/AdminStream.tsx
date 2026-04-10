@@ -201,7 +201,7 @@ const AdminStream: React.FC = () => {
         try {
           let liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
           if (!liveKitUrl || liveKitUrl.trim() === '') {
-            throw new Error('VITE_LIVEKIT_URL no está configurada en los Secretos. Ve a Settings > Secrets y agrégala.');
+            throw new Error('Falta VITE_LIVEKIT_URL en los Secretos. Ve a Settings > Secrets y agrégala.');
           }
 
           // Limpieza profunda de la URL
