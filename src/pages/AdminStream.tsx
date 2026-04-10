@@ -199,15 +199,27 @@ const AdminStream: React.FC = () => {
         roomRef.current = room;
         
         try {
-          const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
-          if (!liveKitUrl) {
-            throw new Error('VITE_LIVEKIT_URL no está configurada en los Secretos');
+          let liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
+          if (!liveKitUrl || liveKitUrl.trim() === '') {
+            throw new Error('VITE_LIVEKIT_URL no está configurada en los Secretos. Ve a Settings > Secrets y agrégala.');
           }
 
-          if (!liveKitUrl.startsWith('wss://') && !liveKitUrl.startsWith('ws://')) {
-            throw new Error('VITE_LIVEKIT_URL debe comenzar con wss:// o ws:// (Ej: wss://tu-servidor.livekit.cloud)');
+          // Limpieza profunda de la URL
+          liveKitUrl = liveKitUrl.trim();
+          
+          // Si el usuario puso http o https, lo cambiamos a ws o wss
+          if (liveKitUrl.startsWith('http')) {
+            liveKitUrl = liveKitUrl.replace(/^http/, 'ws');
+          }
+          
+          // Si no tiene protocolo, lo añadimos
+          if (!liveKitUrl.startsWith('ws')) {
+            // Si la app corre en HTTPS, usamos wss por defecto
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            liveKitUrl = `${protocol}://${liveKitUrl}`;
           }
 
+          console.log('Conectando a LiveKit con URL procesada:', liveKitUrl);
           await room.connect(liveKitUrl, token);
           
           // Publish tracks from the already running localStream

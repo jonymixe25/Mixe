@@ -24,7 +24,9 @@ export const useLiveKitToken = (room: string, identity: string) => {
         }
 
         if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('El servidor no devolvió JSON. Verifica que la API esté funcionando.');
+          const text = await response.text();
+          console.error('El servidor no devolvió JSON:', text.substring(0, 200));
+          throw new Error(`El servidor no devolvió JSON (posible error de configuración). Respuesta: ${text.substring(0, 50)}...`);
         }
 
         const data = await response.json();

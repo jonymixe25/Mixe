@@ -133,10 +133,25 @@ const StreamView: React.FC = () => {
       });
 
       try {
-        const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
-        if (!liveKitUrl) {
-          throw new Error('VITE_LIVEKIT_URL is not configured');
+        let liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
+        if (!liveKitUrl || liveKitUrl.trim() === '') {
+          throw new Error('VITE_LIVEKIT_URL is not configured in Secrets');
         }
+
+        // Deep cleaning of the URL
+        liveKitUrl = liveKitUrl.trim();
+        
+        // If user put http/https, change to ws/wss
+        if (liveKitUrl.startsWith('http')) {
+          liveKitUrl = liveKitUrl.replace(/^http/, 'ws');
+        }
+        
+        // If no protocol, add it
+        if (!liveKitUrl.startsWith('ws')) {
+          const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+          liveKitUrl = `${protocol}://${liveKitUrl}`;
+        }
+
         await room.connect(liveKitUrl, token);
         console.log('Connected to LiveKit room', room.name);
       } catch (error) {
