@@ -24,6 +24,7 @@ const Gallery = lazy(() => import('./pages/Gallery'));
 const Register = lazy(() => import('./pages/Register'));
 const FileStorage = lazy(() => import('./pages/FileStorage'));
 const GlobalSettings = lazy(() => import('./pages/GlobalSettings'));
+const WebPlatform = lazy(() => import('./pages/WebPlatform'));
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
                   <Route path="/stream/:id" element={<StreamView />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
+                  <Route path="/web" element={<WebPlatform />} />
                 </Routes>
               </Suspense>
             </Layout>

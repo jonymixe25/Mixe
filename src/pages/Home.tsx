@@ -100,13 +100,13 @@ const Home: React.FC = () => {
                 <span>En Vivo Ahora</span>
               </Link>
             )}
-            <a 
-              href="./web.php"
+            <Link 
+              to="/web"
               className="w-full sm:w-auto bg-[#ff4e00] text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#ff8c00] transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl shadow-[#ff4e00]/20"
             >
               <Folder className="w-6 h-6" />
               <span>Segunda Plataforma</span>
-            </a>
+            </Link>
           </motion.div>
         </div>
       </section>
