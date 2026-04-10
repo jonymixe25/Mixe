@@ -192,6 +192,8 @@ const AdminStream: React.FC = () => {
   }, [activeStream, isPreviewing, facingMode]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const connectToLiveKit = async () => {
       if (activeStream && token && localStream.current && !roomRef.current) {
         setConnectionStatus('connecting');
@@ -232,10 +234,21 @@ const AdminStream: React.FC = () => {
 
           console.log('Conectando a LiveKit con URL procesada:', liveKitUrl);
           await room.connect(liveKitUrl, token);
+          
+          if (!isMounted) {
+            room.disconnect();
+            return;
+          }
+
           console.log('Conectado a LiveKit, preparando publicación...');
           
           // Pequeña espera para estabilizar la conexión antes de publicar
           await new Promise(resolve => setTimeout(resolve, 500));
+
+          if (!isMounted) {
+            room.disconnect();
+            return;
+          }
 
           // Publish tracks from the already running localStream
           const videoTrack = localStream.current.getVideoTracks()[0];
@@ -250,17 +263,25 @@ const AdminStream: React.FC = () => {
             await room.localParticipant.publishTrack(audioTrack, { name: 'microphone' });
           }
           
-          setConnectionStatus('connected');
-          console.log('Connected and publishing to LiveKit');
+          if (isMounted) {
+            setConnectionStatus('connected');
+            console.log('Connected and publishing to LiveKit');
+          }
         } catch (err) {
-          console.error("Error connecting to LiveKit:", err);
-          setConnectionStatus('error');
-          setToast({
-            message: `Error de streaming: ${err instanceof Error ? err.message : 'No se pudo conectar'}`,
-            type: 'error',
-            isVisible: true
-          });
-          roomRef.current = null;
+          if (isMounted) {
+            console.error("Error connecting to LiveKit:", err);
+            // Ignore "Client initiated disconnect" as it's usually a cleanup side effect
+            if (err instanceof Error && err.message.includes('Client initiated disconnect')) {
+              return;
+            }
+            setConnectionStatus('error');
+            setToast({
+              message: `Error de streaming: ${err instanceof Error ? err.message : 'No se pudo conectar'}`,
+              type: 'error',
+              isVisible: true
+            });
+            roomRef.current = null;
+          }
         }
       }
     };
@@ -268,13 +289,14 @@ const AdminStream: React.FC = () => {
     connectToLiveKit();
 
     return () => {
+      isMounted = false;
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
       setConnectionStatus('idle');
     };
-  }, [activeStream, token, localStream.current]);
+  }, [activeStream, token]);
 
   // Handle track updates when localStream changes (e.g. camera switch)
   useEffect(() => {

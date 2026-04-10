@@ -99,6 +99,8 @@ const StreamView: React.FC = () => {
 
     updateViewerCount(1);
 
+    let isMounted = true;
+
     // LiveKit Setup
     const setupLiveKit = async () => {
       if (!token) return;
@@ -127,7 +129,7 @@ const StreamView: React.FC = () => {
               videoRef.current.appendChild(element);
             }
           }
-          setConnectionStatus('connected');
+          if (isMounted) setConnectionStatus('connected');
         }
       });
 
@@ -156,25 +158,30 @@ const StreamView: React.FC = () => {
         }
 
         await room.connect(liveKitUrl, token);
-        console.log('Connected to LiveKit room', room.name);
+        if (isMounted) console.log('Connected to LiveKit room', room.name);
       } catch (error) {
-        console.error('LiveKit connection error:', error);
-        setConnectionStatus('failed');
+        if (isMounted) {
+          console.error('LiveKit connection error:', error);
+          if (error instanceof Error && error.message.includes('Client initiated disconnect')) {
+            return;
+          }
+          setConnectionStatus('failed');
+        }
       }
     };
 
     setupLiveKit();
 
     return () => {
+      isMounted = false;
       unsubscribe();
       unsubscribeChat();
       updateViewerCount(-1);
-      roomRef.current?.disconnect();
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+        roomRef.current = null;
+      }
     };
-  }, [id, navigate, token]);
-
-  useEffect(() => {
-    // LiveKit setup logic
   }, [id, navigate, token]);
 
   const speak = async (text: string) => {
