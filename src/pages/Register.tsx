@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, UserPlus, LogIn } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, LogIn, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { motion } from 'motion/react';
 import Toast from '../components/Toast';
+import { db, doc, getDoc } from '../firebase';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,8 @@ const Register: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [checkingSettings, setCheckingSettings] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -22,6 +25,22 @@ const Register: React.FC = () => {
   
   const navigate = useNavigate();
   const { registerWithEmail, login, user } = useAuth();
+
+  useEffect(() => {
+    const checkSettings = async () => {
+      try {
+        const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
+        if (settingsDoc.exists()) {
+          setRegistrationEnabled(settingsDoc.data().registrationEnabled ?? true);
+        }
+      } catch (error) {
+        console.error('Error checking registration settings:', error);
+      } finally {
+        setCheckingSettings(false);
+      }
+    };
+    checkSettings();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -70,6 +89,41 @@ const Register: React.FC = () => {
       setIsGoogleLoading(false);
     }
   };
+
+  if (checkingSettings) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff4e00]"></div>
+      </div>
+    );
+  }
+
+  if (!registrationEnabled) {
+    return (
+      <div className="max-w-2xl mx-auto py-24 px-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass p-12 rounded-[3rem] text-center space-y-8 border-yellow-500/20 shadow-2xl"
+        >
+          <div className="w-20 h-20 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto border border-yellow-500/20">
+            <ShieldAlert className="w-10 h-10 text-yellow-500" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-4xl font-display font-black tracking-tighter uppercase italic">Registros <span className="text-yellow-500">Cerrados</span></h2>
+            <p className="text-white/40 text-lg italic">
+              Lo sentimos, el registro de nuevos usuarios está deshabilitado temporalmente por el administrador.
+            </p>
+          </div>
+          <div className="pt-8 border-t border-white/5">
+            <Link to="/" className="text-[#ff4e00] font-black uppercase tracking-widest text-xs hover:underline">
+              Volver al Inicio
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">

@@ -5,6 +5,11 @@ export const useLiveKitToken = (room: string, identity: string) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!room || !identity) {
+      setToken(null);
+      return;
+    }
+
     const fetchToken = async () => {
       try {
         const response = await fetch(`/api/livekit/token?room=${encodeURIComponent(room)}&identity=${encodeURIComponent(identity)}`);
