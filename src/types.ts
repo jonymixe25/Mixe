@@ -21,6 +21,10 @@ export interface StreamSession {
   userName: string;
   title: string;
   description?: string;
+  category?: string;
+  privacy?: 'public' | 'private';
+  latency?: 'normal' | 'low';
+  resolution?: '720p' | '1080p';
   status: 'live' | 'ended';
   startedAt: any;
   endedAt?: any;

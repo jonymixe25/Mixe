@@ -25,7 +25,11 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'));
+    const streamsQuery = query(
+      collection(db, 'streams'), 
+      where('status', '==', 'live'),
+      where('privacy', '==', 'public')
+    );
     const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
       const liveStreams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession));
       setStreams(liveStreams);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -24,6 +24,7 @@ const AdminStream: React.FC = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [autoModerate, setAutoModerate] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -175,6 +176,7 @@ const AdminStream: React.FC = () => {
   useEffect(() => {
     const connectToLiveKit = async () => {
       if (activeStream && token && localStream.current) {
+        setConnectionStatus('connecting');
         const room = new Room();
         roomRef.current = room;
         
@@ -192,10 +194,11 @@ const AdminStream: React.FC = () => {
           if (videoTrack) await room.localParticipant.publishTrack(videoTrack);
           if (audioTrack) await room.localParticipant.publishTrack(audioTrack);
           
+          setConnectionStatus('connected');
           console.log('Connected and publishing to LiveKit');
         } catch (err) {
           console.error("Error connecting to LiveKit:", err);
-          // We don't stop the local preview, just show an error for the stream
+          setConnectionStatus('error');
           setToast({
             message: `Error de streaming: ${err instanceof Error ? err.message : 'No se pudo conectar'}`,
             type: 'error',
@@ -212,8 +215,39 @@ const AdminStream: React.FC = () => {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
+      setConnectionStatus('idle');
     };
   }, [activeStream, token]);
+
+  // Handle track updates when localStream changes (e.g. camera switch)
+  useEffect(() => {
+    const updateTracks = async () => {
+      if (roomRef.current && roomRef.current.state === 'connected' && localStream.current) {
+        try {
+          // Unpublish old tracks
+          const publications = roomRef.current.localParticipant.getTrackPublications();
+          for (const pub of Array.from(publications.values())) {
+            if (pub.track) {
+              await roomRef.current.localParticipant.unpublishTrack(pub.track as any);
+            }
+          }
+
+          // Publish new tracks
+          const videoTrack = localStream.current.getVideoTracks()[0];
+          const audioTrack = localStream.current.getAudioTracks()[0];
+          
+          if (videoTrack) await roomRef.current.localParticipant.publishTrack(videoTrack);
+          if (audioTrack) await roomRef.current.localParticipant.publishTrack(audioTrack);
+          
+          console.log('Tracks updated in LiveKit room');
+        } catch (err) {
+          console.error("Error updating tracks:", err);
+        }
+      }
+    };
+
+    updateTracks();
+  }, [localStream.current]);
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
@@ -559,12 +593,32 @@ const AdminStream: React.FC = () => {
             )}
             
             {(activeStream || isPreviewing) && (
-              <div className="absolute top-8 left-8 flex gap-3">
-                <div className="glass px-5 py-2.5 rounded-2xl border-white/10 flex items-center gap-3 shadow-xl">
-                  <div className={`w-2 h-2 rounded-full ${activeStream ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                    <span>{activeStream ? 'REC' : 'VISTA PREVIA'}</span>
-                  </span>
+              <div className="absolute top-8 left-8 flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <div className="glass px-5 py-2.5 rounded-2xl border-white/10 flex items-center gap-3 shadow-xl">
+                    <div className={`w-2 h-2 rounded-full ${activeStream ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                      <span>{activeStream ? 'REC' : 'VISTA PREVIA'}</span>
+                    </span>
+                  </div>
+                  {activeStream && connectionStatus !== 'idle' && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className={`glass px-5 py-2.5 rounded-2xl border-white/10 flex items-center gap-3 shadow-xl ${
+                        connectionStatus === 'connected' ? 'text-emerald-500' : 
+                        connectionStatus === 'connecting' ? 'text-blue-500' : 
+                        'text-red-500'
+                      }`}
+                    >
+                      <Gauge className={`w-3 h-3 ${connectionStatus === 'connecting' ? 'animate-spin' : ''}`} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                        {connectionStatus === 'connected' ? 'SEÑAL ESTABLE' : 
+                         connectionStatus === 'connecting' ? 'CONECTANDO...' : 
+                         'ERROR DE SEÑAL'}
+                      </span>
+                    </motion.div>
+                  )}
                 </div>
               </div>
             )}

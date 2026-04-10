@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2 } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -37,6 +37,7 @@ const StreamView: React.FC = () => {
   const [reactions, setReactions] = useState<{ id: number; x: number }[]>([]);
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   
   const { token, error: tokenError } = useLiveKitToken(id || '', user?.uid || '');
   const roomRef = useRef<Room | null>(null);
@@ -335,6 +336,14 @@ const StreamView: React.FC = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8">
+      {/* Private Stream Warning */}
+      {stream?.privacy === 'private' && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] glass px-6 py-3 rounded-2xl border-yellow-500/20 flex items-center gap-3 shadow-2xl">
+          <Lock className="w-4 h-4 text-yellow-500" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Transmisión Privada (Solo con enlace)</span>
+        </div>
+      )}
+
       {/* Immersive Stream Container */}
       <div className="relative w-full aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden shadow-2xl shadow-black/50 group ring-1 ring-white/5">
         {/* Floating Reactions Container */}
@@ -384,6 +393,39 @@ const StreamView: React.FC = () => {
 
         {/* Top Overlay Bar */}
         <div className="absolute top-0 left-0 right-0 p-6 md:p-8 flex items-start justify-between z-30 bg-gradient-to-b from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <AnimatePresence>
+            {showStats && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute top-24 right-8 z-50 glass p-6 rounded-3xl border-white/10 shadow-2xl w-64 space-y-4"
+              >
+                <div className="flex items-center gap-3 text-[#ff4e00] mb-2">
+                  <Gauge className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Estado de la Señal</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Resolución</span>
+                    <span className="text-[10px] font-bold text-white">{stream?.resolution || '720p'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Latencia</span>
+                    <span className="text-[10px] font-bold text-white uppercase">{stream?.latency || 'Normal'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Conexión</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      <span className="text-[10px] font-bold text-white uppercase">{connectionStatus}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="bg-red-600 px-3 py-1 rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-lg">
@@ -547,6 +589,13 @@ const StreamView: React.FC = () => {
                 title="Picture in Picture"
               >
                 <PictureInPicture2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setShowStats(!showStats)}
+                className={`glass p-3 rounded-2xl border-white/10 transition-all active:scale-90 ${showStats ? 'text-[#ff4e00] bg-white/10' : 'text-white/60 hover:text-white'}`}
+                title="Estadísticas"
+              >
+                <Gauge className="w-4 h-4" />
               </button>
               <button className="glass p-3 rounded-2xl border-white/10 text-white/60 hover:text-white transition-all active:scale-90">
                 <Maximize className="w-4 h-4" />
