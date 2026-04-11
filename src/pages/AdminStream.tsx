@@ -92,6 +92,12 @@ export default function AdminStream() {
   }, [user]);
 
   useEffect(() => {
+    if (tokenError) {
+      setToast({ message: `Error de LiveKit: ${tokenError}`, type: 'error', isVisible: true });
+    }
+  }, [tokenError]);
+
+  useEffect(() => {
     if (!activeStream) {
       setChatMessages([]);
       return;

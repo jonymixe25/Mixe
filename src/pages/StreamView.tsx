@@ -100,6 +100,12 @@ const StreamView = () => {
   }, [id]);
 
   useEffect(() => {
+    if (tokenError) {
+      setToast({ message: `Error de LiveKit: ${tokenError}`, type: 'error', isVisible: true });
+    }
+  }, [tokenError]);
+
+  useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         setModerationSensitivity(snapshot.data().moderationSensitivity || 'medium');

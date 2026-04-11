@@ -27,36 +27,45 @@ async function startServer() {
   apiRouter.get("/livekit/token", async (req, res) => {
     try {
       const { room, identity } = req.query;
-      console.log(`[API] Token request - Room: ${room}, Identity: ${identity}`);
       
-      if (!room || !identity) {
-        return res.status(400).json({ error: "Missing room or identity" });
+      if (!room || !identity || typeof identity !== 'string' || typeof room !== 'string') {
+        console.warn(`[API] Invalid token request: room=${room}, identity=${identity}`);
+        return res.status(400).json({ error: "Se requiere nombre de sala e identidad válida" });
       }
 
-      const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIouZ8zkp2nVDD';
-      const apiSecret = process.env.LIVEKIT_API_SECRET || '6TIvnesUcT9AorWdTGaSXnlJKBf99bbl6GqzrCIYOfDA';
+      console.log(`[API] Generando token - Sala: ${room}, Identidad: ${identity}`);
+
+      // Prioritize environment variables from Secrets panel
+      const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT;
+      const apiSecret = process.env.LIVEKIT_API_SECRET;
       const livekitUrl = process.env.LIVEKIT_URL || 'wss://vidamixe-kxkfgn4j.livekit.cloud';
 
-      if (!apiKey || !apiSecret || !livekitUrl) {
-        console.error("[API] LiveKit credentials missing. Required: LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL");
-        return res.status(500).json({ error: "LiveKit credentials not configured in Secrets" });
+      if (!apiKey || !apiSecret) {
+        console.error("[API] Credenciales de LiveKit no encontradas en las variables de entorno.");
+        return res.status(500).json({ 
+          error: "Configuración de LiveKit incompleta. Por favor, añade LIVEKIT_API_KEY y LIVEKIT_API_SECRET en el panel de Secrets." 
+        });
       }
 
-      const at = new AccessToken(apiKey, apiSecret, { identity: identity as string });
+      const at = new AccessToken(apiKey, apiSecret, { 
+        identity: identity,
+        name: identity, // Display name in LiveKit dashboard/tools
+      });
+
       at.addGrant({ 
         roomJoin: true, 
-        room: room as string,
+        room: room,
         canPublish: true,
         canSubscribe: true,
         canPublishData: true
       });
 
       const token = await at.toJwt();
-      console.log(`[API] Token generated successfully for room ${room}`);
+      console.log(`[API] Token generado con éxito para la sala ${room}`);
       res.json({ token, url: livekitUrl });
     } catch (error) {
-      console.error("[API] Error generating LiveKit token:", error);
-      res.status(500).json({ error: "Internal server error generating token" });
+      console.error("[API] Error al generar el token de LiveKit:", error);
+      res.status(500).json({ error: "Error interno al generar el token de acceso" });
     }
   });
 
