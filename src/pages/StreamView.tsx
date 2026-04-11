@@ -104,6 +104,17 @@ const StreamView = () => {
     updateViewerCount(1);
 
     let isMounted = true;
+    let unsubscribeJoinRequest = () => {};
+
+    if (user) {
+      unsubscribeJoinRequest = onSnapshot(doc(db, 'streams', id, 'joinRequests', user.uid), (doc) => {
+        if (doc.exists()) {
+          setJoinStatus(doc.data().status);
+        } else {
+          setJoinStatus('none');
+        }
+      });
+    }
 
     // LiveKit Setup
     const setupLiveKit = async () => {
@@ -169,13 +180,65 @@ const StreamView = () => {
       isMounted = false;
       unsubscribe();
       unsubscribeChat();
+      unsubscribeJoinRequest();
       updateViewerCount(-1);
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
     };
-  }, [id, navigate, token, liveKitUrl]);
+  }, [id, navigate, token, liveKitUrl, user]);
+
+  useEffect(() => {
+    if (joinStatus === 'accepted' && roomRef.current) {
+      const publishLocalCamera = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          const videoTrack = stream.getVideoTracks()[0];
+          const audioTrack = stream.getAudioTracks()[0];
+          
+          if (videoTrack) {
+            const pub = await roomRef.current!.localParticipant.publishTrack(videoTrack);
+            // Attach local video so the guest can see themselves
+            const element = pub.track?.attach();
+            if (element && element instanceof HTMLVideoElement && videoRef.current) {
+              element.playsInline = true;
+              element.muted = true;
+              element.autoplay = true;
+              videoRef.current.appendChild(element);
+            }
+          }
+          if (audioTrack) {
+            await roomRef.current!.localParticipant.publishTrack(audioTrack);
+          }
+          
+          setToast({ message: 'Estás transmitiendo en duo', type: 'success', isVisible: true });
+        } catch (error) {
+          console.error("Error publishing local camera:", error);
+          setToast({ message: 'Error al acceder a la cámara', type: 'error', isVisible: true });
+        }
+      };
+      publishLocalCamera();
+    }
+  }, [joinStatus]);
+
+  const handleRequestJoin = async () => {
+    if (!user || !id) return;
+    try {
+      setJoinStatus('pending');
+      await setDoc(doc(db, 'streams', id, 'joinRequests', user.uid), {
+        userId: user.uid,
+        userName: user.displayName,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+      setToast({ message: 'Solicitud enviada al anfitrión', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error requesting join:', error);
+      setJoinStatus('none');
+      setToast({ message: 'Error al enviar solicitud', type: 'error', isVisible: true });
+    }
+  };
 
   const speak = async (text: string) => {
     try {
@@ -408,7 +471,7 @@ const StreamView = () => {
         {/* LiveKit Video Container */}
         <div
           ref={videoRef}
-          className="w-full h-full object-cover"
+          className="w-full h-full flex items-center justify-center gap-4 p-4 [&>video]:flex-1 [&>video]:h-full [&>video]:object-cover [&>video]:rounded-2xl [&>video]:border [&>video]:border-white/10"
         />
 
         {/* Stream Ended Overlay */}
@@ -659,6 +722,24 @@ const StreamView = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {user && user.uid !== stream.userId && (
+                <button
+                  onClick={handleRequestJoin}
+                  disabled={joinStatus === 'pending' || joinStatus === 'accepted'}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
+                    joinStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
+                    joinStatus === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' :
+                    'bg-[#ff4e00]/20 text-[#ff4e00] hover:bg-[#ff4e00] hover:text-white border border-[#ff4e00]/30'
+                  }`}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {joinStatus === 'pending' ? 'Solicitud Enviada' :
+                     joinStatus === 'accepted' ? 'En Duo' :
+                     'Unirse en Duo'}
+                  </span>
+                </button>
+              )}
               <button
                 onClick={handleLike}
                 className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${

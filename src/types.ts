@@ -72,6 +72,19 @@ export interface MediaItem {
   createdAt: any;
 }
 
+export interface ShortVideo {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  videoUrl: string;
+  description: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  createdAt: any;
+}
+
 export interface Comment {
   id: string;
   newsId: string;

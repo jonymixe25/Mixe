@@ -154,6 +154,20 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidShort(data) {
+      return hasRequiredFields(['userId', 'userName', 'videoUrl', 'description', 'likes', 'comments', 'shares', 'createdAt']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'userPhoto', 'videoUrl', 'description', 'likes', 'comments', 'shares', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.videoUrl is string && data.videoUrl.size() > 0 && data.videoUrl.size() < 2000 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.likes is number && data.likes >= 0 &&
+             data.comments is number && data.comments >= 0 &&
+             data.shares is number && data.shares >= 0 &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('userPhoto', 1000);
+    }
+
     function isValidMessage(data) {
       return hasRequiredFields(['userId', 'userName', 'createdAt']) &&
              hasOnlyAllowedFields(['userId', 'userName', 'text', 'imageUrl', 'createdAt']) &&
@@ -304,6 +318,20 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidNews(request.resource.data);
       allow update: if isAdmin() && isValidNews(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    match /shorts/{shortId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidShort(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isOwner(resource.data.userId) || isAdmin()) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'shares', 'comments']) &&
+         ('likes' in request.resource.data.diff(resource.data).affectedKeys() ? math.abs(request.resource.data.likes - resource.data.likes) == 1 : true) &&
+         ('shares' in request.resource.data.diff(resource.data).affectedKeys() ? math.abs(request.resource.data.shares - resource.data.shares) == 1 : true) &&
+         ('comments' in request.resource.data.diff(resource.data).affectedKeys() ? math.abs(request.resource.data.comments - resource.data.comments) == 1 : true)
+        )
+      );
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
     }
 
     match /settings/{settingId} {

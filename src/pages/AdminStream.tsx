@@ -32,6 +32,7 @@ export default function AdminStream() {
     isVisible: false
   });
   const videoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoContainerRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
   const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
@@ -51,8 +52,6 @@ export default function AdminStream() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
-  const [guestStream, setGuestStream] = useState<MediaStream | null>(null);
-  const guestVideoRef = useRef<HTMLVideoElement>(null);
   
   // WebRTC Broadcaster State
   const localStream = useRef<MediaStream | null>(null);
@@ -218,6 +217,23 @@ export default function AdminStream() {
           }
         });
         roomRef.current = room;
+
+        room.on(RoomEvent.TrackSubscribed, (track: Track) => {
+          if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
+            const element = track.attach();
+            if (element instanceof HTMLVideoElement) {
+              element.playsInline = true;
+              element.autoplay = true;
+            }
+            if (remoteVideoContainerRef.current) {
+              remoteVideoContainerRef.current.appendChild(element);
+            }
+          }
+        });
+
+        room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
+          track.detach().forEach((element) => element.remove());
+        });
         
         try {
           console.log('Conectando a LiveKit con URL:', liveKitUrl);
@@ -694,13 +710,15 @@ export default function AdminStream() {
           <div className="aspect-video bg-[#151619] rounded-[2rem] overflow-hidden border border-white/5 relative group shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
             {activeStream || isPreviewing ? (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-                />
+                <div className="w-full h-full flex items-center justify-center gap-4 p-4 [&>video]:flex-1 [&>video]:h-full [&>video]:object-cover [&>video]:rounded-2xl [&>video]:border [&>video]:border-white/10" ref={remoteVideoContainerRef}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                  />
+                </div>
 
                 {/* Stream Health Bar */}
                 {connectionStatus === 'connected' && (
@@ -735,24 +753,6 @@ export default function AdminStream() {
                       <p className="text-2xl md:text-3xl font-display font-black uppercase italic tracking-tighter text-center leading-none">{overlayText}</p>
                     </motion.div>
                   </div>
-                )}
-                
-                {guestStream && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="absolute bottom-8 right-8 w-1/3 aspect-video bg-[#0a0502] rounded-[1.5rem] overflow-hidden border-2 border-[#ff4e00] shadow-2xl z-10"
-                  >
-                    <video
-                      ref={guestVideoRef}
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-[8px] font-mono uppercase tracking-widest border border-white/10">
-                      <span>Invitado</span>
-                    </div>
-                  </motion.div>
                 )}
 
                 <div className="absolute bottom-8 left-8 flex gap-3">
@@ -1152,6 +1152,39 @@ export default function AdminStream() {
                   <span className="text-[10px] font-mono uppercase tracking-widest">{showOverlay ? 'Overlay ON' : 'Overlay OFF'}</span>
                 </button>
               </div>
+
+              {/* Join Requests */}
+              {joinRequests.filter(r => r.status === 'pending').length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] flex items-center gap-2">
+                    <UserPlus className="w-3 h-3" />
+                    Solicitudes de Duo ({joinRequests.filter(r => r.status === 'pending').length})
+                  </h4>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                    {joinRequests.filter(r => r.status === 'pending').map(req => (
+                      <div key={req.id} className="flex items-center justify-between bg-[#1a1b1e] p-3 rounded-xl border border-white/5">
+                        <span className="text-sm font-medium text-white">{req.userName}</span>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleAcceptRequest(req.id)}
+                            className="p-2 bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-colors"
+                            title="Aceptar"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleRejectRequest(req.id)}
+                            className="p-2 bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+                            title="Rechazar"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {showOverlay && (
                 <motion.div 
