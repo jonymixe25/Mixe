@@ -44,6 +44,7 @@ const StreamView = () => {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [suggestedStreams, setSuggestedStreams] = useState<StreamSession[]>([]);
   const [anonymousId] = useState(() => `anon_${Math.random().toString(36).substring(2, 11)}`);
 
@@ -66,6 +67,25 @@ const StreamView = () => {
       }
       setIsPlaying(!isPlaying);
     }
+  };
+
+  const toggleCamera = async () => {
+    if (joinStatus !== 'accepted' || !roomRef.current) return;
+    
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    
+    // Stop current video tracks
+    const localParticipant = roomRef.current.localParticipant;
+    const publications = localParticipant.getTrackPublications();
+    
+    for (const pub of publications) {
+      if (pub.track && pub.track.kind === Track.Kind.Video) {
+        pub.track.stop();
+        await localParticipant.unpublishTrack(pub.track as any);
+      }
+    }
+    // The useEffect will re-trigger and publish with the new mode
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -253,11 +273,13 @@ const StreamView = () => {
         try {
           let stream: MediaStream;
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: { ideal: facingMode } }, 
+              audio: true 
+            });
           } catch (e) {
-            console.warn("Failed to get video, trying audio only", e);
-            stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-            setToast({ message: 'No se pudo acceder al video, transmitiendo solo audio', type: 'error', isVisible: true });
+            console.warn("Failed with facingMode, trying default", e);
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           }
           
           const videoTrack = stream.getVideoTracks()[0];
@@ -265,12 +287,12 @@ const StreamView = () => {
           
           if (videoTrack) {
             const pub = await roomRef.current!.localParticipant.publishTrack(videoTrack);
-            // Attach local video so the guest can see themselves
             const element = pub.track?.attach();
             if (element && element instanceof HTMLVideoElement && videoRef.current) {
               element.playsInline = true;
               element.muted = true;
               element.autoplay = true;
+              element.className = `w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`;
               videoRef.current.appendChild(element);
             }
           }
@@ -286,7 +308,7 @@ const StreamView = () => {
       };
       publishLocalCamera();
     }
-  }, [joinStatus]);
+  }, [joinStatus, facingMode]);
 
   const handleRequestJoin = async () => {
     if (!user || !id) return;
@@ -771,32 +793,33 @@ const StreamView = () => {
         </div>
 
         {/* Bottom Controls Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-30 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-4">
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 z-30 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-500">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-start">
+              <div className="flex items-center gap-3 md:gap-4">
                 <button 
                   onClick={togglePlay}
-                  className="w-12 h-12 rounded-full bg-[#ff4e00] flex items-center justify-center text-white shadow-[0_0_20px_rgba(255,78,0,0.4)] hover:scale-110 transition-all active:scale-95"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ff4e00] flex items-center justify-center text-white shadow-[0_0_20px_rgba(255,78,0,0.4)] hover:scale-110 transition-all active:scale-95"
+                  title={isPlaying ? "Pausar" : "Reproducir"}
                 >
-                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
+                  {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5" /> : <Play className="w-4 h-4 md:w-5 md:h-5 ml-1" />}
                 </button>
-                <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md hidden xs:block">
                   <img
                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
                     alt="avatar"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="hidden sm:block">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium tracking-wide">{stream.userName}</p>
-                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+                    <p className="text-xs md:text-sm font-medium tracking-wide truncate max-w-[100px] md:max-w-none">{stream.userName}</p>
+                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[7px] md:text-[8px] font-black uppercase tracking-widest animate-pulse">
                       <div className="w-1 h-1 bg-white rounded-full" />
                       LIVE
                     </div>
                   </div>
-                  <p className="text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
+                  <p className="text-[8px] md:text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
                 </div>
               </div>
               
@@ -806,7 +829,7 @@ const StreamView = () => {
                 <button onClick={toggleMute} className="p-2 text-white/60 hover:text-white transition-colors">
                   {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
-                <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
+                <div className="w-20 md:w-0 overflow-hidden md:group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
                   <input 
                     type="range" 
                     min="0" 
@@ -820,63 +843,61 @@ const StreamView = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
               {user && user.uid !== stream.userId && (
                 <button
                   onClick={handleRequestJoin}
                   disabled={joinStatus === 'pending' || joinStatus === 'accepted'}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
+                  className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full font-mono uppercase tracking-widest text-[9px] md:text-[10px] transition-all duration-500 ${
                     joinStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
                     joinStatus === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' :
                     'bg-[#ff4e00]/20 text-[#ff4e00] hover:bg-[#ff4e00] hover:text-white border border-[#ff4e00]/30'
                   }`}
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">
-                    {joinStatus === 'pending' ? 'Solicitud Enviada' :
+                  <UserPlus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span>
+                    {joinStatus === 'pending' ? 'Pendiente' :
                      joinStatus === 'accepted' ? 'En Duo' :
-                     'Unirse en Duo'}
+                     'Unirse'}
                   </span>
                 </button>
               )}
-              <button
-                onClick={handleLike}
-                className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
-                  isLiked 
-                    ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-                    : 'bg-white/5 backdrop-blur-md text-white/60 hover:bg-white/10 border border-white/10'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                <span>{stream.likes || 0}</span>
-              </button>
-              <button 
-                onClick={handleShare}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={togglePiP}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-                title="Picture in Picture"
-              >
-                <PictureInPicture2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setShowStats(!showStats)}
-                className={`w-10 h-10 rounded-full backdrop-blur-md border transition-all active:scale-90 flex items-center justify-center ${showStats ? 'text-[#ff4e00] bg-[#ff4e00]/10 border-[#ff4e00]/30' : 'text-white/60 hover:text-white bg-white/5 border-white/10 hover:bg-white/10'}`}
-                title="Estadísticas"
-              >
-                <Gauge className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={toggleFullScreen}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-                title="Pantalla Completa"
-              >
-                <Maximize className="w-4 h-4" />
-              </button>
+              
+              <div className="flex items-center gap-2">
+                {joinStatus === 'accepted' && (
+                  <button
+                    onClick={toggleCamera}
+                    className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
+                    title="Voltear Cámara"
+                  >
+                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+                )}
+                <button
+                  onClick={togglePiP}
+                  className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
+                  title="Picture in Picture"
+                >
+                  <PictureInPicture2 className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+                <button
+                  onClick={toggleFullScreen}
+                  className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
+                  title="Pantalla Completa"
+                >
+                  <Maximize className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+                <button
+                  onClick={handleLike}
+                  className={`flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-full transition-all duration-500 ${
+                    isLiked 
+                      ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                      : 'bg-white/5 backdrop-blur-md text-white/60 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isLiked ? 'fill-current' : ''}`} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

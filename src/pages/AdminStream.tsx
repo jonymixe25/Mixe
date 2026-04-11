@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2 } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -791,23 +791,43 @@ export default function AdminStream() {
                   </div>
                 )}
 
-                <div className="absolute bottom-8 left-8 flex gap-3">
-                  <button 
-                    onClick={toggleCamera}
-                    className="bg-[#1a1b1e]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-all group shadow-xl"
-                    title="Cambiar Cámara"
-                  >
-                    <Sparkles className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
-                  </button>
-                  {!activeStream && (
+                <div className="absolute bottom-8 left-8 right-8 flex items-center justify-between z-40">
+                  <div className="flex gap-3">
                     <button 
-                      onClick={() => setIsPreviewing(false)}
-                      className="bg-red-500/80 backdrop-blur-md p-4 rounded-xl border border-red-500/50 hover:bg-red-500 transition-all group shadow-[0_0_20px_rgba(239,68,68,0.3)]"
-                      title="Apagar Cámara"
+                      onClick={toggleCamera}
+                      className="bg-[#1a1b1e]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-all group shadow-xl active:scale-95"
+                      title="Voltear Cámara"
                     >
-                      <StopCircle className="w-6 h-6 text-white" />
+                      <Camera className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
                     </button>
-                  )}
+                    {!activeStream && (
+                      <button 
+                        onClick={() => setIsPreviewing(false)}
+                        className="bg-red-500/80 backdrop-blur-md p-4 rounded-xl border border-red-500/50 hover:bg-red-500 transition-all group shadow-[0_0_20px_rgba(239,68,68,0.3)] active:scale-95"
+                        title="Apagar Cámara"
+                      >
+                        <StopCircle className="w-6 h-6 text-white" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => {
+                        if (videoRef.current) {
+                          if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                          } else {
+                            videoRef.current.parentElement?.requestFullscreen();
+                          }
+                        }
+                      }}
+                      className="bg-[#1a1b1e]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-all group shadow-xl active:scale-95"
+                      title="Pantalla Completa"
+                    >
+                      <Maximize className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
+                    </button>
+                  </div>
                 </div>
 
                 {cameraError && (
