@@ -42,7 +42,9 @@ const StreamView = () => {
   const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const chatEndRef = useRef<HTMLDivElement>(null);
   
-  const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(id || '', user?.uid || '');
+  const [anonymousId] = useState(() => `anon_${Math.random().toString(36).substring(2, 11)}`);
+  const viewerIdentity = user?.uid || anonymousId;
+  const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(id || '', viewerIdentity);
   const roomRef = useRef<Room | null>(null);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ const StreamView = () => {
   }, []);
 
   useEffect(() => {
-    if (!id || !user) return;
+    if (!id) return;
     // ... existing stream and chat listeners ...
 
     const streamRef = doc(db, 'streams', id);
@@ -367,18 +369,6 @@ const StreamView = () => {
     </div>
   );
 
-  if (!user) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
-      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
-        <Users className="w-10 h-10 text-white/20" />
-      </div>
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold uppercase italic"><span>Inicia sesión para ver</span></h2>
-        <p className="text-white/40 italic"><span>Debes estar registrado para unirte a las transmisiones en vivo.</span></p>
-      </div>
-    </div>
-  );
-
   return (
     <div className="max-w-[1800px] mx-auto space-y-8 relative">
       {/* Atmospheric Background */}
@@ -589,47 +579,53 @@ const StreamView = () => {
             ))}
           </div>
 
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
-            <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Escribe un mensaje..."
-                className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
-              />
-              <div className="flex items-center gap-1 pr-1">
-                <button
-                  type="button"
-                  onClick={handleReaction}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
-                >
-                  <Heart className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => chatImageInputRef.current?.click()}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="submit"
-                  disabled={!message.trim()}
-                  className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
-                >
-                  <Send className="w-3 h-3" />
-                </button>
+          {user ? (
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
+              <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Escribe un mensaje..."
+                  className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
+                />
+                <div className="flex items-center gap-1 pr-1">
+                  <button
+                    type="button"
+                    onClick={handleReaction}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
+                  >
+                    <Heart className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => chatImageInputRef.current?.click()}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!message.trim()}
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
+                  >
+                    <Send className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
+              <input
+                type="file"
+                ref={chatImageInputRef}
+                onChange={handleChatImageUpload}
+                className="hidden"
+                accept="image/*"
+              />
+            </form>
+          ) : (
+            <div className="p-4 border-t border-white/5 bg-black/20 text-center">
+              <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
             </div>
-            <input
-              type="file"
-              ref={chatImageInputRef}
-              onChange={handleChatImageUpload}
-              className="hidden"
-              accept="image/*"
-            />
-          </form>
+          )}
         </div>
 
         {/* Bottom Controls Overlay */}
@@ -782,47 +778,53 @@ const StreamView = () => {
             ))}
             <div ref={chatEndRef} />
           </div>
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
-            <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-              <input
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Escribe un mensaje..."
-                className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
-              />
-              <div className="flex items-center gap-1 pr-1">
-                <button
-                  type="button"
-                  onClick={handleReaction}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
-                >
-                  <Heart className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => chatImageInputRef.current?.click()}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-                <button
-                  type="submit"
-                  disabled={!message.trim()}
-                  className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
-                >
-                  <Send className="w-3 h-3" />
-                </button>
+          {user ? (
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
+              <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Escribe un mensaje..."
+                  className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
+                />
+                <div className="flex items-center gap-1 pr-1">
+                  <button
+                    type="button"
+                    onClick={handleReaction}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
+                  >
+                    <Heart className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => chatImageInputRef.current?.click()}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!message.trim()}
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
+                  >
+                    <Send className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
+              <input
+                type="file"
+                ref={chatImageInputRef}
+                onChange={handleChatImageUpload}
+                className="hidden"
+                accept="image/*"
+              />
+            </form>
+          ) : (
+            <div className="p-4 border-t border-white/5 bg-black/20 text-center">
+              <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
             </div>
-            <input
-              type="file"
-              ref={chatImageInputRef}
-              onChange={handleChatImageUpload}
-              className="hidden"
-              accept="image/*"
-            />
-          </form>
+          )}
         </div>
       </div>
 

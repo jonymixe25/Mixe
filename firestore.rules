@@ -229,10 +229,10 @@ service cloud.firestore {
     match /streams/{streamId} {
       allow read: if true; // Publicly readable for live streams
       allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && (
+      allow update: if (
         // Owner/Admin can update everything
-        (isStreamUpdateValid(request.resource.data, resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
-        // Viewers can ONLY update viewerCount or likes
+        (isAuthenticated() && isStreamUpdateValid(request.resource.data, resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
+        // Viewers (including unauthenticated) can ONLY update viewerCount or likes
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount', 'likes']) && 
          (
            ('viewerCount' in request.resource.data.diff(resource.data).affectedKeys() && 
