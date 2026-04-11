@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, updateDoc, doc, increment } from '../firebase';
 import { ShortVideo } from '../types';
 import { useAuth } from '../AuthContext';
-import { Heart, MessageCircle, Share2, Plus, X, Upload, Loader2, Play } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, X, Upload, Loader2, Play, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Toast from '../components/Toast';
 
@@ -20,46 +20,89 @@ const ShortItem = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
-    if (isActive) {
-      videoRef.current?.play().catch(console.error);
-      setIsPlaying(true);
-    } else {
-      videoRef.current?.pause();
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
+    let playPromise: Promise<void> | undefined;
+
+    if (isActive && videoRef.current && short.videoUrl) {
+      playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setIsPlaying(true);
+        }).catch(error => {
+          if (error.name !== 'AbortError') {
+            console.error('Video play error:', error);
+          }
+        });
       }
+    } else if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, short.videoUrl]);
 
   const togglePlay = () => {
-    if (videoRef.current) {
+    if (videoRef.current && short.videoUrl) {
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play().catch(console.error);
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setIsPlaying(true);
+          }).catch(error => {
+            if (error.name !== 'AbortError') {
+              console.error('Video play error:', error);
+            }
+          });
+        }
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
-  const handleLike = () => {
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      const currentProgress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+      setProgress(currentProgress);
+    }
+  };
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsLiked(!isLiked);
     onLike(short.id);
   };
 
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   return (
-    <div className="relative w-full h-full snap-start bg-black flex items-center justify-center overflow-hidden">
-      <video
-        ref={videoRef}
-        src={short.videoUrl}
-        className="absolute inset-0 w-full h-full object-cover"
-        loop
-        playsInline
-        onClick={togglePlay}
-      />
+    <div className="relative w-full h-full snap-start bg-black flex items-center justify-center overflow-hidden group">
+      {short.videoUrl ? (
+        <video
+          ref={videoRef}
+          src={short.videoUrl}
+          className="absolute inset-0 w-full h-full object-cover"
+          loop
+          playsInline
+          muted={isMuted}
+          onClick={togglePlay}
+          onTimeUpdate={handleTimeUpdate}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white/50">
+          <p>Video no disponible</p>
+        </div>
+      )}
       
       {/* Play/Pause Overlay */}
       {!isPlaying && (
@@ -69,6 +112,14 @@ const ShortItem = ({
           </div>
         </div>
       )}
+
+      {/* Mute Button */}
+      <button 
+        onClick={toggleMute}
+        className="absolute top-6 right-6 z-30 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white hover:bg-white/10 transition-colors"
+      >
+        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      </button>
 
       {/* Gradient Overlay for Text Readability */}
       <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none z-10" />
@@ -87,34 +138,42 @@ const ShortItem = ({
             </div>
             <span className="font-bold text-white text-sm md:text-base drop-shadow-md">@{short.userName}</span>
           </div>
-          <p className="text-white/90 text-sm md:text-base line-clamp-3 drop-shadow-md">
+          <p className="text-white/90 text-sm md:text-base line-clamp-3 drop-shadow-md mb-4">
             {short.description}
           </p>
         </div>
 
         {/* Right: Actions */}
         <div className="flex flex-col items-center gap-6 pb-4">
-          <button onClick={handleLike} className="flex flex-col items-center gap-1 group">
-            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active:scale-90 transition-transform">
+          <button onClick={handleLike} className="flex flex-col items-center gap-1 group/btn">
+            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active/btn:scale-90 transition-transform">
               <Heart className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
             </div>
             <span className="text-white text-xs font-bold drop-shadow-md">{short.likes + (isLiked ? 1 : 0)}</span>
           </button>
 
-          <button className="flex flex-col items-center gap-1 group">
-            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active:scale-90 transition-transform">
+          <button className="flex flex-col items-center gap-1 group/btn">
+            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active/btn:scale-90 transition-transform">
               <MessageCircle className="w-6 h-6 text-white" />
             </div>
             <span className="text-white text-xs font-bold drop-shadow-md">{short.comments}</span>
           </button>
 
-          <button onClick={() => onShare(short.id)} className="flex flex-col items-center gap-1 group">
-            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active:scale-90 transition-transform">
+          <button onClick={() => onShare(short.id)} className="flex flex-col items-center gap-1 group/btn">
+            <div className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 group-active/btn:scale-90 transition-transform">
               <Share2 className="w-6 h-6 text-white" />
             </div>
             <span className="text-white text-xs font-bold drop-shadow-md">{short.shares}</span>
           </button>
         </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-30">
+        <div 
+          className="h-full bg-[#ff4e00] transition-all duration-100 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );

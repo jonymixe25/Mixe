@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
+import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, storage, ref, uploadBytesResumable, getDownloadURL, where } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
 import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -41,11 +41,51 @@ const StreamView = () => {
   const [showStats, setShowStats] = useState(false);
   const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const chatEndRef = useRef<HTMLDivElement>(null);
-  
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [suggestedStreams, setSuggestedStreams] = useState<StreamSession[]>([]);
   const [anonymousId] = useState(() => `anon_${Math.random().toString(36).substring(2, 11)}`);
+
+  // Apply volume to video element
+  useEffect(() => {
+    if (videoElementRef.current) {
+      videoElementRef.current.volume = isMuted ? 0 : volume;
+      videoElementRef.current.muted = isMuted;
+    }
+  }, [volume, isMuted, hasVideo]);
+
+  const toggleMute = () => setIsMuted(!isMuted);
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (newVolume > 0 && isMuted) {
+      setIsMuted(false);
+    } else if (newVolume === 0 && !isMuted) {
+      setIsMuted(true);
+    }
+  };
   const viewerIdentity = user?.uid || anonymousId;
   const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(id || '', viewerIdentity);
   const roomRef = useRef<Room | null>(null);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'streams'),
+      where('status', '==', 'live'),
+      orderBy('startedAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const streams = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as StreamSession))
+        .filter(s => s.id !== id); // Exclude current stream
+      setSuggestedStreams(streams);
+    });
+
+    return () => unsubscribe();
+  }, [id]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
@@ -193,7 +233,15 @@ const StreamView = () => {
     if (joinStatus === 'accepted' && roomRef.current) {
       const publishLocalCamera = async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          let stream: MediaStream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          } catch (e) {
+            console.warn("Failed to get video, trying audio only", e);
+            stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            setToast({ message: 'No se pudo acceder al video, transmitiendo solo audio', type: 'error', isVisible: true });
+          }
+          
           const videoTrack = stream.getVideoTracks()[0];
           const audioTrack = stream.getAudioTracks()[0];
           
@@ -711,12 +759,20 @@ const StreamView = () => {
               
               <div className="h-8 w-px bg-white/10 hidden sm:block" />
               
-              <div className="flex items-center gap-2">
-                <button className="p-2 text-white/60 hover:text-white transition-colors">
-                  <Volume2 className="w-5 h-5" />
+              <div className="flex items-center gap-2 group/volume">
+                <button onClick={toggleMute} className="p-2 text-white/60 hover:text-white transition-colors">
+                  {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
-                <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden hidden sm:block">
-                  <div className="w-2/3 h-full bg-[#ff4e00]" />
+                <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.01" 
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-full h-1 bg-white/20 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#ff4e00] [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+                  />
                 </div>
               </div>
             </div>
@@ -907,6 +963,38 @@ const StreamView = () => {
             </div>
           )}
         </div>
+
+        {/* Suggested Streams */}
+        {suggestedStreams.length > 0 && (
+          <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-6 shadow-2xl">
+            <h3 className="text-[#ff4e00] font-mono uppercase tracking-widest text-xs mb-6 flex items-center gap-2">
+              <Radio className="w-4 h-4" />
+              Transmisiones Sugeridas
+            </h3>
+            <div className="space-y-4">
+              {suggestedStreams.map(s => (
+                <div key={s.id} onClick={() => navigate(`/stream/${s.id}`)} className="flex gap-4 cursor-pointer group hover:bg-white/5 p-2 rounded-2xl transition-colors">
+                  <div className="w-24 h-16 bg-white/10 rounded-xl overflow-hidden relative flex-shrink-0">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${s.userId}`} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                    <div className="absolute bottom-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                      <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                      LIVE
+                    </div>
+                  </div>
+                  <div className="flex flex-col justify-center overflow-hidden">
+                    <h4 className="text-white text-sm font-medium truncate group-hover:text-[#ff4e00] transition-colors">{s.title}</h4>
+                    <p className="text-white/50 text-xs truncate">{s.userName}</p>
+                    <div className="flex items-center gap-1 text-white/40 text-[10px] mt-1">
+                      <Users className="w-3 h-3" />
+                      <span>{s.viewerCount}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <Toast 

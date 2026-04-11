@@ -7,6 +7,7 @@ import { Send, ArrowLeft, Loader2, User as UserIcon, Image as ImageIcon, Video, 
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
+import Toast from '../components/Toast';
 
 interface PrivateMessage {
   id: string;
@@ -39,6 +40,11 @@ const Chat: React.FC = () => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const signalingUnsubscribes = useRef<(() => void)[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
 
   // Generate a consistent chatId for two users
   const getChatId = (uid1: string, uid2: string) => {
@@ -178,7 +184,14 @@ const Chat: React.FC = () => {
     const chatId = getChatId(user.uid, contactId);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (e) {
+        console.warn("Failed to get video, trying audio only", e);
+        stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        setToast({ message: 'No se pudo acceder al video, usando solo audio', type: 'error', isVisible: true });
+      }
       setLocalStream(stream);
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
@@ -249,7 +262,14 @@ const Chat: React.FC = () => {
     const chatId = getChatId(user.uid, contactId);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (e) {
+        console.warn("Failed to get video, trying audio only", e);
+        stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        setToast({ message: 'No se pudo acceder al video, usando solo audio', type: 'error', isVisible: true });
+      }
       setLocalStream(stream);
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
@@ -450,9 +470,14 @@ const Chat: React.FC = () => {
                 {callStatus === 'connected' ? (
                   <video
                     ref={remoteVideoRef}
-                    autoPlay
                     playsInline
                     className="w-full h-full object-cover"
+                    onLoadedMetadata={(e) => {
+                      const video = e.target as HTMLVideoElement;
+                      video.play().catch(err => {
+                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                      });
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center space-y-8 relative overflow-hidden">
@@ -480,10 +505,15 @@ const Chat: React.FC = () => {
                 <div className="absolute bottom-8 right-8 w-1/4 aspect-video bg-[#0a0502] rounded-[2rem] overflow-hidden border-2 border-white/10 shadow-2xl z-10 group-hover:border-[#ff4e00]/50 transition-colors duration-500">
                   <video
                     ref={localVideoRef}
-                    autoPlay
                     muted
                     playsInline
                     className="w-full h-full object-cover scale-x-[-1]"
+                    onLoadedMetadata={(e) => {
+                      const video = e.target as HTMLVideoElement;
+                      video.play().catch(err => {
+                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                      });
+                    }}
                   />
                 </div>
               </div>
@@ -625,6 +655,13 @@ const Chat: React.FC = () => {
           </button>
         </form>
       </div>
+
+      <Toast 
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </div>
   );
 };

@@ -167,10 +167,29 @@ export default function AdminStream() {
             }
           }
 
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: { ideal: facingMode } }, 
-            audio: true 
-          });
+          let stream: MediaStream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: { ideal: facingMode } }, 
+              audio: true 
+            });
+          } catch (e) {
+            console.warn("Failed with facingMode, trying default video constraints", e);
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: true 
+              });
+            } catch (e2) {
+              console.warn("Failed to get video, trying audio only", e2);
+              stream = await navigator.mediaDevices.getUserMedia({ 
+                video: false, 
+                audio: true 
+              });
+              setToast({ message: 'No se pudo acceder al video, usando solo audio', type: 'error', isVisible: true });
+            }
+          }
+          
           localStream.current = stream;
           setIsStreamReady(true);
           if (videoRef.current) {
@@ -713,10 +732,15 @@ export default function AdminStream() {
                 <div className="w-full h-full flex items-center justify-center gap-4 p-4 [&>video]:flex-1 [&>video]:h-full [&>video]:object-cover [&>video]:rounded-2xl [&>video]:border [&>video]:border-white/10" ref={remoteVideoContainerRef}>
                   <video
                     ref={videoRef}
-                    autoPlay
                     muted
                     playsInline
                     className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                    onLoadedMetadata={(e) => {
+                      const video = e.target as HTMLVideoElement;
+                      video.play().catch(err => {
+                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                      });
+                    }}
                   />
                 </div>
 
