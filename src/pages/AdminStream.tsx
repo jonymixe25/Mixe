@@ -111,7 +111,7 @@ export default function AdminStream() {
     });
 
     return () => unsubscribeChat();
-  }, [activeStream]);
+  }, [activeStream?.id]);
 
   useEffect(() => {
     if (!activeStream) return;
@@ -123,7 +123,7 @@ export default function AdminStream() {
     });
 
     return () => unsubscribe();
-  }, [activeStream]);
+  }, [activeStream?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -217,7 +217,7 @@ export default function AdminStream() {
     };
 
     setupCamera();
-  }, [activeStream, isPreviewing, facingMode]);
+  }, [activeStream?.id, isPreviewing, facingMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -327,7 +327,7 @@ export default function AdminStream() {
       }
       setConnectionStatus('idle');
     };
-  }, [activeStream, token, liveKitUrl, isStreamReady]);
+  }, [activeStream?.id, token, liveKitUrl, isStreamReady]);
 
   // Handle track updates when localStream changes (e.g. camera switch)
   useEffect(() => {

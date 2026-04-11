@@ -101,7 +101,7 @@ service cloud.firestore {
 
     function isValidStream(data) {
       return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount', 'likes']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'category', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'privacy', 'latency', 'resolution']) &&
+             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'thumbnailUrl', 'category', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'privacy', 'latency', 'resolution']) &&
              data.userId is string &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
@@ -113,7 +113,8 @@ service cloud.firestore {
              data.startedAt is timestamp &&
              data.viewerCount is number && data.viewerCount >= 0 &&
              data.likes is number && data.likes >= 0 &&
-             isValidOptionalString('description', 2000);
+             isValidOptionalString('description', 2000) &&
+             isValidOptionalString('thumbnailUrl', 1000);
     }
 
     function isStreamUpdateValid(newData, oldData) {

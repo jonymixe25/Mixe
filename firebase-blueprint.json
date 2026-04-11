@@ -37,12 +37,18 @@
         "userName": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "category": { "type": "string", "enum": ["cultura", "musica", "tradicion", "noticias"] },
         "status": { "type": "string", "enum": ["live", "ended"] },
         "startedAt": { "type": "string", "format": "date-time" },
         "endedAt": { "type": "string", "format": "date-time" },
-        "viewerCount": { "type": "number" }
+        "viewerCount": { "type": "number" },
+        "likes": { "type": "number" },
+        "privacy": { "type": "string", "enum": ["public", "private"] },
+        "latency": { "type": "string", "enum": ["normal", "low"] },
+        "resolution": { "type": "string", "enum": ["720p", "1080p"] }
       },
-      "required": ["userId", "title", "status", "startedAt"]
+      "required": ["userId", "userName", "title", "status", "startedAt", "viewerCount", "likes"]
     },
     "Contact": {
       "title": "Contact",

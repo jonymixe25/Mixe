@@ -43,6 +43,7 @@ const StreamView = () => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [suggestedStreams, setSuggestedStreams] = useState<StreamSession[]>([]);
   const [anonymousId] = useState(() => `anon_${Math.random().toString(36).substring(2, 11)}`);
 
@@ -55,6 +56,17 @@ const StreamView = () => {
   }, [volume, isMuted, hasVideo]);
 
   const toggleMute = () => setIsMuted(!isMuted);
+
+  const togglePlay = () => {
+    if (videoElementRef.current) {
+      if (isPlaying) {
+        videoElementRef.current.pause();
+      } else {
+        videoElementRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
@@ -460,6 +472,16 @@ const StreamView = () => {
     }
   };
 
+  const toggleFullScreen = () => {
+    if (videoRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        videoRef.current.requestFullscreen();
+      }
+    }
+  };
+
   const generateSummary = async () => {
     if (!stream?.description) return;
     setIsSummarizing(true);
@@ -747,6 +769,12 @@ const StreamView = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-4">
+                <button 
+                  onClick={togglePlay}
+                  className="w-12 h-12 rounded-full bg-[#ff4e00] flex items-center justify-center text-white shadow-[0_0_20px_rgba(255,78,0,0.4)] hover:scale-110 transition-all active:scale-95"
+                >
+                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
+                </button>
                 <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md">
                   <img
                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
@@ -755,7 +783,13 @@ const StreamView = () => {
                   />
                 </div>
                 <div className="hidden sm:block">
-                  <p className="text-sm font-medium tracking-wide">{stream.userName}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-medium tracking-wide">{stream.userName}</p>
+                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">
+                      <div className="w-1 h-1 bg-white rounded-full" />
+                      LIVE
+                    </div>
+                  </div>
                   <p className="text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
                 </div>
               </div>
@@ -830,7 +864,11 @@ const StreamView = () => {
               >
                 <Gauge className="w-4 h-4" />
               </button>
-              <button className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90">
+              <button 
+                onClick={toggleFullScreen}
+                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                title="Pantalla Completa"
+              >
                 <Maximize className="w-4 h-4" />
               </button>
             </div>
