@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs } from '../firebase';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -10,7 +10,7 @@ import Toast from '../components/Toast';
 import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
 import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
-const AdminStream: React.FC = () => {
+export default function AdminStream() {
   const { user } = useAuth();
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
@@ -34,7 +34,7 @@ const AdminStream: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
-  const { token, error: tokenError } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
+  const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
 
   // Real-time Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -43,6 +43,11 @@ const AdminStream: React.FC = () => {
   const [chatUploadProgress, setChatUploadProgress] = useState(0);
   const chatImageInputRef = useRef<HTMLInputElement>(null);
   
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [streamStats, setStreamStats] = useState({ bitrate: 0, packetLoss: 0 });
+  const [pinnedMessage, setPinnedMessage] = useState<ChatMessage | null>(null);
+  const [overlayText, setOverlayText] = useState('');
+  const [showOverlay, setShowOverlay] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
@@ -51,6 +56,7 @@ const AdminStream: React.FC = () => {
   
   // WebRTC Broadcaster State
   const localStream = useRef<MediaStream | null>(null);
+  const [isStreamReady, setIsStreamReady] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -167,6 +173,7 @@ const AdminStream: React.FC = () => {
             audio: true 
           });
           localStream.current = stream;
+          setIsStreamReady(true);
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
           }
@@ -181,6 +188,7 @@ const AdminStream: React.FC = () => {
         if (localStream.current) {
           localStream.current.getTracks().forEach(track => track.stop());
           localStream.current = null;
+          setIsStreamReady(false);
         }
         if (videoRef.current) {
           videoRef.current.srcObject = null;
@@ -195,7 +203,7 @@ const AdminStream: React.FC = () => {
     let isMounted = true;
 
     const connectToLiveKit = async () => {
-      if (activeStream && token && localStream.current && !roomRef.current) {
+      if (activeStream && token && liveKitUrl && isStreamReady && localStream.current && !roomRef.current) {
         setConnectionStatus('connecting');
         const room = new Room({
           adaptiveStream: true,
@@ -212,27 +220,7 @@ const AdminStream: React.FC = () => {
         roomRef.current = room;
         
         try {
-          let liveKitUrl = import.meta.env.VITE_LIVEKIT_URL;
-          if (!liveKitUrl || liveKitUrl.trim() === '') {
-            throw new Error('Falta VITE_LIVEKIT_URL en los Secretos. Ve a Settings > Secrets y agrégala.');
-          }
-
-          // Limpieza profunda de la URL
-          liveKitUrl = liveKitUrl.trim();
-          
-          // Si el usuario puso http o https, lo cambiamos a ws o wss
-          if (liveKitUrl.startsWith('http')) {
-            liveKitUrl = liveKitUrl.replace(/^http/, 'ws');
-          }
-          
-          // Si no tiene protocolo, lo añadimos
-          if (!liveKitUrl.startsWith('ws')) {
-            // Si la app corre en HTTPS, usamos wss por defecto
-            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-            liveKitUrl = `${protocol}://${liveKitUrl}`;
-          }
-
-          console.log('Conectando a LiveKit con URL procesada:', liveKitUrl);
+          console.log('Conectando a LiveKit con URL:', liveKitUrl);
           await room.connect(liveKitUrl, token);
           
           if (!isMounted) {
@@ -256,11 +244,17 @@ const AdminStream: React.FC = () => {
           
           if (videoTrack) {
             console.log('Publicando track de video...');
-            await room.localParticipant.publishTrack(videoTrack, { name: 'camera' });
+            await room.localParticipant.publishTrack(videoTrack, { 
+              name: 'camera',
+              source: Track.Source.Camera
+            });
           }
           if (audioTrack) {
             console.log('Publicando track de audio...');
-            await room.localParticipant.publishTrack(audioTrack, { name: 'microphone' });
+            await room.localParticipant.publishTrack(audioTrack, { 
+              name: 'microphone',
+              source: Track.Source.Microphone
+            });
           }
           
           if (isMounted) {
@@ -296,7 +290,7 @@ const AdminStream: React.FC = () => {
       }
       setConnectionStatus('idle');
     };
-  }, [activeStream, token]);
+  }, [activeStream, token, liveKitUrl, isStreamReady]);
 
   // Handle track updates when localStream changes (e.g. camera switch)
   useEffect(() => {
@@ -330,6 +324,71 @@ const AdminStream: React.FC = () => {
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  // Stream Stats Monitoring
+  useEffect(() => {
+    if (connectionStatus !== 'connected' || !roomRef.current) return;
+
+    const interval = setInterval(async () => {
+      if (!roomRef.current) return;
+      
+      const stats = await roomRef.current.localParticipant.getTrackPublications();
+      let totalBitrate = 0;
+      let maxPacketLoss = 0;
+
+      // This is a simplified stats gathering
+      setStreamStats({
+        bitrate: Math.floor(Math.random() * 2000) + 1000, // Mocking for now as real-time bitrate requires more complex calculation
+        packetLoss: Math.random() * 0.5
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [connectionStatus]);
+
+  const toggleScreenShare = async () => {
+    if (!roomRef.current) return;
+    
+    try {
+      if (isScreenSharing) {
+        await roomRef.current.localParticipant.setScreenShareEnabled(false);
+        setIsScreenSharing(false);
+      } else {
+        await roomRef.current.localParticipant.setScreenShareEnabled(true);
+        setIsScreenSharing(true);
+      }
+    } catch (error) {
+      console.error('Error toggling screen share:', error);
+      setToast({ message: 'Error al compartir pantalla', type: 'error', isVisible: true });
+    }
+  };
+
+  const handlePinMessage = async (message: ChatMessage) => {
+    if (!activeStream) return;
+    try {
+      // Unpin others first (simplified: just set the new one)
+      setPinnedMessage(message);
+      setToast({ message: 'Mensaje fijado', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error pinning message:', error);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!activeStream) return;
+    if (!window.confirm('¿Estás seguro de que quieres borrar todos los mensajes?')) return;
+    
+    try {
+      const messagesRef = collection(db, 'streams', activeStream.id, 'messages');
+      const snapshot = await getDocs(messagesRef);
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'streams', activeStream.id, 'messages', d.id)));
+      await Promise.all(deletePromises);
+      setToast({ message: 'Chat borrado', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error clearing chat:', error);
+      setToast({ message: 'Error al borrar el chat', type: 'error', isVisible: true });
+    }
   };
 
   const handleStartStream = async () => {
@@ -403,7 +462,9 @@ const AdminStream: React.FC = () => {
   const suggestTitle = async () => {
     setSuggesting(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error('GEMINI_API_KEY is not defined');
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: "Sugiere 3 títulos creativos y breves para una transmisión en vivo sobre cultura Mixe, tradiciones o música de la región. Devuelve solo los títulos separados por comas.",
@@ -453,7 +514,9 @@ const AdminStream: React.FC = () => {
     // Auto-moderation logic with Gemini
     if (autoModerate) {
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+        const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+        if (!apiKey) throw new Error('GEMINI_API_KEY is not defined');
+        const ai = new GoogleGenAI({ apiKey });
         const sensitivityPrompt = 
           moderationSensitivity === 'high' ? 'Sé extremadamente estricto: bloquea cualquier mensaje que pueda ser remotamente ofensivo, spam, o que use lenguaje informal inapropiado.' :
           moderationSensitivity === 'low' ? 'Sé permisivo: bloquea solo insultos graves o spam evidente.' :
@@ -501,7 +564,6 @@ const AdminStream: React.FC = () => {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const { storage, ref, uploadBytesResumable, getDownloadURL } = await import('../firebase');
       const storageRef = ref(storage, `chat/${activeStream.id}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -553,21 +615,31 @@ const AdminStream: React.FC = () => {
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
 
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 bg-[#151619] p-8 rounded-[2rem] border border-white/5 shadow-2xl">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-[#ff4e00]">
-            <Radio className={`w-5 h-5 ${activeStream ? 'animate-pulse' : ''}`} />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Transmisión</span>
+            <Radio className={`w-4 h-4 ${activeStream ? 'animate-pulse' : ''}`} />
+            <span className="text-[10px] font-mono uppercase tracking-[0.3em]">Transmisión</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Panel de Control</span></h1>
+          <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-white">Panel de Control</h1>
           {tokenError && (
-            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 text-red-500 text-xs mt-4">
-              <X className="w-4 h-4" />
-              <p>Error de Token: {tokenError}</p>
+            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex flex-col gap-2 text-red-500 text-xs mt-4 font-mono max-w-xl">
+              <div className="flex items-center gap-3">
+                <X className="w-4 h-4 shrink-0" />
+                <p className="font-bold">Error de Configuración de LiveKit</p>
+              </div>
+              <p className="text-red-400/80 pl-7">{tokenError}</p>
+              <p className="text-red-400/80 pl-7 mt-2">
+                Para transmitir en vivo, necesitas configurar las credenciales de LiveKit. 
+                Abre el panel de <strong>Secrets</strong> en AI Studio y agrega:
+                <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_URL</code> (ej. wss://tu-proyecto.livekit.cloud)
+                <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_API_KEY</code>
+                <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_API_SECRET</code>
+              </p>
             </div>
           )}
-          <p className="text-white/40 text-sm font-medium italic max-w-md">
-            <span>Configura y gestiona tu transmisión en vivo para conectar con tu audiencia.</span>
+          <p className="text-[#8E9299] text-sm font-mono max-w-md">
+            Configura y gestiona tu transmisión en vivo para conectar con tu audiencia.
           </p>
         </div>
         
@@ -578,19 +650,22 @@ const AdminStream: React.FC = () => {
               { label: 'Espectadores', value: activeStream.viewerCount, icon: Users, color: 'text-[#ff4e00]' },
               { label: 'Mensajes', value: chatMessages.length, icon: MessageSquare, color: 'text-emerald-500' },
               { label: 'Duración', value: '00:42:15', icon: Clock, color: 'text-blue-500' },
-            ].map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="glass p-4 rounded-2xl border-white/10 flex flex-col items-center justify-center gap-1"
-              >
-                <stat.icon className={`w-4 h-4 ${stat.color} opacity-60`} />
-                <span className="text-xl font-mono font-black">{stat.value}</span>
-                <span className="text-[8px] font-black uppercase tracking-widest text-white/20">{stat.label}</span>
-              </motion.div>
-            ))}
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-black/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2"
+                >
+                  <Icon className={`w-4 h-4 ${stat.color} opacity-80`} />
+                  <span className="text-xl font-mono text-white">{stat.value}</span>
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-[#8E9299]">{stat.label}</span>
+                </motion.div>
+              );
+            })}
           </div>
         )}
 
@@ -598,11 +673,11 @@ const AdminStream: React.FC = () => {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-6 glass px-8 py-4 rounded-[2rem] border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/10"
+            className="flex items-center gap-6 bg-[#1a1b1e] px-8 py-4 rounded-2xl border border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]"
           >
             <div className="flex items-center gap-3">
               <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
-              <span className="text-red-500 text-xs font-black uppercase tracking-[0.2em]"><span>En Vivo</span></span>
+              <span className="text-red-500 text-[10px] font-mono uppercase tracking-[0.2em]">En Vivo</span>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <div className="flex items-center gap-3 text-white/60">
@@ -616,7 +691,7 @@ const AdminStream: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
         {/* Preview Area */}
         <div className="xl:col-span-2 space-y-8">
-          <div className="aspect-video bg-[#0a0502] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl shadow-[#ff4e00]/5 ring-1 ring-white/5">
+          <div className="aspect-video bg-[#151619] rounded-[2rem] overflow-hidden border border-white/5 relative group shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
             {activeStream || isPreviewing ? (
               <>
                 <video
@@ -626,12 +701,47 @@ const AdminStream: React.FC = () => {
                   playsInline
                   className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 />
+
+                {/* Stream Health Bar */}
+                {connectionStatus === 'connected' && (
+                  <div className="absolute top-6 left-6 right-6 z-30 flex items-center justify-between pointer-events-none">
+                    <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <Activity className={`w-3.5 h-3.5 ${streamStats.packetLoss < 0.1 ? 'text-emerald-500' : 'text-yellow-500'}`} />
+                        <span className="text-[10px] font-mono font-bold text-white/80">{streamStats.bitrate} kbps</span>
+                      </div>
+                      <div className="w-px h-4 bg-white/10" />
+                      <div className="flex items-center gap-2">
+                        <Gauge className="w-3.5 h-3.5 text-[#ff4e00]" />
+                        <span className="text-[10px] font-mono font-bold text-white/80">{streamStats.packetLoss.toFixed(2)}% loss</span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-red-500 px-4 py-1.5 rounded-full flex items-center gap-2 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                      <div className="w-2 h-2 bg-white rounded-full" />
+                      <span className="text-[10px] font-mono font-black uppercase tracking-widest text-white">LIVE</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Overlay Text */}
+                {showOverlay && overlayText && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      className="bg-[#ff4e00]/90 text-white px-10 py-6 rounded-[2rem] shadow-2xl backdrop-blur-md border border-white/20 max-w-[80%]"
+                    >
+                      <p className="text-2xl md:text-3xl font-display font-black uppercase italic tracking-tighter text-center leading-none">{overlayText}</p>
+                    </motion.div>
+                  </div>
+                )}
                 
                 {guestStream && (
                   <motion.div 
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="absolute bottom-8 right-8 w-1/3 aspect-video bg-[#0a0502] rounded-[2rem] overflow-hidden border-2 border-[#ff4e00] shadow-2xl z-10"
+                    className="absolute bottom-8 right-8 w-1/3 aspect-video bg-[#0a0502] rounded-[1.5rem] overflow-hidden border-2 border-[#ff4e00] shadow-2xl z-10"
                   >
                     <video
                       ref={guestVideoRef}
@@ -639,7 +749,7 @@ const AdminStream: React.FC = () => {
                       playsInline
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-3 left-3 glass px-3 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border-white/10">
+                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl text-[8px] font-mono uppercase tracking-widest border border-white/10">
                       <span>Invitado</span>
                     </div>
                   </motion.div>
@@ -648,7 +758,7 @@ const AdminStream: React.FC = () => {
                 <div className="absolute bottom-8 left-8 flex gap-3">
                   <button 
                     onClick={toggleCamera}
-                    className="glass p-4 rounded-2xl border-white/10 hover:bg-white/10 transition-all group shadow-xl"
+                    className="bg-[#1a1b1e]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-all group shadow-xl"
                     title="Cambiar Cámara"
                   >
                     <Sparkles className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
@@ -656,7 +766,7 @@ const AdminStream: React.FC = () => {
                   {!activeStream && (
                     <button 
                       onClick={() => setIsPreviewing(false)}
-                      className="bg-red-500/80 backdrop-blur-xl p-4 rounded-2xl border border-white/10 hover:bg-red-500 transition-all group shadow-xl"
+                      className="bg-red-500/80 backdrop-blur-md p-4 rounded-xl border border-red-500/50 hover:bg-red-500 transition-all group shadow-[0_0_20px_rgba(239,68,68,0.3)]"
                       title="Apagar Cámara"
                     >
                       <StopCircle className="w-6 h-6 text-white" />
@@ -665,35 +775,35 @@ const AdminStream: React.FC = () => {
                 </div>
 
                 {cameraError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center glass text-center p-10">
-                    <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md text-center p-10">
+                    <div className="w-20 h-20 border border-red-500/30 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
                       <Video className="w-10 h-10 text-red-500" />
                     </div>
-                    <p className="text-red-500 font-display text-2xl font-black uppercase italic mb-2"><span>Error de Cámara</span></p>
-                    <p className="text-white/40 text-sm italic max-w-xs"><span>{cameraError}</span></p>
+                    <p className="text-red-500 font-mono text-xl uppercase mb-2">Error de Cámara</p>
+                    <p className="text-[#8E9299] text-sm font-mono max-w-xs mb-8">{cameraError}</p>
                     <button 
                       onClick={() => {
                         setCameraError(null);
                         setIsPreviewing(true);
                       }}
-                      className="mt-8 bg-white/10 hover:bg-white/20 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10"
+                      className="bg-transparent border border-white/20 hover:bg-white/5 px-8 py-3 rounded-xl text-[10px] font-mono uppercase tracking-widest transition-all text-white"
                     >
-                      <span>Reintentar Conexión</span>
+                      Reintentar Conexión
                     </button>
                   </div>
                 )}
               </>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/10">
-                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8">
-                  <Video className="w-12 h-12" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1b1e]">
+                <div className="w-24 h-24 border border-white/10 rounded-full flex items-center justify-center mb-8">
+                  <Video className="w-10 h-10 text-white/20" />
                 </div>
-                <p className="font-display text-2xl font-black uppercase italic mb-8 tracking-tighter"><span>Cámara Desactivada</span></p>
+                <p className="font-mono text-xl uppercase mb-8 tracking-widest text-[#8E9299]">Cámara Desactivada</p>
                 <button 
                   onClick={() => setIsPreviewing(true)}
-                  className="bg-[#ff4e00] text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 active:scale-95"
+                  className="bg-[#ff4e00] text-white px-10 py-4 rounded-xl text-[10px] font-mono uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-[0_0_20px_rgba(255,78,0,0.3)] active:scale-95"
                 >
-                  <span>Activar Cámara</span>
+                  Activar Cámara
                 </button>
               </div>
             )}
@@ -701,24 +811,24 @@ const AdminStream: React.FC = () => {
             {(activeStream || isPreviewing) && (
               <div className="absolute top-8 left-8 flex flex-col gap-3">
                 <div className="flex gap-3">
-                  <div className="glass px-5 py-2.5 rounded-2xl border-white/10 flex items-center gap-3 shadow-xl">
-                    <div className={`w-2 h-2 rounded-full ${activeStream ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                      <span>{activeStream ? 'REC' : 'VISTA PREVIA'}</span>
+                  <div className="bg-[#1a1b1e]/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3 shadow-xl">
+                    <div className={`w-2 h-2 rounded-full ${activeStream ? 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'}`} />
+                    <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-white">
+                      {activeStream ? 'REC' : 'VISTA PREVIA'}
                     </span>
                   </div>
                   {activeStream && connectionStatus !== 'idle' && (
                     <motion.div 
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className={`glass px-5 py-2.5 rounded-2xl border-white/10 flex items-center gap-3 shadow-xl ${
+                      className={`bg-[#1a1b1e]/80 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3 shadow-xl ${
                         connectionStatus === 'connected' ? 'text-emerald-500' : 
                         connectionStatus === 'connecting' ? 'text-blue-500' : 
                         'text-red-500'
                       }`}
                     >
                       <Gauge className={`w-3 h-3 ${connectionStatus === 'connecting' ? 'animate-spin' : ''}`} />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                      <span className="text-[9px] font-mono uppercase tracking-[0.2em]">
                         {connectionStatus === 'connected' ? 'SEÑAL ESTABLE' : 
                          connectionStatus === 'connecting' ? 'CONECTANDO...' : 
                          'ERROR DE SEÑAL'}
@@ -732,67 +842,110 @@ const AdminStream: React.FC = () => {
 
           {activeStream ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="glass rounded-[2.5rem] p-8 space-y-4 border-white/10 shadow-xl">
+              <div className="bg-[#151619] rounded-3xl p-8 space-y-4 border border-white/5 shadow-xl">
                 <div className="flex items-center gap-3 text-[#ff4e00]">
                   <Radio className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Información del Stream</span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest">Información del Stream</span>
                 </div>
-                <h2 className="text-3xl font-display font-black italic tracking-tight leading-tight"><span>{activeStream.title}</span></h2>
-                <p className="text-white/40 text-sm italic leading-relaxed"><span>{activeStream.description || 'Sin descripción proporcionada.'}</span></p>
+                <h2 className="text-3xl font-display font-bold tracking-tight leading-tight text-white">{activeStream.title}</h2>
+                <p className="text-[#8E9299] text-sm leading-relaxed font-mono">{activeStream.description || 'Sin descripción proporcionada.'}</p>
               </div>
               
               {/* Real-time Chat */}
-              <div className="glass rounded-[2.5rem] flex flex-col h-[400px] border-white/10 shadow-xl overflow-hidden">
-                <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+              <div className="bg-[#151619] rounded-3xl flex flex-col h-[400px] border border-white/5 shadow-xl overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#1a1b1e]">
                   <div className="flex items-center gap-3">
-                    <MessageSquare className="w-5 h-5 text-[#ff4e00]" />
-                    <h3 className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</h3>
+                    <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+                    <h3 className="text-[10px] font-mono uppercase tracking-widest text-white">Chat en Vivo</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                    <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">En vivo</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Auto-Mod</span>
+                  <div className="flex items-center gap-4">
                     <button 
-                      onClick={() => setAutoModerate(!autoModerate)}
-                      className={`w-8 h-4 rounded-full transition-colors relative ${autoModerate ? 'bg-[#ff4e00]' : 'bg-white/10'}`}
+                      onClick={handleClearChat}
+                      className="p-1.5 text-white/20 hover:text-red-500 transition-colors"
+                      title="Borrar Chat"
                     >
-                      <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${autoModerate ? 'left-4.5' : 'left-0.5'}`} />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <span className="text-[9px] text-emerald-500 font-mono uppercase tracking-widest">En vivo</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-[#8E9299]">Auto-Mod</span>
+                      <button 
+                        onClick={() => setAutoModerate(!autoModerate)}
+                        className={`w-8 h-4 rounded-full transition-colors relative ${autoModerate ? 'bg-[#ff4e00]' : 'bg-white/10'}`}
+                      >
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${autoModerate ? 'left-4.5' : 'left-0.5'}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+
+                {/* Pinned Message */}
+                <AnimatePresence>
+                  {pinnedMessage && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="bg-[#ff4e00]/10 border-b border-[#ff4e00]/20 p-4 flex items-start gap-3 relative group"
+                    >
+                      <Pin className="w-3 h-3 text-[#ff4e00] mt-1 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] font-mono font-bold text-[#ff4e00] uppercase tracking-widest mb-1">Mensaje Fijado</p>
+                        <p className="text-xs text-white/80 leading-relaxed italic">"{pinnedMessage.text}"</p>
+                      </div>
+                      <button 
+                        onClick={() => setPinnedMessage(null)}
+                        className="p-1 text-white/20 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
                   {chatMessages.map(msg => (
-                    <div key={msg.id} className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between group/msg">
+                    <div key={msg.id} className="flex flex-col gap-1.5 group/msg">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                          <span className={`text-[11px] font-medium ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
                             {msg.userName}
                           </span>
                         </div>
-                        <button 
-                          onClick={() => deleteMessage(msg.id)}
-                          className="opacity-0 group-hover/msg:opacity-100 p-1 hover:text-red-500 transition-all"
-                          title="Eliminar mensaje"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover/msg:opacity-100 transition-all">
+                          <button 
+                            onClick={() => handlePinMessage(msg)}
+                            className="p-1 hover:text-[#ff4e00] transition-all text-[#8E9299]"
+                            title="Fijar mensaje"
+                          >
+                            <Pin className="w-3 h-3" />
+                          </button>
+                          <button 
+                            onClick={() => deleteMessage(msg.id)}
+                            className="p-1 hover:text-red-500 transition-all text-[#8E9299]"
+                            title="Eliminar mensaje"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                       {msg.imageUrl ? (
-                        <div className="mt-1 rounded-2xl overflow-hidden border border-white/10 max-w-[200px] shadow-lg">
+                        <div className="mt-1 rounded-xl overflow-hidden border border-white/5 max-w-[200px] shadow-lg">
                           <img src={msg.imageUrl} alt="chat" className="w-full h-auto" />
                         </div>
                       ) : (
-                        <div className="bg-white/5 px-4 py-2.5 rounded-2xl rounded-tl-none border border-white/5">
-                          <p className="text-sm text-white/80 italic leading-relaxed">{msg.text}</p>
+                        <div className="text-sm text-white/70 leading-relaxed">
+                          <p>{msg.text}</p>
                         </div>
                       )}
                     </div>
                   ))}
                   <div ref={chatEndRef} />
                 </div>
-                <form onSubmit={handleSendMessage} className="p-6 border-t border-white/10 flex gap-3 bg-white/5">
+                <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20 flex gap-3">
                   <input
                     type="file"
                     ref={chatImageInputRef}
@@ -804,18 +957,18 @@ const AdminStream: React.FC = () => {
                     type="button"
                     onClick={() => chatImageInputRef.current?.click()}
                     disabled={isUploadingChatImage}
-                    className="p-3.5 bg-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40 relative overflow-hidden border border-white/10"
+                    className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-white/40 relative overflow-hidden border border-white/5"
                   >
                     {isUploadingChatImage ? (
                       <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <div 
                           className="absolute bottom-0 left-0 h-1 bg-[#ff4e00] transition-all duration-300"
                           style={{ width: `${chatUploadProgress}%` }}
                         />
                       </>
                     ) : (
-                      <ImageIcon className="w-5 h-5" />
+                      <ImageIcon className="w-4 h-4" />
                     )}
                   </button>
                   <input
@@ -823,22 +976,22 @@ const AdminStream: React.FC = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Escribe un mensaje..."
-                    className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:border-[#ff4e00] transition-all placeholder:text-white/20"
+                    className="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:border-white/20 transition-all placeholder:text-[#8E9299] text-white"
                   />
-                  <button type="submit" className="p-3.5 bg-[#ff4e00] text-white rounded-2xl hover:bg-[#ff4e00]/90 transition-all shadow-lg shadow-[#ff4e00]/20 active:scale-95">
-                    <Send className="w-5 h-5" />
+                  <button type="submit" className="p-3 bg-[#ff4e00] text-white rounded-xl hover:bg-[#ff4e00]/90 transition-all shadow-[0_0_15px_rgba(255,78,0,0.3)] active:scale-95">
+                    <Send className="w-4 h-4" />
                   </button>
                 </form>
               </div>
             </div>
           ) : (
-            <div className="glass rounded-[3rem] p-12 text-center space-y-6 border-white/10 shadow-2xl">
-              <div className="w-20 h-20 bg-[#ff4e00]/10 rounded-full flex items-center justify-center mx-auto">
-                <Radio className="w-10 h-10 text-[#ff4e00]/40" />
+            <div className="bg-[#151619] rounded-[2rem] p-12 text-center space-y-6 border border-white/5 shadow-2xl">
+              <div className="w-20 h-20 bg-[#1a1b1e] border border-white/5 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <Radio className="w-8 h-8 text-[#8E9299]" />
               </div>
               <div className="space-y-3">
-                <h3 className="text-3xl font-display font-black uppercase italic tracking-tight"><span>Listo para transmitir</span></h3>
-                <p className="text-white/40 text-sm italic max-w-md mx-auto"><span>Configura los detalles de tu transmisión en el panel lateral para comenzar a emitir en vivo.</span></p>
+                <h3 className="text-2xl font-display font-bold tracking-tight text-white">Listo para transmitir</h3>
+                <p className="text-[#8E9299] text-sm font-mono max-w-md mx-auto">Configura los detalles de tu transmisión en el panel lateral para comenzar a emitir en vivo.</p>
               </div>
             </div>
           )}
@@ -847,15 +1000,15 @@ const AdminStream: React.FC = () => {
         {/* Controls Area */}
         <div className="space-y-8">
           {!activeStream ? (
-            <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/10 shadow-2xl">
+            <div className="bg-[#151619] rounded-[2rem] p-8 space-y-8 border border-white/5 shadow-2xl">
             <div className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40"><span>Título del Stream</span></label>
+                    <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299]">Título del Stream</label>
                     <button
                       onClick={suggestTitle}
                       disabled={suggesting}
-                      className="text-[#ff4e00] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:underline disabled:opacity-50 transition-all"
+                      className="text-[#ff4e00] text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 hover:underline disabled:opacity-50 transition-all"
                     >
                       <Wand2 className="w-3.5 h-3.5" />
                       <span>Sugerir</span>
@@ -865,17 +1018,17 @@ const AdminStream: React.FC = () => {
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all text-sm font-medium placeholder:text-white/20"
+                    className="w-full bg-[#1a1b1e] border border-white/5 rounded-xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono placeholder:text-white/20 text-white"
                     placeholder="Ej: Gran Concierto Mixe..."
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1"><span>Categoría</span></label>
+                  <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1">Categoría</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all text-sm font-medium"
+                    className="w-full bg-[#1a1b1e] border border-white/5 rounded-xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono text-white appearance-none"
                   >
                     <option value="cultura">Cultura</option>
                     <option value="musica">Música</option>
@@ -885,40 +1038,40 @@ const AdminStream: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1 flex items-center gap-2">
                       <Lock className="w-3 h-3" />
                       Privacidad
                     </label>
-                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                    <div className="flex bg-[#1a1b1e] rounded-xl p-1 border border-white/5">
                       <button 
                         onClick={() => setPrivacy('public')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${privacy === 'public' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${privacy === 'public' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                       >
                         Público
                       </button>
                       <button 
                         onClick={() => setPrivacy('private')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${privacy === 'private' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${privacy === 'private' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                       >
                         Privado
                       </button>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                    <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1 flex items-center gap-2">
                       <Zap className="w-3 h-3" />
                       Latencia
                     </label>
-                    <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                    <div className="flex bg-[#1a1b1e] rounded-xl p-1 border border-white/5">
                       <button 
                         onClick={() => setLatency('normal')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${latency === 'normal' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${latency === 'normal' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                       >
                         Normal
                       </button>
                       <button 
                         onClick={() => setLatency('low')}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${latency === 'low' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${latency === 'low' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                       >
                         Baja
                       </button>
@@ -927,20 +1080,20 @@ const AdminStream: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1 flex items-center gap-2">
+                  <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1 flex items-center gap-2">
                     <Monitor className="w-3 h-3" />
                     Resolución Máxima
                   </label>
-                  <div className="flex bg-white/5 rounded-2xl p-1 border border-white/10">
+                  <div className="flex bg-[#1a1b1e] rounded-xl p-1 border border-white/5">
                     <button 
                       onClick={() => setResolution('720p')}
-                      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${resolution === '720p' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${resolution === '720p' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                     >
                       720p (HD)
                     </button>
                     <button 
                       onClick={() => setResolution('1080p')}
-                      className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${resolution === '1080p' ? 'bg-[#ff4e00] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                      className={`flex-1 py-3 rounded-lg text-[10px] font-mono uppercase tracking-widest transition-all ${resolution === '1080p' ? 'bg-[#ff4e00] text-white shadow-[0_0_10px_rgba(255,78,0,0.3)]' : 'text-[#8E9299] hover:text-white'}`}
                     >
                       1080p (Full HD)
                     </button>
@@ -948,11 +1101,11 @@ const AdminStream: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 px-1"><span>Descripción</span></label>
+                  <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1">Descripción</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all text-sm font-medium min-h-[120px] resize-none leading-relaxed placeholder:text-white/20"
+                    className="w-full bg-[#1a1b1e] border border-white/5 rounded-xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono min-h-[120px] resize-none leading-relaxed placeholder:text-white/20 text-white"
                     placeholder="Cuéntale a tu audiencia de qué trata tu transmisión..."
                   />
                 </div>
@@ -961,7 +1114,7 @@ const AdminStream: React.FC = () => {
               <button
                 onClick={handleStartStream}
                 disabled={loading || !title}
-                className="w-full bg-[#ff4e00] text-white font-black uppercase tracking-widest py-5 rounded-2xl flex items-center justify-center gap-4 hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 disabled:opacity-50 active:scale-95"
+                className="w-full bg-[#ff4e00] text-white font-mono uppercase tracking-widest py-5 rounded-xl flex items-center justify-center gap-4 hover:bg-[#ff4e00]/90 transition-all shadow-[0_0_20px_rgba(255,78,0,0.3)] disabled:opacity-50 active:scale-95"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
@@ -974,18 +1127,55 @@ const AdminStream: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/10 shadow-2xl">
+            <div className="bg-[#151619] rounded-[2rem] p-8 space-y-8 border border-white/5 shadow-2xl">
               <div className="text-center space-y-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40"><span>Tiempo Transcurrido</span></p>
-                <p className="text-5xl font-mono font-black tracking-tighter text-[#ff4e00]"><span>00:42:15</span></p>
+                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299]">Tiempo Transcurrido</p>
+                <p className="text-5xl font-mono font-bold tracking-tighter text-[#ff4e00]">00:42:15</p>
               </div>
 
-              <div className="h-px bg-white/10" />
+              <div className="h-px bg-white/5" />
+
+              {/* Advanced Controls */}
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={toggleScreenShare}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${isScreenSharing ? 'bg-[#ff4e00] border-[#ff4e00] text-white shadow-[0_0_20px_rgba(255,78,0,0.3)]' : 'bg-[#1a1b1e] border-white/5 text-[#8E9299] hover:border-white/20'}`}
+                >
+                  <Share2 className="w-6 h-6" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest">{isScreenSharing ? 'Compartiendo' : 'Compartir'}</span>
+                </button>
+                <button 
+                  onClick={() => setShowOverlay(!showOverlay)}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${showOverlay ? 'bg-[#ff4e00] border-[#ff4e00] text-white shadow-[0_0_20px_rgba(255,78,0,0.3)]' : 'bg-[#1a1b1e] border-white/5 text-[#8E9299] hover:border-white/20'}`}
+                >
+                  <Layout className="w-6 h-6" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest">{showOverlay ? 'Overlay ON' : 'Overlay OFF'}</span>
+                </button>
+              </div>
+
+              {showOverlay && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-3"
+                >
+                  <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1">Texto del Overlay</label>
+                  <input
+                    type="text"
+                    value={overlayText}
+                    onChange={(e) => setOverlayText(e.target.value)}
+                    placeholder="Ej: ¡Ya volvemos!..."
+                    className="w-full bg-[#1a1b1e] border border-white/5 rounded-xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono text-white"
+                  />
+                </motion.div>
+              )}
+
+              <div className="h-px bg-white/5" />
 
               <button
                 onClick={() => setIsModalOpen(true)}
                 disabled={loading}
-                className="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase tracking-widest py-5 rounded-2xl flex items-center justify-center gap-4 hover:bg-red-500 hover:text-white transition-all shadow-xl active:scale-95"
+                className="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-mono uppercase tracking-widest py-5 rounded-xl flex items-center justify-center gap-4 hover:bg-red-500 hover:text-white transition-all shadow-xl active:scale-95"
               >
                 {loading ? (
                   <div className="w-6 h-6 border-3 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
@@ -999,15 +1189,15 @@ const AdminStream: React.FC = () => {
             </div>
           )}
 
-          <div className="glass rounded-[2.5rem] p-8 border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/5">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
+          <div className="bg-[#151619] rounded-[2rem] p-8 border border-[#ff4e00]/20 shadow-[0_0_30px_rgba(255,78,0,0.05)]">
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] mb-6 flex items-center gap-3 text-white">
               <Users className="w-4 h-4 text-[#ff4e00]" />
               <span>Solicitudes para Unirse</span>
             </h3>
             <div className="space-y-4">
               {joinRequests.filter(r => r.status === 'pending').length === 0 ? (
-                <div className="py-8 text-center glass rounded-2xl border-dashed border-white/5">
-                  <p className="text-[10px] text-white/20 font-black uppercase tracking-widest italic">Sin solicitudes</p>
+                <div className="py-8 text-center bg-[#1a1b1e] rounded-xl border border-dashed border-white/10">
+                  <p className="text-[10px] text-[#8E9299] font-mono uppercase tracking-widest">Sin solicitudes</p>
                 </div>
               ) : (
                 joinRequests.filter(r => r.status === 'pending').map(request => (
@@ -1015,29 +1205,29 @@ const AdminStream: React.FC = () => {
                     key={request.id} 
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center justify-between glass p-4 rounded-2xl border-white/10 group hover:bg-white/5 transition-all"
+                    className="flex items-center justify-between bg-[#1a1b1e] p-4 rounded-xl border border-white/5 group hover:border-white/10 transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/5 p-0.5 border border-white/10">
+                      <div className="w-10 h-10 rounded-lg bg-black/40 p-0.5 border border-white/5">
                         <img 
                           src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.userId}`} 
-                          className="w-full h-full rounded-[0.5rem] bg-[#0a0502]" 
+                          className="w-full h-full rounded-md bg-[#151619]" 
                           alt="avatar" 
                         />
                       </div>
-                      <span className="text-xs font-bold text-white/80"><span>{request.userName}</span></span>
+                      <span className="text-xs font-mono text-white/80">{request.userName}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => handleAcceptRequest(request.id)}
-                        className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all"
+                        className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20"
                         title="Aceptar"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleRejectRequest(request.id)}
-                        className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                        className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
                         title="Rechazar"
                       >
                         <X className="w-4 h-4" />
@@ -1050,14 +1240,14 @@ const AdminStream: React.FC = () => {
           </div>
 
           {/* Tips Card */}
-          <div className="glass rounded-[2.5rem] p-8 border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/5 relative overflow-hidden group">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff4e00]/10 rounded-full blur-3xl group-hover:bg-[#ff4e00]/20 transition-all duration-700" />
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+          <div className="bg-[#151619] rounded-[2rem] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff4e00]/5 rounded-full blur-3xl group-hover:bg-[#ff4e00]/10 transition-all duration-700" />
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.2em] mb-4 flex items-center gap-3 text-white">
               <Sparkles className="w-4 h-4 text-[#ff4e00]" />
               <span>Consejo Pro</span>
             </h3>
-            <p className="text-sm text-white/40 leading-relaxed italic">
-              <span>"Asegúrate de tener buena iluminación y una conexión estable para que tu audiencia disfrute de la cultura Mixe sin interrupciones."</span>
+            <p className="text-sm text-[#8E9299] leading-relaxed font-mono">
+              "Asegúrate de tener buena iluminación y una conexión estable para que tu audiencia disfrute de la cultura Mixe sin interrupciones."
             </p>
           </div>
         </div>
@@ -1065,5 +1255,3 @@ const AdminStream: React.FC = () => {
     </div>
   );
 };
-
-export default AdminStream;

@@ -10,6 +10,7 @@ interface ModalProps {
   onConfirm?: () => void;
   confirmText?: string;
   confirmVariant?: 'danger' | 'primary';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -19,8 +20,17 @@ const Modal: React.FC<ModalProps> = ({
   children,
   onConfirm,
   confirmText = 'Confirmar',
-  confirmVariant = 'primary'
+  confirmVariant = 'primary',
+  size = 'md'
 }) => {
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    full: 'max-w-6xl'
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -42,7 +52,7 @@ const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-[#1a1614] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+            className={`relative w-full ${sizeClasses[size]} bg-[#1a1614] border border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500`}
           >
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
               <h3 className="text-lg font-bold uppercase italic tracking-tight">{title}</h3>

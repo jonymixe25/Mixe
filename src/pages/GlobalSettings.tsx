@@ -5,7 +5,7 @@ import { OperationType } from '../types';
 import { Settings as SettingsIcon, Save, AlertTriangle, Languages, ShieldAlert, UserPlus, ShieldCheck, Facebook, Twitter, Instagram, Globe } from 'lucide-react';
 import Toast from '../components/Toast';
 
-const GlobalSettings: React.FC = () => {
+const GlobalSettings = () => {
   const { user } = useAuth();
   const [appName, setAppName] = useState('');
   const [themeColor, setThemeColor] = useState('#ff4e00');

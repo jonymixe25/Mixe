@@ -15,6 +15,7 @@ interface PrivateMessage {
   text: string;
   imageUrl?: string;
   createdAt: any;
+  isSystem?: boolean;
 }
 
 const Chat: React.FC = () => {
@@ -87,6 +88,33 @@ const Chat: React.FC = () => {
 
     return () => unsubscribe();
   }, [user, contactId]);
+
+  // Auto-send welcome message for new conversations
+  useEffect(() => {
+    if (!loading && messages.length === 0 && user && contactId && contact) {
+      const sendWelcome = async () => {
+        const chatId = getChatId(user.uid, contactId);
+        const chatRef = doc(db, 'chats', chatId);
+        
+        try {
+          const chatDoc = await getDoc(chatRef);
+          if (!chatDoc.exists() || !chatDoc.data().welcomeSent) {
+            await setDoc(chatRef, { welcomeSent: true }, { merge: true });
+            await addDoc(collection(db, 'chats', chatId, 'messages'), {
+              senderId: 'system',
+              senderName: 'Sistema',
+              text: `¡Bienvenido al chat! Esta es una nueva conversación entre ${user.displayName} y ${contact.displayName}.`,
+              createdAt: serverTimestamp(),
+              isSystem: true
+            });
+          }
+        } catch (e) {
+          console.error('Error sending welcome message:', e);
+        }
+      };
+      sendWelcome();
+    }
+  }, [loading, messages.length, user, contactId, contact]);
 
   // WebRTC Configuration
   const rtcConfig = {
@@ -518,30 +546,49 @@ const Chat: React.FC = () => {
             </div>
           </div>
         ) : (
-          messages.map((msg, i) => (
-            <motion.div
-              initial={{ opacity: 0, x: msg.senderId === user?.uid ? 20 : -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              key={msg.id}
-              className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className="flex flex-col gap-2 max-w-[75%]">
-                <div className={`px-6 py-4 rounded-[2rem] text-sm font-medium shadow-xl relative group ${
-                  msg.senderId === user?.uid 
-                    ? 'bg-[#ff4e00] text-white rounded-tr-none' 
-                    : 'glass text-white/80 rounded-tl-none border-white/10'
-                }`}>
-                  <p className="leading-relaxed italic"><span>{msg.text}</span></p>
-                  <div className={`absolute top-0 ${msg.senderId === user?.uid ? '-right-2' : '-left-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                    <div className={`w-4 h-4 rotate-45 ${msg.senderId === user?.uid ? 'bg-[#ff4e00]' : 'bg-white/10'}`} />
+          messages.map((msg, i) => {
+            if (msg.isSystem) {
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={msg.id}
+                  className="flex justify-center my-6"
+                >
+                  <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-full backdrop-blur-sm">
+                    <p className="text-xs font-mono text-white/40 uppercase tracking-widest text-center">
+                      {msg.text}
+                    </p>
                   </div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, x: msg.senderId === user?.uid ? 20 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                key={msg.id}
+                className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className="flex flex-col gap-2 max-w-[75%]">
+                  <div className={`px-6 py-4 rounded-[2rem] text-sm font-medium shadow-xl relative group ${
+                    msg.senderId === user?.uid 
+                      ? 'bg-[#ff4e00] text-white rounded-tr-none' 
+                      : 'glass text-white/80 rounded-tl-none border-white/10'
+                  }`}>
+                    <p className="leading-relaxed italic"><span>{msg.text}</span></p>
+                    <div className={`absolute top-0 ${msg.senderId === user?.uid ? '-right-2' : '-left-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                      <div className={`w-4 h-4 rotate-45 ${msg.senderId === user?.uid ? 'bg-[#ff4e00]' : 'bg-white/10'}`} />
+                    </div>
+                  </div>
+                  <span className={`text-[8px] font-black uppercase tracking-widest text-white/20 ${msg.senderId === user?.uid ? 'text-right' : 'text-left'}`}>
+                    {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm', { locale: es }) : 'Ahora'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-black uppercase tracking-widest text-white/20 ${msg.senderId === user?.uid ? 'text-right' : 'text-left'}`}>
-                  {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm', { locale: es }) : 'Ahora'}
-                </span>
-              </div>
-            </motion.div>
-          ))
+              </motion.div>
+            );
+          })
         )}
         <div ref={scrollRef} />
       </div>

@@ -94,6 +94,7 @@
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "text": { "type": "string" },
+        "isPinned": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "userName", "text", "createdAt"]

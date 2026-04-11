@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, orderBy, deleteDoc, doc, handleFirestoreError } from '../firebase';
 import { MediaItem, OperationType } from '../types';
-import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText, Users, Download, Play } from 'lucide-react';
+import { Image as ImageIcon, Trash2, ExternalLink, Calendar, Folder, Plus, X, Video, Volume2, FileText, Users, Download, Play, Maximize2, Minimize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ImageUpload from '../components/ImageUpload';
 import Modal from '../components/Modal';
 
 import Toast from '../components/Toast';
 
-const Gallery: React.FC = () => {
+const Gallery = () => {
   const { user } = useAuth();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +17,7 @@ const Gallery: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [uploadFolder, setUploadFolder] = useState('General');
   const [isPublic, setIsPublic] = useState(false);
@@ -311,61 +312,85 @@ const Gallery: React.FC = () => {
       )}
       <Modal
         isOpen={!!selectedMedia}
-        onClose={() => setSelectedMedia(null)}
+        onClose={() => {
+          setSelectedMedia(null);
+          setIsExpanded(false);
+        }}
         title={selectedMedia?.fileName || 'Detalles del Archivo'}
+        size={isExpanded ? 'full' : 'md'}
       >
         <div className="space-y-6">
-          <div className="aspect-video bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-white/10">
+          <div className={`relative bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-white/10 transition-all duration-500 ${isExpanded ? 'aspect-video max-h-[70vh]' : 'aspect-video'}`}>
             {selectedMedia?.fileType?.startsWith('image/') ? (
               <img src={selectedMedia.url} className="w-full h-full object-contain" alt="" referrerPolicy="no-referrer" />
             ) : selectedMedia?.fileType?.startsWith('video/') ? (
               <video src={selectedMedia.url} controls className="w-full h-full" />
             ) : selectedMedia?.fileType?.startsWith('audio/') ? (
-              <audio src={selectedMedia.url} controls className="w-full" />
+              <div className="w-full h-full flex flex-col items-center justify-center p-12 bg-gradient-to-br from-brand/5 to-transparent">
+                <div className="w-24 h-24 bg-brand/10 rounded-full flex items-center justify-center mb-8 animate-pulse">
+                  <Volume2 className="w-12 h-12 text-brand" />
+                </div>
+                <audio src={selectedMedia.url} controls className="w-full max-w-md" />
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
                 <FileText className="w-16 h-16 text-white/20" />
                 <p className="text-white/40 text-sm">Vista previa no disponible</p>
               </div>
             )}
+
+            {(selectedMedia?.fileType?.startsWith('video/') || selectedMedia?.fileType?.startsWith('audio/')) && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md text-white rounded-xl hover:bg-brand transition-all z-10"
+                title={isExpanded ? "Contraer" : "Expandir"}
+              >
+                {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+              </button>
+            )}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="glass p-4 rounded-2xl border-white/10">
-              <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tipo</p>
-              <p className="text-xs font-bold truncate">{selectedMedia?.fileType || 'Desconocido'}</p>
-            </div>
-            <div className="glass p-4 rounded-2xl border-white/10">
-              <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tamaño</p>
-              <p className="text-xs font-bold">
-                {selectedMedia?.fileSize ? `${(selectedMedia.fileSize / (1024 * 1024)).toFixed(2)} MB` : 'N/A'}
-              </p>
-            </div>
-          </div>
+          {!isExpanded && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass p-4 rounded-2xl border-white/10">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tipo</p>
+                  <p className="text-xs font-bold truncate">{selectedMedia?.fileType || 'Desconocido'}</p>
+                </div>
+                <div className="glass p-4 rounded-2xl border-white/10">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-white/20 mb-1">Tamaño</p>
+                  <p className="text-xs font-bold">
+                    {selectedMedia?.fileSize ? `${(selectedMedia.fileSize / (1024 * 1024)).toFixed(2)} MB` : 'N/A'}
+                  </p>
+                </div>
+              </div>
 
-          <div className="flex gap-3">
-            <a 
-              href={selectedMedia?.url} 
-              download={selectedMedia?.fileName}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 bg-brand text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand/90 transition-all shadow-xl shadow-brand/20"
-            >
-              <Download className="w-5 h-5" />
-              <span>Descargar</span>
-            </a>
-            <button 
-              onClick={() => {
-                if (selectedMedia) {
-                  confirmDelete(selectedMedia.id);
-                  setSelectedMedia(null);
-                }
-              }}
-              className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-          </div>
+              <div className="flex gap-3">
+                <a 
+                  href={selectedMedia?.url} 
+                  download={selectedMedia?.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-brand text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand/90 transition-all shadow-xl shadow-brand/20"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Descargar</span>
+                </a>
+                <button 
+                  onClick={() => {
+                    if (selectedMedia) {
+                      confirmDelete(selectedMedia.id);
+                      setSelectedMedia(null);
+                      setIsExpanded(false);
+                    }
+                  }}
+                  className="p-4 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 

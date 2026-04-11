@@ -35,9 +35,10 @@ async function startServer() {
 
       const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT;
       const apiSecret = process.env.LIVEKIT_API_SECRET;
+      const livekitUrl = process.env.LIVEKIT_URL;
 
-      if (!apiKey || !apiSecret) {
-        console.error("[API] LiveKit credentials missing. Required: LIVEKIT_API_KEY and LIVEKIT_API_SECRET");
+      if (!apiKey || !apiSecret || !livekitUrl) {
+        console.error("[API] LiveKit credentials missing. Required: LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL");
         return res.status(500).json({ error: "LiveKit credentials not configured in Secrets" });
       }
 
@@ -52,7 +53,7 @@ async function startServer() {
 
       const token = await at.toJwt();
       console.log(`[API] Token generated successfully for room ${room}`);
-      res.json({ token });
+      res.json({ token, url: livekitUrl });
     } catch (error) {
       console.error("[API] Error generating LiveKit token:", error);
       res.status(500).json({ error: "Internal server error generating token" });

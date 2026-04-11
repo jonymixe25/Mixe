@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
 
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showWelcomeToast, setShowWelcomeToast] = useState(false);
   const [prevUser, setPrevUser] = useState<any>(null);
@@ -22,7 +22,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAnyStreamLive, setIsAnyStreamLive] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'), firestoreLimit(1));
     const unsubscribe = onSnapshot(streamsQuery, (snapshot) => {
       setIsAnyStreamLive(!snapshot.empty);
@@ -30,7 +30,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -48,7 +48,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const performSearch = async () => {
       if (searchQuery.length < 2) {
         setSearchResults({ news: [], streams: [] });
@@ -91,7 +91,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && !prevUser) {
       setShowWelcomeToast(true);
     }

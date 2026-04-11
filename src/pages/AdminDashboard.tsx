@@ -10,7 +10,7 @@ import ImageUpload from '../components/ImageUpload';
 
 import Toast from '../components/Toast';
 
-const AdminDashboard: React.FC = () => {
+const AdminDashboard = () => {
   const { user } = useAuth();
   const [streams, setStreams] = useState<StreamSession[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
