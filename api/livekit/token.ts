@@ -22,9 +22,9 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Missing room or identity" });
     }
 
-    const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const livekitUrl = process.env.LIVEKIT_URL;
+    const apiKey = process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIouZ8zkp2nVDD';
+    const apiSecret = process.env.LIVEKIT_API_SECRET || '6TIvnesUcT9AorWdTGaSXnlJKBf99bbl6GqzrCIYOfDA';
+    const livekitUrl = process.env.LIVEKIT_URL || 'wss://vidamixe-kxkfgn4j.livekit.cloud';
 
     if (!apiKey || !apiSecret || !livekitUrl) {
       console.error("[API] LiveKit credentials missing. Required: LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL");
