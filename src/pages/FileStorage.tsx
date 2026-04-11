@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, storage, ref, uploadBytes, getDownloadURL, listAll, getMetadata, addDoc, collection, serverTimestamp } from '../firebase';
+import { db, storage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, listAll, getMetadata, addDoc, collection, serverTimestamp } from '../firebase';
 import { Folder, Upload, Download, FileText, Trash2 } from 'lucide-react';
 
 const FileStorage: React.FC = () => {
@@ -35,12 +35,30 @@ const FileStorage: React.FC = () => {
 
     setUploading(true);
     const fileRef = ref(storage, `users/${user.uid}/files/${file.name}`);
+    
     try {
-      await uploadBytes(fileRef, file);
-      await fetchFiles();
+      const uploadTask = uploadBytesResumable(fileRef, file);
+      
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          // Progress can be added here if needed
+        },
+        (error) => {
+          console.error('Error uploading file:', error);
+          if (error.code === 'storage/retry-limit-exceeded') {
+            alert('Error de conexión: Se superó el límite de reintentos. Por favor, verifica tu conexión a internet o intenta más tarde.');
+          } else {
+            alert('Error al subir el archivo: ' + error.message);
+          }
+          setUploading(false);
+        },
+        async () => {
+          await fetchFiles();
+          setUploading(false);
+        }
+      );
     } catch (error) {
-      console.error('Error uploading file:', error);
-    } finally {
+      console.error('Error starting upload:', error);
       setUploading(false);
     }
   };

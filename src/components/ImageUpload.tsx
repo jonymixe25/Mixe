@@ -68,8 +68,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         }, 
         (error) => {
           console.error('Error uploading file:', error);
+          let message = 'Error al subir el archivo: ' + error.message;
+          if (error.code === 'storage/retry-limit-exceeded') {
+            message = 'Error de conexión: Se superó el límite de reintentos. Verifica tu conexión a internet.';
+          }
           setToast({
-            message: 'Error al subir el archivo: ' + error.message,
+            message,
             type: 'error',
             isVisible: true
           });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, updateDoc, doc, increment } from '../firebase';
+import { db, collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, updateDoc, doc, increment, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
 import { ShortVideo } from '../types';
 import { useAuth } from '../AuthContext';
 import { Heart, MessageCircle, Share2, Plus, X, Upload, Loader2, Play, Volume2, VolumeX } from 'lucide-react';
@@ -56,7 +56,7 @@ const ShortItem = ({
             setIsPlaying(true);
           }).catch(error => {
             if (error.name !== 'AbortError') {
-              console.error('Video play error:', error);
+              console.error('Video play error:', error.message || error);
             }
           });
         }
@@ -87,7 +87,7 @@ const ShortItem = ({
 
   return (
     <div className="relative w-full h-full snap-start bg-black flex items-center justify-center overflow-hidden group">
-      {short.videoUrl ? (
+      {short.videoUrl && short.videoUrl.startsWith('http') ? (
         <video
           ref={videoRef}
           src={short.videoUrl}
@@ -97,6 +97,10 @@ const ShortItem = ({
           muted={isMuted}
           onClick={togglePlay}
           onTimeUpdate={handleTimeUpdate}
+          onError={(e) => {
+            console.error('Video load error for URL:', short.videoUrl);
+            setIsPlaying(false);
+          }}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white/50">
@@ -187,9 +191,11 @@ const Shorts = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadUrl, setUploadUrl] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDescription, setUploadDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -258,35 +264,60 @@ const Shorts = () => {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !uploadUrl.trim() || !uploadDescription.trim()) return;
+    if (!user || !uploadFile || !uploadDescription.trim()) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
+    
     try {
-      const newShort = {
-        userId: user.uid,
-        userName: user.displayName || 'Usuario',
-        userPhoto: user.photoURL || '',
-        videoUrl: uploadUrl.trim(),
-        description: uploadDescription.trim(),
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        createdAt: serverTimestamp()
-      };
+      const storageRef = ref(storage, `shorts/${user.uid}/${Date.now()}_${uploadFile.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, uploadFile);
 
-      const docRef = await addDoc(collection(db, 'shorts'), newShort);
-      
-      // Add to local state
-      setShorts(prev => [{ id: docRef.id, ...newShort, createdAt: new Date() } as ShortVideo, ...prev]);
-      
-      setIsUploadModalOpen(false);
-      setUploadUrl('');
-      setUploadDescription('');
-      setToast({ message: 'Video publicado exitosamente', type: 'success', isVisible: true });
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading video:', error);
+          let message = 'Error al subir el video';
+          if (error.code === 'storage/retry-limit-exceeded') {
+            message = 'Error de conexión: Se superó el límite de reintentos. Verifica tu conexión.';
+          }
+          setToast({ message, type: 'error', isVisible: true });
+          setIsUploading(false);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          const newShort = {
+            userId: user.uid,
+            userName: user.displayName || 'Usuario',
+            userPhoto: user.photoURL || '',
+            videoUrl: downloadURL,
+            description: uploadDescription.trim(),
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            createdAt: serverTimestamp()
+          };
+
+          const docRef = await addDoc(collection(db, 'shorts'), newShort);
+          
+          // Add to local state
+          setShorts(prev => [{ id: docRef.id, ...newShort, createdAt: new Date() } as ShortVideo, ...prev]);
+          
+          setIsUploadModalOpen(false);
+          setUploadFile(null);
+          setUploadDescription('');
+          setUploadProgress(0);
+          setToast({ message: 'Video publicado exitosamente', type: 'success', isVisible: true });
+          setIsUploading(false);
+        }
+      );
     } catch (error) {
-      console.error('Error uploading short:', error);
-      setToast({ message: 'Error al publicar el video', type: 'error', isVisible: true });
-    } finally {
+      console.error('Error starting upload:', error);
+      setToast({ message: 'Error al iniciar la subida', type: 'error', isVisible: true });
       setIsUploading(false);
     }
   };
@@ -368,17 +399,48 @@ const Shorts = () => {
               <form onSubmit={handleUpload} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-white/40 mb-2">
-                    URL del Video (MP4)
+                    Archivo de Video (MP4)
                   </label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full aspect-video bg-black/50 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-[#ff4e00]/50 transition-all group"
+                  >
+                    {uploadFile ? (
+                      <div className="text-center p-4">
+                        <Play className="w-8 h-8 text-[#ff4e00] mx-auto mb-2" />
+                        <p className="text-white text-sm font-medium truncate max-w-[200px]">{uploadFile.name}</p>
+                        <p className="text-white/40 text-[10px] mt-1">{(uploadFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-white/20 group-hover:text-[#ff4e00] transition-colors mb-2" />
+                        <p className="text-white/40 text-xs">Haz clic para seleccionar un video</p>
+                      </>
+                    )}
+                  </div>
                   <input
-                    type="url"
-                    required
-                    value={uploadUrl}
-                    onChange={(e) => setUploadUrl(e.target.value)}
-                    placeholder="https://ejemplo.com/video.mp4"
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff4e00] transition-colors"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    accept="video/mp4,video/x-m4v,video/*"
+                    className="hidden"
                   />
                 </div>
+
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-mono uppercase tracking-widest text-white/40">
+                      <span>Subiendo...</span>
+                      <span>{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-[#ff4e00] transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-widest text-white/40 mb-2">
@@ -396,13 +458,13 @@ const Shorts = () => {
 
                 <button
                   type="submit"
-                  disabled={isUploading || !uploadUrl.trim() || !uploadDescription.trim()}
+                  disabled={isUploading || !uploadFile || !uploadDescription.trim()}
                   className="w-full bg-[#ff4e00] text-white font-bold py-4 rounded-xl hover:bg-[#ff4e00]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isUploading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Publicando...</span>
+                      <span>Subiendo {Math.round(uploadProgress)}%</span>
                     </>
                   ) : (
                     <span>Publicar Video</span>

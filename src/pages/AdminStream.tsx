@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
+import ImageUpload from '../components/ImageUpload';
 import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
 import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
@@ -15,6 +16,7 @@ export default function AdminStream() {
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [category, setCategory] = useState('cultura');
   const [privacy, setPrivacy] = useState<'public' | 'private'>('public');
   const [latency, setLatency] = useState<'normal' | 'low'>('normal');
@@ -449,6 +451,7 @@ export default function AdminStream() {
         userName: user.displayName,
         title,
         description,
+        thumbnailUrl,
         category,
         privacy,
         latency,
@@ -609,6 +612,9 @@ export default function AdminStream() {
         },
         (error) => {
           console.error('Error uploading chat image:', error);
+          if (error.code === 'storage/retry-limit-exceeded') {
+            alert('Error de conexión: Se superó el límite de reintentos. Verifica tu conexión.');
+          }
           setIsUploadingChatImage(false);
         },
         async () => {
@@ -738,7 +744,7 @@ export default function AdminStream() {
                     onLoadedMetadata={(e) => {
                       const video = e.target as HTMLVideoElement;
                       video.play().catch(err => {
-                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                        if (err.name !== 'AbortError') console.error('Play error (admin):', err.message || err);
                       });
                     }}
                   />
@@ -1045,6 +1051,18 @@ export default function AdminStream() {
                     className="w-full bg-[#1a1b1e] border border-white/5 rounded-xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono placeholder:text-white/20 text-white"
                     placeholder="Ej: Gran Concierto Mixe..."
                   />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299] px-1">Miniatura del Stream</label>
+                  <div className="glass rounded-2xl p-4 border-dashed border-white/5 bg-[#1a1b1e]">
+                    <ImageUpload 
+                      onUploadComplete={(url) => setThumbnailUrl(url)}
+                      label="Selecciona una imagen de portada"
+                      folder="thumbnails"
+                      currentImageUrl={thumbnailUrl}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-3">

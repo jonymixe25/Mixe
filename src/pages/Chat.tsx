@@ -475,7 +475,7 @@ const Chat: React.FC = () => {
                     onLoadedMetadata={(e) => {
                       const video = e.target as HTMLVideoElement;
                       video.play().catch(err => {
-                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                        if (err.name !== 'AbortError') console.error('Play error (remote):', err.message || err);
                       });
                     }}
                   />
@@ -511,7 +511,7 @@ const Chat: React.FC = () => {
                     onLoadedMetadata={(e) => {
                       const video = e.target as HTMLVideoElement;
                       video.play().catch(err => {
-                        if (err.name !== 'AbortError') console.error('Play error:', err);
+                        if (err.name !== 'AbortError') console.error('Play error (local):', err.message || err);
                       });
                     }}
                   />

@@ -375,6 +375,9 @@ const StreamView = () => {
         },
         (error) => {
           console.error('Error uploading chat image:', error);
+          if (error.code === 'storage/retry-limit-exceeded') {
+            alert('Error de conexión: Se superó el límite de reintentos. Verifica tu conexión.');
+          }
           setIsUploadingChatImage(false);
         },
         async () => {
