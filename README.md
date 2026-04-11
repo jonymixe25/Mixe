@@ -1,20 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Voz Mixe Live
 
-# Run and deploy your AI Studio app
+## Documentación Completa
 
-This contains everything you need to run your app locally.
+### Introducción
+Voz Mixe Live es un proyecto diseñado para ...
 
-View your app in AI Studio: https://ai.studio/apps/d5278022-5f7a-411c-a943-f030a7c22af6
+### Instalación
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/jonymixe25/Mixe.git
+   cd Mixe
+   ```
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
 
-## Run Locally
+### Configuración
+Para configurar el proyecto, edita el archivo `.env` y proporciona las siguientes variables:
+- `DATABASE_URL`: URL de la base de datos.
+- `API_KEY`: La clave de API para acceder a los servicios.
 
-**Prerequisites:**  Node.js
+### Despliegue
+Para desplegar la aplicación, utiliza los siguientes comandos:
+```bash
+npm run build
+npm start
+```
 
+### Endpoints de la API
+- `GET /api/usuarios`: Obtiene la lista de usuarios.
+- `POST /api/usuarios`: Crea un nuevo usuario.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Esquema de Base de Datos
+- **Usuarios**: Almacena información sobre los usuarios.
+  - `id`: Identificador único.
+  - `nombre`: Nombre del usuario.
+
+### Prácticas de Seguridad
+- Siempre valida la entrada del usuario.
+- Usa HTTPS para todas las comunicaciones.
+
+### Características
+- Interfaz de usuario intuitiva.
+- Soporte multilenguaje.
+
+### Configuración del Entorno de Desarrollo
+1. Asegúrate de tener Node.js y npm instalados.
+2. Prepara tus archivos de configuración.
+
+### Solución de Problemas
+- **Error: No se puede conectar a la base de datos**: Verifica tu configuración en `.env`.
+- **Error: Puertos ocupados**: Asegúrate de que no hay otros servicios utilizando los mismos puertos.
