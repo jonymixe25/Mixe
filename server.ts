@@ -164,14 +164,13 @@ async function startServer() {
       const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA);
       let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL);
 
-      // Advanced cleaning for Secret (extra cautious about invisible chars)
-      const sanitizeSecret = (s: string) => s.replace(/[^\x20-\x7E]/g, '').trim();
-      const finalSecret = sanitizeSecret(apiSecret);
+      // Basic cleaning for Secret (just trim standard whitespace)
+      const finalSecret = apiSecret.trim();
 
       // Log configuration status (WITHOUT showing the full secret)
       console.log(`[LiveKit] Token Request - Room: ${room}, Identity: ${identity}`);
       console.log(`[LiveKit] Config - Key: ${apiKey ? 'Found (' + apiKey.substring(0, 4) + '...)' : 'MISSING'}`);
-      console.log(`[LiveKit] Config - Secret: ${finalSecret ? 'Found (' + finalSecret.length + ' chars, ' + (finalSecret !== apiSecret ? 'CLEANED' : 'CLEAN') + ')' : 'MISSING'}`);
+      console.log(`[LiveKit] Config - Secret: ${finalSecret ? 'Found (' + finalSecret.length + ' chars)' : 'MISSING'}`);
       console.log(`[LiveKit] Config - URL: ${livekitUrl || 'MISSING'}`);
 
       // Clean identity and room (no spaces allowed in some LiveKit identifiers)

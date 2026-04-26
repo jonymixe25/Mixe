@@ -247,19 +247,19 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isAuthenticated() && isValidUser(request.resource.data, false) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isAuthenticated() && isValidUser(request.resource.data, true) && (isOwner(uid) || isAdmin()) && (request.resource.data.role == resource.data.role || isAdmin());
     }
 
     match /media/{mediaId} {
-      allow get, list: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && isValidMedia(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /streams/{streamId} {
-      allow get, list: if true; // Publicly readable for live streams
+      allow read: if true; // Publicly readable for live streams
       allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
       allow update: if (
         // Owner/Admin can update everything
@@ -278,68 +278,68 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
       match /signaling/{signalingId} {
-        allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
         allow update: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow delete: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
 
         match /adminCandidates/{candidateId} {
-          allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         }
 
         match /viewerCandidates/{candidateId} {
-          allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
         }
       }
 
       match /messages/{messageId} {
-        allow get, list: if true;
+        allow read: if true;
         allow create: if isAuthenticated() && isValidMessage(request.resource.data);
         allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       }
 
       match /joinRequests/{requestId} {
-        allow get, list: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow read: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && request.auth.uid == requestId;
         allow update: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
       }
 
       match /guestSignaling/{guestId} {
-        allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
         allow update: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow delete: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
 
         match /guestCandidates/{candidateId} {
-          allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
         }
 
         match /adminCandidates/{candidateId} {
-          allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         }
       }
     }
 
     match /users/{uid}/contacts/{contactId} {
-      allow get, list: if isOwner(uid);
+      allow read: if isOwner(uid);
       allow create: if isOwner(uid) && isValidContact(request.resource.data);
       allow update: if isOwner(uid) && isValidContact(request.resource.data);
       allow delete: if isOwner(uid);
     }
 
     match /news/{newsId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isAdmin() && isValidNews(request.resource.data);
       allow update: if isAdmin() && isValidNews(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /shorts/{shortId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isAuthenticated() && isValidShort(request.resource.data);
       allow update: if isAuthenticated() && (
         (isOwner(resource.data.userId) || isAdmin()) ||
@@ -353,13 +353,20 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /alerts/{alertId} {
-      allow get, list: if true;
+      allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // ===============================================================
+    // Global Safety Net
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
