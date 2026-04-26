@@ -5,6 +5,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './AuthContext';
 import Layout from './components/Layout';
@@ -58,6 +59,7 @@ export default function App() {
             </Layout>
           </Router>
           <Analytics />
+          <SpeedInsights />
         </HelmetProvider>
       </AuthProvider>
     </GlobalErrorBoundary>
