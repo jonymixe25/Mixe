@@ -1,6 +1,7 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Legacy paths (keeping for compatibility if needed, though we moved to v-uploads)
     match /chat/{streamId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -12,6 +13,14 @@ service firebase.storage {
     match /profiles/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // New v-uploads paths
+    match /v-uploads/{allPaths=**} {
+       // Allow reading anything in v-uploads
+       allow read: if true;
+       // Allow writing if authenticated
+       allow write: if request.auth != null;
     }
   }
 }

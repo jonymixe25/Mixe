@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
+import { useTheme } from '../ThemeContext';
+import { useDevice } from '../hooks/useDevice';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
+  const { primaryColor, setPrimaryColor } = useTheme();
+  const { isMobile } = useDevice();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,6 +25,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [enableMixe, setEnableMixe] = useState(false);
   const [isAnyStreamLive, setIsAnyStreamLive] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const colors = [
+    { name: 'Naranja', value: '#ff4e00' },
+    { name: 'Rojo', value: '#ef4444' },
+    { name: 'Azul', value: '#3b82f6' },
+    { name: 'Esmeralda', value: '#10b981' },
+    { name: 'Violeta', value: '#8b5cf6' },
+    { name: 'Rosa', value: '#ec4899' },
+    { name: 'Amarillo', value: '#eab308' },
+    { name: 'Cian', value: '#06b6d4' },
+  ];
 
   useEffect(() => {
     const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'), firestoreLimit(1));
@@ -37,16 +53,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         setGlobalSettings(data);
         setEnableMixe(data.enableMixe || false);
         
-        // Apply theme color
-        if (data.themeColor) {
-          document.documentElement.style.setProperty('--primary-color', data.themeColor);
-          // Also set a lighter version for shadows/glows if needed
-          document.documentElement.style.setProperty('--primary-color-glow', `${data.themeColor}4d`); // 30% opacity
+        // Only apply if user hasn't explicitly chosen their own color or set as default
+        if (data.themeColor && !localStorage.getItem('theme-primary-color')) {
+          setPrimaryColor(data.themeColor);
         }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [setPrimaryColor]);
 
   useEffect(() => {
     const performSearch = async () => {
@@ -124,9 +138,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-6 left-0 right-0 z-[100] px-6">
-        <div className="max-w-7xl mx-auto glass rounded-[2.5rem] border-white/10 px-6 sm:px-10 shadow-2xl shadow-black/50 backdrop-blur-2xl">
-          <div className="flex items-center justify-between h-20 md:h-24">
+      <nav className={`fixed ${isMobile ? 'top-2' : 'top-6'} left-0 right-0 z-[100] px-4 md:px-6`}>
+        <div className={`max-w-7xl mx-auto glass ${isMobile ? 'rounded-2xl px-4' : 'rounded-[2.5rem] px-6 sm:px-10'} border-white/10 shadow-2xl shadow-black/50 backdrop-blur-2xl`}>
+          <div className={`flex items-center justify-between ${isMobile ? 'h-16' : 'h-20 md:h-24'}`}>
             <div className="flex items-center gap-2">
               <Link to="/" className="flex items-center gap-4 group">
                 <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-brand/30 relative overflow-hidden">
@@ -246,6 +260,57 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   )}
                 </Link>
               ))}
+              
+              <div className="w-px h-8 bg-white/10 mx-4" />
+
+              <div className="relative">
+                <button
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  className="p-3 glass hover:bg-white/10 text-white/40 hover:text-brand rounded-xl transition-all duration-500 border-white/10 group"
+                  title="Cambiar Color"
+                >
+                  <Palette className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                </button>
+                
+                <AnimatePresence>
+                  {showColorPicker && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute top-full right-0 mt-4 glass p-6 rounded-[2rem] border-white/10 shadow-2xl z-[201] w-64"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-6 flex items-center gap-2">
+                        <Palette className="w-3 h-3" />
+                        <span>Personalizar Tema</span>
+                      </p>
+                      <div className="grid grid-cols-4 gap-3">
+                        {colors.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => {
+                              setPrimaryColor(color.value);
+                              setShowColorPicker(false);
+                            }}
+                            className={`w-10 h-10 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-90 relative group ${
+                              primaryColor === color.value ? 'ring-2 ring-white ring-offset-4 ring-offset-[#0a0502]' : ''
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          >
+                            <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-8 pt-6 border-t border-white/5">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-white/20 italic">
+                          Cualquier usuario puede modificar el color de la aplicación.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               
               <div className="w-px h-8 bg-white/10 mx-4" />
               
@@ -415,8 +480,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             )}
           </div>
 
-          <div className="text-white/10 text-[10px] font-black uppercase tracking-widest">
-            © 2026 {globalSettings?.appName || 'Voz Mixe Live'}. Todos los derechos reservados.
+          <div className="text-white/10 text-[10px] font-black uppercase tracking-widest text-center md:text-right">
+            ©Jonatan García Diaz 2026 {globalSettings?.appName && `| ${globalSettings.appName}`}
           </div>
         </div>
       </footer>

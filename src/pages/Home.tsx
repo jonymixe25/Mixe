@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, Clock, Volume2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, Clock, Volume2, X, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { useDevice } from '../hooks/useDevice';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
+  const { isMobile } = useDevice();
   const [streams, setStreams] = useState<StreamSession[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mixeWord, setMixeWord] = useState({ mixe: 'Määy', spanish: 'Buenos días', pronunciation: 'Ma-ai' });
   const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [showLiveNotification, setShowLiveNotification] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {
@@ -43,6 +46,12 @@ const Home: React.FC = () => {
     const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
       const liveStreams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession));
       setStreams(liveStreams);
+      
+      // Show notification if there's a live stream and we haven't shown it yet in this session
+      if (liveStreams.length > 0 && !sessionStorage.getItem('notified-live')) {
+        setShowLiveNotification(true);
+        sessionStorage.setItem('notified-live', 'true');
+      }
     }, (error) => {
       console.error('Error fetching live streams:', error);
     });
@@ -63,15 +72,66 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-20 md:space-y-32">
+    <div className="space-y-16 md:space-y-32">
+      {/* Live Stream Notification Overlay */}
+      <AnimatePresence>
+        {showLiveNotification && streams.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
+            className="fixed bottom-10 right-6 md:right-10 z-[120] max-w-sm w-[calc(100vw-3rem)]"
+          >
+            <div className="glass p-6 rounded-[2rem] border-brand/30 shadow-2xl shadow-brand/20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4">
+                <button 
+                  onClick={() => setShowLiveNotification(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div className="flex items-start gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center relative shrink-0">
+                  <Radio className="w-7 h-7 text-brand animate-pulse" />
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full animate-pulse border-2 border-[#0a0502]" />
+                </div>
+                
+                <div className="flex-1 space-y-2 pr-6">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">Transmisión en Vivo</p>
+                  <h4 className="font-display font-bold text-lg leading-tight uppercase italic">{streams[0].title}</h4>
+                  <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">{streams[0].userName} está transmitiendo ahora</p>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex gap-3">
+                <Link 
+                  to={`/stream/${streams[0].id}`}
+                  className="flex-1 bg-brand text-white text-[10px] font-black uppercase tracking-widest py-4 rounded-xl text-center hover:bg-brand/80 transition-colors shadow-lg shadow-brand/20"
+                >
+                  Ver Transmisión
+                </Link>
+                <button 
+                  onClick={() => setShowLiveNotification(false)}
+                  className="px-6 glass text-[10px] font-black uppercase tracking-widest py-4 rounded-xl text-white/40 hover:text-white transition-colors"
+                >
+                  Después
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero Section */}
-      <section className="relative h-[85vh] rounded-[3rem] overflow-hidden flex items-center justify-center group shadow-2xl shadow-black/50">
+      <section className={`relative ${isMobile ? 'h-[75vh]' : 'h-[85vh]'} rounded-[3rem] overflow-hidden flex items-center justify-center group shadow-2xl shadow-black/50`}>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0502]/40 to-[#0a0502] z-10" />
         <motion.img
           initial={{ scale: 1.15 }}
           animate={{ scale: 1 }}
           transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-          src="https://picsum.photos/seed/mixe-culture/1920/1080?blur=2"
+          src="https://picsum.photos/seed/mixe-culture/1920/1080?blur=1"
           alt="Voz Mixe Hero"
           className="absolute inset-0 w-full h-full object-cover"
           referrerPolicy="no-referrer"
@@ -89,7 +149,7 @@ const Home: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-6xl sm:text-8xl md:text-[10rem] font-display font-black tracking-tighter uppercase italic leading-[0.8] mb-10"
+            className={`${isMobile ? 'text-5xl' : 'text-6xl sm:text-8xl md:text-[10rem]'} font-display font-black tracking-tighter uppercase italic leading-[0.8] mb-10`}
           >
             <span className="block">{globalSettings?.appName?.split(' ')[0] || 'La Voz'}</span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-brand/80 to-brand bg-[length:200%_auto] animate-gradient">
@@ -100,7 +160,7 @@ const Home: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
-            className="text-xl sm:text-2xl md:text-3xl text-white/60 font-medium italic max-w-3xl mx-auto leading-tight"
+            className={`${isMobile ? 'text-lg' : 'text-xl sm:text-2xl md:text-3xl'} text-white/60 font-medium italic max-w-3xl mx-auto leading-tight`}
           >
             <span>"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.</span>
           </motion.p>
@@ -108,11 +168,11 @@ const Home: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.8 }}
-            className="mt-16 flex flex-wrap justify-center gap-6"
+            className={`mt-16 flex ${isMobile ? 'flex-col' : 'flex-wrap'} justify-center gap-6`}
           >
             <Link 
               to="/news"
-              className="w-full sm:w-auto bg-white text-black px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl shadow-white/5"
+              className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} bg-white text-black px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand hover:text-white transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl shadow-white/5`}
             >
               <Newspaper className="w-6 h-6" />
               <span>Explorar Noticias</span>
@@ -120,15 +180,15 @@ const Home: React.FC = () => {
             {streams.length > 0 && (
               <Link 
                 to={`/stream/${streams[0].id}`}
-                className="w-full sm:w-auto glass text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all duration-500 transform hover:-translate-y-2 active:scale-95"
+                className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} glass text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all duration-500 transform hover:-translate-y-2 active:scale-95`}
               >
-                <Radio className="w-6 h-6 text-[#ff4e00] animate-pulse" />
+                <Radio className="w-6 h-6 text-brand animate-pulse" />
                 <span>En Vivo Ahora</span>
               </Link>
             )}
             <Link 
               to="/web"
-              className="w-full sm:w-auto bg-[#ff4e00] text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-[#ff8c00] transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl shadow-[#ff4e00]/20"
+              className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} bg-brand text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:opacity-90 transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl shadow-brand/20`}
             >
               <Folder className="w-6 h-6" />
               <span>Segunda Plataforma</span>
@@ -137,8 +197,39 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Welcome Message Section */}
-      {user && (
+      {/* Guest Welcome / User Welcome */}
+      {!user ? (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="px-2"
+        >
+          <div className="glass p-8 md:p-16 rounded-[3rem] border-brand/20 shadow-2xl shadow-brand/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-12 opacity-5">
+              <Users className="w-64 h-64 text-brand" />
+            </div>
+            <div className="max-w-3xl space-y-6 relative z-10 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3 text-brand">
+                <Info className="w-5 h-5" />
+                <span className="text-xs font-black uppercase tracking-[0.3em]">Acceso de Visitante</span>
+              </div>
+              <h2 className="text-4xl md:text-6xl font-display font-black tracking-tighter uppercase italic leading-none">
+                Mira nuestras transmisiones <span className="text-brand">sin registro</span>
+              </h2>
+              <p className="text-white/40 text-lg md:text-xl italic leading-relaxed">
+                Nuestra plataforma es abierta para todos. Puedes disfrutar de las transmisiones públicas y noticias sin necesidad de crear una cuenta.
+              </p>
+              <div className="pt-6">
+                <Link to="/register" className="inline-flex items-center gap-3 text-brand text-xs font-black uppercase tracking-[0.3em] group/btn">
+                  <span>O crea una cuenta para participar en el chat</span>
+                  <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-2">
           <motion.section 
             initial={{ opacity: 0, x: -20 }}
@@ -148,7 +239,7 @@ const Home: React.FC = () => {
           >
             <div className="glass p-8 md:p-12 rounded-[3rem] flex flex-col md:flex-row items-center justify-between gap-8 border-white/10 shadow-2xl h-full">
               <div className="space-y-4 text-center md:text-left">
-                <div className="flex items-center justify-center md:justify-start gap-3 text-[#ff4e00]">
+                <div className="flex items-center justify-center md:justify-start gap-3 text-brand">
                   <Sparkles className="w-5 h-5" />
                   <span className="text-xs font-black uppercase tracking-[0.3em]">Bienvenido de nuevo</span>
                 </div>
@@ -163,7 +254,7 @@ const Home: React.FC = () => {
                 to="/profile"
                 className="group relative flex items-center gap-4 bg-white/5 hover:bg-white/10 p-4 pr-8 rounded-[2rem] transition-all duration-500 border border-white/10"
               >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#ff4e00]/30 group-hover:border-[#ff4e00] transition-colors">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-brand/30 group-hover:border-brand transition-colors">
                   <img 
                     src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
                     alt={user.displayName}
@@ -172,9 +263,9 @@ const Home: React.FC = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tu Perfil</p>
-                  <p className="font-bold text-white group-hover:text-[#ff4e00] transition-colors">Ver mi cuenta</p>
+                  <p className="font-bold text-white group-hover:text-brand transition-colors">Ver mi cuenta</p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-[#ff4e00] transform group-hover:translate-x-2 transition-transform" />
+                <ArrowRight className="w-5 h-5 text-brand transform group-hover:translate-x-2 transition-transform" />
               </Link>
             </div>
           </motion.section>
@@ -186,14 +277,14 @@ const Home: React.FC = () => {
             viewport={{ once: true }}
             className="h-full"
           >
-            <div className="glass p-8 md:p-10 rounded-[3rem] border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/5 h-full flex flex-col justify-center relative overflow-hidden group">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff4e00]/10 rounded-full blur-3xl group-hover:bg-[#ff4e00]/20 transition-all duration-700" />
-              <div className="flex items-center gap-3 text-[#ff4e00] mb-6">
+            <div className="glass p-8 md:p-10 rounded-[3rem] border-brand/20 shadow-2xl shadow-brand/5 h-full flex flex-col justify-center relative overflow-hidden group">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-700" />
+              <div className="flex items-center gap-3 text-brand mb-6">
                 <Languages className="w-5 h-5" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em]">Palabra del Día (Mixe)</span>
               </div>
               <div className="space-y-2">
-                <h3 className="text-5xl font-display font-black text-white italic tracking-tighter uppercase leading-none group-hover:text-[#ff4e00] transition-colors">
+                <h3 className="text-5xl font-display font-black text-white italic tracking-tighter uppercase leading-none group-hover:text-brand transition-colors">
                   {mixeWord.mixe}
                 </h3>
                 <p className="text-white/40 text-sm font-medium italic">

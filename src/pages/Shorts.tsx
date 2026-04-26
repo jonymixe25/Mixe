@@ -270,7 +270,7 @@ const Shorts = () => {
     setUploadProgress(0);
     
     try {
-      const storageRef = ref(storage, `shorts/${user.uid}/${Date.now()}_${uploadFile.name}`);
+      const storageRef = ref(storage, `v-uploads/shorts/${user.uid}/${Date.now()}_${uploadFile.name}`);
       const uploadTask = uploadBytesResumable(storageRef, uploadFile);
 
       uploadTask.on('state_changed',

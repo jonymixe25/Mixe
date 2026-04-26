@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize, Camera } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -12,6 +13,7 @@ import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
 import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
 export default function AdminStream() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeStream, setActiveStream] = useState<StreamSession | null>(null);
   const [title, setTitle] = useState('');
@@ -28,6 +30,10 @@ export default function AdminStream() {
   const [autoModerate, setAutoModerate] = useState(true);
   const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const [remoteParticipants, setRemoteParticipants] = useState<any[]>([]);
+  const [isConferenceModalOpen, setIsConferenceModalOpen] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<any>(null);
+  const [activeInvitations, setActiveInvitations] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -38,6 +44,30 @@ export default function AdminStream() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
   const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(activeStream?.id || '', user?.uid || '');
+
+  const [elapsedTime, setElapsedTime] = useState('00:00:00');
+
+  useEffect(() => {
+    if (!activeStream || activeStream.status !== 'live') {
+      setElapsedTime('00:00:00');
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const start = activeStream.startedAt?.toDate ? activeStream.startedAt.toDate().getTime() : Date.now();
+      const diff = Math.max(0, Date.now() - start);
+      
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      
+      setElapsedTime(
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeStream]);
 
   // Real-time Chat
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -55,6 +85,10 @@ export default function AdminStream() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
   // WebRTC Broadcaster State
   const localStream = useRef<MediaStream | null>(null);
   const [isStreamReady, setIsStreamReady] = useState(false);
@@ -261,6 +295,18 @@ export default function AdminStream() {
         room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
           track.detach().forEach((element) => element.remove());
         });
+
+        room.on(RoomEvent.ParticipantConnected, () => {
+          if (roomRef.current) {
+            setRemoteParticipants(Array.from(roomRef.current.remoteParticipants.values()));
+          }
+        });
+
+        room.on(RoomEvent.ParticipantDisconnected, () => {
+          if (roomRef.current) {
+            setRemoteParticipants(Array.from(roomRef.current.remoteParticipants.values()));
+          }
+        });
         
         try {
           console.log('Conectando a LiveKit con URL:', liveKitUrl);
@@ -302,6 +348,7 @@ export default function AdminStream() {
           
           if (isMounted) {
             setConnectionStatus('connected');
+            setRemoteParticipants(Array.from(room.remoteParticipants.values()));
             console.log('Connected and publishing to LiveKit');
           }
         } catch (err) {
@@ -369,6 +416,112 @@ export default function AdminStream() {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
+  const startRecording = () => {
+    if (!localStream.current) {
+      setToast({ message: 'No hay stream disponible para grabar', type: 'error', isVisible: true });
+      return;
+    }
+
+    recordedChunksRef.current = [];
+    const mimeTypes = [
+      'video/mp4;codecs=h264',
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    
+    let selectedMimeType = '';
+    for (const type of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        selectedMimeType = type;
+        break;
+      }
+    }
+
+    if (!selectedMimeType) {
+      setToast({ message: 'Tu navegador no soporta grabación de video', type: 'error', isVisible: true });
+      return;
+    }
+
+    try {
+      const recorder = new MediaRecorder(localStream.current, { mimeType: selectedMimeType });
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const blob = new Blob(recordedChunksRef.current, { type: selectedMimeType });
+        await saveRecording(blob, selectedMimeType);
+      };
+
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecording(true);
+      setToast({ message: 'Grabación iniciada', type: 'success', isVisible: true });
+    } catch (err) {
+      console.error('Error starting MediaRecorder:', err);
+      setToast({ message: 'Error al iniciar la grabación del stream', type: 'error', isVisible: true });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const saveRecording = async (blob: Blob, mimeType: string) => {
+    if (!user) return;
+    
+    try {
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const fileName = `grabacion_${Date.now()}.${ext}`;
+      const storagePath = `v-uploads/recordings/${user.uid}/${fileName}`;
+      const storageRefPtr = ref(storage, storagePath);
+      
+      const uploadTask = uploadBytesResumable(storageRefPtr, blob);
+      
+      uploadTask.on('state_changed', 
+        null, 
+        (error) => {
+          console.error('Error uploading recording:', error);
+          setToast({ message: 'Error al subir la grabación a la nube', type: 'error', isVisible: true });
+        }, 
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          const recordingData = {
+            userId: user.uid,
+            url: downloadUrl,
+            fileName,
+            fileSize: blob.size,
+            fileType: mimeType,
+            streamId: activeStream?.id || 'manual',
+            streamTitle: activeStream?.title || 'Grabación manual',
+            createdAt: serverTimestamp()
+          };
+
+          await addDoc(collection(db, 'recordings'), recordingData);
+
+          // Also add to general media for the gallery
+          await addDoc(collection(db, 'media'), {
+            ...recordingData,
+            folder: 'Transmisiones Guardadas',
+            isPublic: false,
+          });
+
+          setToast({ message: 'Grabación guardada con éxito en tu galería', type: 'success', isVisible: true });
+        }
+      );
+    } catch (err) {
+      console.error('Error saving recording:', err);
+    }
+  };
+
   // Stream Stats Monitoring
   useEffect(() => {
     if (connectionStatus !== 'connected' || !roomRef.current) return;
@@ -417,6 +570,54 @@ export default function AdminStream() {
       console.error('Error pinning message:', error);
     }
   };
+
+  const sendConferenceInvite = async (participant: any) => {
+    if (!activeStream || !user) return;
+    
+    try {
+      const invitationId = `${activeStream.id}_${participant.identity}`;
+      const roomId = `private_${activeStream.id}_${participant.identity}_${Date.now()}`;
+      
+      await addDoc(collection(db, 'streams', activeStream.id, 'invitations'), {
+        from: user.uid,
+        fromName: user.displayName || 'Streamer',
+        to: participant.identity,
+        status: 'pending',
+        roomId: roomId,
+        createdAt: serverTimestamp()
+      });
+      
+      setActiveInvitations(prev => ({ ...prev, [participant.identity]: 'pending' }));
+      
+      setToast({
+        message: `Invitación enviada a ${participant.identity}`,
+        type: 'success',
+        isVisible: true
+      });
+    } catch (err) {
+      console.error('Error sending invitation:', err);
+      setToast({
+        message: 'No se pudo enviar la invitación.',
+        type: 'error',
+        isVisible: true
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!activeStream) return;
+    
+    const q = query(collection(db, 'streams', activeStream.id, 'invitations'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const invites: Record<string, string> = {};
+      snapshot.docs.forEach(doc => {
+        invites[doc.data().to] = doc.data().status;
+      });
+      setActiveInvitations(invites);
+    });
+    
+    return () => unsubscribe();
+  }, [activeStream]);
 
   const handleClearChat = async () => {
     if (!activeStream) return;
@@ -530,7 +731,11 @@ export default function AdminStream() {
       await updateDoc(doc(db, 'streams', activeStream.id, 'joinRequests', requestId), {
         status: 'accepted'
       });
-      setToast({ message: 'Solicitud aceptada', type: 'success', isVisible: true });
+      // Make stream private when it becomes a Duo session
+      await updateDoc(doc(db, 'streams', activeStream.id), {
+        privacy: 'private'
+      });
+      setToast({ message: 'Solicitud aceptada y modo dúo privado activado', type: 'success', isVisible: true });
     } catch (error) {
       console.error('Error accepting request:', error);
     }
@@ -608,7 +813,7 @@ export default function AdminStream() {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const storageRef = ref(storage, `chat/${activeStream.id}/${Date.now()}_${file.name}`);
+      const storageRef = ref(storage, `v-uploads/chat/${activeStream.id}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on('state_changed', 
@@ -679,7 +884,7 @@ export default function AdminStream() {
               <p className="text-red-400/80 pl-7 mt-2">
                 Para transmitir en vivo, necesitas configurar las credenciales de LiveKit. 
                 Abre el panel de <strong>Secrets</strong> en AI Studio y agrega:
-                <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_URL</code> (ej. wss://tu-proyecto.livekit.cloud)
+                <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_URL</code> (ej. wss://new-app-6tu2ilh8.livekit.cloud)
                 <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_API_KEY</code>
                 <br />- <code className="bg-black/30 px-1 py-0.5 rounded">LIVEKIT_API_SECRET</code>
               </p>
@@ -798,7 +1003,7 @@ export default function AdminStream() {
                       className="bg-[#1a1b1e]/80 backdrop-blur-md p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-all group shadow-xl active:scale-95"
                       title="Voltear Cámara"
                     >
-                      <Camera className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
+                      <Sparkles className="w-6 h-6 text-white/60 group-hover:text-[#ff4e00] transition-colors" />
                     </button>
                     {!activeStream && (
                       <button 
@@ -907,8 +1112,9 @@ export default function AdminStream() {
                 <p className="text-[#8E9299] text-sm leading-relaxed font-mono">{activeStream.description || 'Sin descripción proporcionada.'}</p>
               </div>
               
-              {/* Real-time Chat */}
-              <div className="bg-[#151619] rounded-3xl flex flex-col h-[400px] border border-white/5 shadow-xl overflow-hidden">
+              <div className="space-y-8">
+                {/* Real-time Chat */}
+                <div className="bg-[#151619] rounded-3xl flex flex-col h-[400px] border border-white/5 shadow-xl overflow-hidden">
                 <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#1a1b1e]">
                   <div className="flex items-center gap-3">
                     <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
@@ -1039,7 +1245,69 @@ export default function AdminStream() {
                   </button>
                 </form>
               </div>
+
+              {/* Viewers & Invitations */}
+              <div className="bg-[#151619] rounded-3xl flex flex-col h-[400px] border border-white/5 shadow-xl overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-[#1a1b1e]">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-[#ff4e00]" />
+                    <h3 className="text-[10px] font-mono uppercase tracking-widest text-white">Espectadores ({remoteParticipants.length})</h3>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                  {remoteParticipants.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-40">
+                      <Users className="w-8 h-8" />
+                      <p className="text-[10px] font-mono uppercase tracking-widest">No hay espectadores conectados</p>
+                    </div>
+                  ) : (
+                    remoteParticipants.map((p) => (
+                      <div key={p.sid} className="bg-[#1a1b1e] border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-[#ff4e00]/30 transition-all group">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff4e00]/20 to-[#ff4e00]/5 flex items-center justify-center border border-white/5 font-display font-black text-[#ff4e00] text-sm italic">
+                            {p.identity.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-display font-bold text-white tracking-tight">{p.identity}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                              <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest">Conectado</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {activeInvitations[p.identity] === 'accepted' ? (
+                            <button 
+                              onClick={() => navigate(`/conference/${activeStream.id}_${p.identity}`)}
+                              className="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-white flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Entrar</span>
+                            </button>
+                          ) : activeInvitations[p.identity] === 'pending' ? (
+                            <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+                              <Loader2 className="w-3 h-3 text-[#ff4e00] animate-spin" />
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#ff4e00]">Invitación Enviada</span>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => sendConferenceInvite(p)}
+                              className="bg-[#ff4e00]/10 hover:bg-[#ff4e00]/20 border border-[#ff4e00]/30 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest text-[#ff4e00] flex items-center gap-2 transition-all"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                              <span>Invitar a 1:1</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
+          </div>
           ) : (
             <div className="bg-[#151619] rounded-[2rem] p-12 text-center space-y-6 border border-white/5 shadow-2xl">
               <div className="w-20 h-20 bg-[#1a1b1e] border border-white/5 rounded-full flex items-center justify-center mx-auto shadow-inner">
@@ -1198,7 +1466,7 @@ export default function AdminStream() {
             <div className="bg-[#151619] rounded-[2rem] p-8 space-y-8 border border-white/5 shadow-2xl">
               <div className="text-center space-y-4">
                 <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#8E9299]">Tiempo Transcurrido</p>
-                <p className="text-5xl font-mono font-bold tracking-tighter text-[#ff4e00]">00:42:15</p>
+                <p className="text-5xl font-mono font-bold tracking-tighter text-[#ff4e00]">{elapsedTime}</p>
               </div>
 
               <div className="h-px bg-white/5" />
@@ -1218,6 +1486,13 @@ export default function AdminStream() {
                 >
                   <Layout className="w-6 h-6" />
                   <span className="text-[10px] font-mono uppercase tracking-widest">{showOverlay ? 'Overlay ON' : 'Overlay OFF'}</span>
+                </button>
+                <button 
+                  onClick={isRecording ? stopRecording : startRecording}
+                  className={`col-span-2 flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border transition-all ${isRecording ? 'bg-red-500 border-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-[#1a1b1e] border-white/5 text-[#8E9299] hover:border-white/20'}`}
+                >
+                  <Video className="w-6 h-6" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest">{isRecording ? 'Detener Grabación' : 'Grabar Transmisión'}</span>
                 </button>
               </div>
 
@@ -1351,8 +1626,8 @@ export default function AdminStream() {
               "Asegúrate de tener buena iluminación y una conexión estable para que tu audiencia disfrute de la cultura Mixe sin interrupciones."
             </p>
           </div>
-        </div>
       </div>
     </div>
+  </div>
   );
-};
+}

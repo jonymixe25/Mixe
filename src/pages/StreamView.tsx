@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, storage, ref, uploadBytesResumable, getDownloadURL, where } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -10,6 +10,7 @@ import { Room, RoomEvent, Track, VideoTrack, AudioTrack } from 'livekit-client';
 import { useLiveKitToken } from '../hooks/useLiveKitToken';
 
 import Toast from '../components/Toast';
+import Modal from '../components/Modal';
 
 const StreamView = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,12 +40,13 @@ const StreamView = () => {
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [incomingInvitation, setIncomingInvitation] = useState<any>(null);
+  const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [moderationSensitivity, setModerationSensitivity] = useState<'low' | 'medium' | 'high'>('medium');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [suggestedStreams, setSuggestedStreams] = useState<StreamSession[]>([]);
   const [anonymousId] = useState(() => `anon_${Math.random().toString(36).substring(2, 11)}`);
 
@@ -58,6 +60,37 @@ const StreamView = () => {
 
   const toggleMute = () => setIsMuted(!isMuted);
 
+  const acceptInvitation = async () => {
+    if (!incomingInvitation || !id) return;
+    
+    try {
+      await updateDoc(doc(db, 'streams', id, 'invitations', incomingInvitation.id), {
+        status: 'accepted',
+        acceptedAt: serverTimestamp()
+      });
+      
+      navigate(`/conference/${incomingInvitation.roomId}`);
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+    }
+  };
+
+  const rejectInvitation = async () => {
+    if (!incomingInvitation || !id) return;
+    
+    try {
+      await updateDoc(doc(db, 'streams', id, 'invitations', incomingInvitation.id), {
+        status: 'rejected',
+        rejectedAt: serverTimestamp()
+      });
+      
+      setIsInvitationModalOpen(false);
+      setIncomingInvitation(null);
+    } catch (err) {
+      console.error('Error rejecting invitation:', err);
+    }
+  };
+
   const togglePlay = () => {
     if (videoElementRef.current) {
       if (isPlaying) {
@@ -67,25 +100,6 @@ const StreamView = () => {
       }
       setIsPlaying(!isPlaying);
     }
-  };
-
-  const toggleCamera = async () => {
-    if (joinStatus !== 'accepted' || !roomRef.current) return;
-    
-    const newMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newMode);
-    
-    // Stop current video tracks
-    const localParticipant = roomRef.current.localParticipant;
-    const publications = localParticipant.getTrackPublications();
-    
-    for (const pub of publications) {
-      if (pub.track && pub.track.kind === Track.Kind.Video) {
-        pub.track.stop();
-        await localParticipant.unpublishTrack(pub.track as any);
-      }
-    }
-    // The useEffect will re-trigger and publish with the new mode
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,6 +195,25 @@ const StreamView = () => {
 
     updateViewerCount(1);
 
+    // Listen for invitations
+    let unsubscribeInvitations = () => {};
+    if (id && viewerIdentity) {
+      const q = query(
+        collection(db, 'streams', id, 'invitations'),
+        where('to', '==', viewerIdentity),
+        where('status', '==', 'pending'),
+        limit(1)
+      );
+      
+      unsubscribeInvitations = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const invite = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+          setIncomingInvitation(invite);
+          setIsInvitationModalOpen(true);
+        }
+      });
+    }
+
     let isMounted = true;
     let unsubscribeJoinRequest = () => {};
 
@@ -273,13 +306,11 @@ const StreamView = () => {
         try {
           let stream: MediaStream;
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: { ideal: facingMode } }, 
-              audio: true 
-            });
-          } catch (e) {
-            console.warn("Failed with facingMode, trying default", e);
             stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          } catch (e) {
+            console.warn("Failed to get video, trying audio only", e);
+            stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            setToast({ message: 'No se pudo acceder al video, transmitiendo solo audio', type: 'error', isVisible: true });
           }
           
           const videoTrack = stream.getVideoTracks()[0];
@@ -287,12 +318,12 @@ const StreamView = () => {
           
           if (videoTrack) {
             const pub = await roomRef.current!.localParticipant.publishTrack(videoTrack);
+            // Attach local video so the guest can see themselves
             const element = pub.track?.attach();
             if (element && element instanceof HTMLVideoElement && videoRef.current) {
               element.playsInline = true;
               element.muted = true;
               element.autoplay = true;
-              element.className = `w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`;
               videoRef.current.appendChild(element);
             }
           }
@@ -308,7 +339,7 @@ const StreamView = () => {
       };
       publishLocalCamera();
     }
-  }, [joinStatus, facingMode]);
+  }, [joinStatus]);
 
   const handleRequestJoin = async () => {
     if (!user || !id) return;
@@ -356,7 +387,12 @@ const StreamView = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !user || !id) return;
+    if (!message.trim() || !id) return;
+
+    if (!user) {
+      setToast({ message: 'Inicia sesión para participar en el chat', type: 'error', isVisible: true });
+      return;
+    }
 
     const msgText = message.trim();
     setMessage('');
@@ -400,12 +436,17 @@ const StreamView = () => {
 
   const handleChatImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user || !id) return;
+    if (!file || !id) return;
+    
+    if (!user) {
+      setToast({ message: 'Inicia sesión para enviar imágenes', type: 'error', isVisible: true });
+      return;
+    }
 
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const storageRef = ref(storage, `chat/${id}/${Date.now()}_${file.name}`);
+      const storageRef = ref(storage, `v-uploads/chat/${id}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on('state_changed', 
@@ -703,7 +744,7 @@ const StreamView = () => {
         <div className="absolute top-8 right-8 bottom-8 w-80 z-40 hidden lg:flex flex-col glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
           <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+              <MessageSquare className="w-4 h-4 text-brand" />
               <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
             </div>
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -718,11 +759,11 @@ const StreamView = () => {
                 className="flex flex-col gap-1"
               >
                 <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-white/80'}`}>
+                  <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-brand' : 'text-white/80'}`}>
                     {msg.userName}
                   </span>
                   {msg.userId === stream?.userId && (
-                    <Shield className="w-3 h-3 text-[#ff4e00]" />
+                    <Shield className="w-3 h-3 text-brand" />
                   )}
                   <span className="text-[9px] font-mono text-white/30">
                     {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -793,33 +834,32 @@ const StreamView = () => {
         </div>
 
         {/* Bottom Controls Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 z-30 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-500">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-start">
-              <div className="flex items-center gap-3 md:gap-4">
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-30 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <button 
                   onClick={togglePlay}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#ff4e00] flex items-center justify-center text-white shadow-[0_0_20px_rgba(255,78,0,0.4)] hover:scale-110 transition-all active:scale-95"
-                  title={isPlaying ? "Pausar" : "Reproducir"}
+                  className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white shadow-2xl shadow-brand/40 hover:scale-110 transition-all active:scale-95"
                 >
-                  {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5" /> : <Play className="w-4 h-4 md:w-5 md:h-5 ml-1" />}
+                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
                 </button>
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md hidden xs:block">
+                <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md">
                   <img
                     src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
                     alt="avatar"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5 md:mb-1">
-                    <p className="text-xs md:text-sm font-medium tracking-wide truncate max-w-[100px] md:max-w-none">{stream.userName}</p>
-                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[7px] md:text-[8px] font-black uppercase tracking-widest animate-pulse">
+                <div className="hidden sm:block">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-medium tracking-wide">{stream.userName}</p>
+                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">
                       <div className="w-1 h-1 bg-white rounded-full" />
                       LIVE
                     </div>
                   </div>
-                  <p className="text-[8px] md:text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
                 </div>
               </div>
               
@@ -829,7 +869,7 @@ const StreamView = () => {
                 <button onClick={toggleMute} className="p-2 text-white/60 hover:text-white transition-colors">
                   {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
-                <div className="w-20 md:w-0 overflow-hidden md:group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
+                <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
                   <input 
                     type="range" 
                     min="0" 
@@ -843,61 +883,63 @@ const StreamView = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+            <div className="flex items-center gap-3">
               {user && user.uid !== stream.userId && (
                 <button
                   onClick={handleRequestJoin}
                   disabled={joinStatus === 'pending' || joinStatus === 'accepted'}
-                  className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-full font-mono uppercase tracking-widest text-[9px] md:text-[10px] transition-all duration-500 ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
                     joinStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
                     joinStatus === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' :
                     'bg-[#ff4e00]/20 text-[#ff4e00] hover:bg-[#ff4e00] hover:text-white border border-[#ff4e00]/30'
                   }`}
                 >
-                  <UserPlus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  <span>
-                    {joinStatus === 'pending' ? 'Pendiente' :
+                  <UserPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">
+                    {joinStatus === 'pending' ? 'Solicitud Enviada' :
                      joinStatus === 'accepted' ? 'En Duo' :
-                     'Unirse'}
+                     'Unirse en Duo'}
                   </span>
                 </button>
               )}
-              
-              <div className="flex items-center gap-2">
-                {joinStatus === 'accepted' && (
-                  <button
-                    onClick={toggleCamera}
-                    className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
-                    title="Voltear Cámara"
-                  >
-                    <Camera className="w-4 h-4 md:w-5 md:h-5" />
-                  </button>
-                )}
-                <button
-                  onClick={togglePiP}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
-                  title="Picture in Picture"
-                >
-                  <PictureInPicture2 className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-                <button
-                  onClick={toggleFullScreen}
-                  className="w-9 h-9 md:w-11 md:h-11 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all text-white/60 hover:text-white"
-                  title="Pantalla Completa"
-                >
-                  <Maximize className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-                <button
-                  onClick={handleLike}
-                  className={`flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-full transition-all duration-500 ${
-                    isLiked 
-                      ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-                      : 'bg-white/5 backdrop-blur-md text-white/60 hover:bg-white/10 border border-white/10'
-                  }`}
-                >
-                  <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isLiked ? 'fill-current' : ''}`} />
-                </button>
-              </div>
+              <button
+                onClick={handleLike}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
+                  isLiked 
+                    ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
+                    : 'bg-white/5 backdrop-blur-md text-white/60 hover:bg-white/10 border border-white/10'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                <span>{stream.likes || 0}</span>
+              </button>
+              <button 
+                onClick={handleShare}
+                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={togglePiP}
+                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                title="Picture in Picture"
+              >
+                <PictureInPicture2 className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setShowStats(!showStats)}
+                className={`w-10 h-10 rounded-full backdrop-blur-md border transition-all active:scale-90 flex items-center justify-center ${showStats ? 'text-[#ff4e00] bg-[#ff4e00]/10 border-[#ff4e00]/30' : 'text-white/60 hover:text-white bg-white/5 border-white/10 hover:bg-white/10'}`}
+                title="Estadísticas"
+              >
+                <Gauge className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={toggleFullScreen}
+                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+                title="Pantalla Completa"
+              >
+                <Maximize className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -1026,13 +1068,21 @@ const StreamView = () => {
               />
             </form>
           ) : (
-            <div className="p-4 border-t border-white/5 bg-black/20 text-center">
-              <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
+            <div className="p-6 border-t border-white/5 bg-black/20 text-center space-y-4">
+              <p className="text-[10px] text-white/40 font-black uppercase tracking-widest leading-relaxed">
+                Únete a la conversación
+              </p>
+              <button 
+                onClick={() => navigate('/register')}
+                className="w-full bg-brand text-white text-[9px] font-black uppercase tracking-[0.2em] py-3 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-brand/20"
+              >
+                Registrarme para chatear
+              </button>
             </div>
           )}
         </div>
 
-        {/* Suggested Streams */}
+        {/* Bottom Controls Overlay */}
         {suggestedStreams.length > 0 && (
           <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-6 shadow-2xl">
             <h3 className="text-[#ff4e00] font-mono uppercase tracking-widest text-xs mb-6 flex items-center gap-2">
@@ -1071,6 +1121,43 @@ const StreamView = () => {
         isVisible={toast.isVisible}
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
+
+      <Modal
+        isOpen={isInvitationModalOpen}
+        onClose={() => setIsInvitationModalOpen(false)}
+        title="Invitación a Conferencia"
+      >
+        <div className="space-y-6">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-[#ff4e00]/10 rounded-full flex items-center justify-center border border-[#ff4e00]/20">
+              <Video className="w-8 h-8 text-[#ff4e00]" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-white text-lg font-display font-bold">
+                {incomingInvitation?.fromName || 'El streamer'} te invita a una conferencia privada
+              </p>
+              <p className="text-[#8E9299] text-sm">
+                ¿Deseas unirte a una videollamada privada 1:1 ahora mismo?
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-4">
+            <button
+              onClick={rejectInvitation}
+              className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-mono uppercase tracking-widest text-[10px] rounded-xl transition-all border border-white/5"
+            >
+              Rechazar
+            </button>
+            <button
+              onClick={acceptInvitation}
+              className="flex-1 py-4 bg-[#ff4e00] hover:bg-[#ff4e00]/90 text-white font-mono uppercase tracking-widest text-[10px] rounded-xl transition-all shadow-[0_0_20px_rgba(255,78,0,0.3)] active:scale-95"
+            >
+              Aceptar e Ir
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

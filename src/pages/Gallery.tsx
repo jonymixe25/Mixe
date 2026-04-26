@@ -19,7 +19,7 @@ const Gallery = () => {
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
-  const [uploadFolder, setUploadFolder] = useState('General');
+  const [uploadFolder, setUploadFolder] = useState('AUTO');
   const [isPublic, setIsPublic] = useState(false);
   const [viewMode, setViewMode] = useState<'private' | 'public'>('private');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
@@ -189,7 +189,7 @@ const Gallery = () => {
           </div>
           <div className="glass rounded-2xl p-6 border-dashed border-white/10">
             <p className="text-white/60 text-sm italic leading-relaxed text-center">
-              <span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu carpeta personal.</span>
+              <span>Selecciona un archivo (imagen, video, audio o PDF) de tu dispositivo para guardarlo en tu carpeta personal. Si el nombre de la carpeta es "AUTO", se creará una basada en el nombre del archivo.</span>
             </p>
           </div>
           <ImageUpload 

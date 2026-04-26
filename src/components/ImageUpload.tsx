@@ -58,7 +58,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     setProgress(0);
     
     try {
-      const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
+      const sanitizedFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const targetFolder = folder === 'AUTO' ? sanitizedFileName : folder;
+
+      // Wrap everything in a v-uploads root folder as requested by the user
+      const storageRef = ref(storage, `v-uploads/${targetFolder}/${Date.now()}_${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on('state_changed', 
@@ -88,7 +92,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               await addDoc(collection(db, 'media'), {
                 userId: user.uid,
                 url,
-                folder,
+                folder: targetFolder,
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,

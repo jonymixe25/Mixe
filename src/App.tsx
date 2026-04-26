@@ -5,9 +5,9 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './AuthContext';
+import { ThemeProvider } from './ThemeContext';
 import Layout from './components/Layout';
 import AuthGuard from './components/AuthGuard';
 import React, { Suspense, lazy } from 'react';
@@ -28,40 +28,43 @@ const FileStorage = lazy(() => import('./pages/FileStorage'));
 const GlobalSettings = lazy(() => import('./pages/GlobalSettings'));
 const WebPlatform = lazy(() => import('./pages/WebPlatform'));
 const Shorts = lazy(() => import('./pages/Shorts'));
+const PrivateConference = lazy(() => import('./pages/PrivateConference'));
 
 export default function App() {
   return (
     <GlobalErrorBoundary>
-      <AuthProvider>
-        <HelmetProvider>
-          <Router>
-            <Layout>
-              <MaintenanceGuard>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Cargando...</div>}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/news" element={<News />} />
-                    <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
-                    <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
-                    <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
-                    <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
-                    <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
-                    <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
-                    <Route path="/settings" element={<AuthGuard requireAdmin><GlobalSettings /></AuthGuard>} />
-                    <Route path="/stream/:id" element={<StreamView />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
-                    <Route path="/web" element={<WebPlatform />} />
-                    <Route path="/shorts" element={<Shorts />} />
-                  </Routes>
-                </Suspense>
-              </MaintenanceGuard>
-            </Layout>
-          </Router>
-          <Analytics />
-          <SpeedInsights />
-        </HelmetProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <HelmetProvider>
+            <Router>
+              <Layout>
+                <MaintenanceGuard>
+                  <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Cargando...</div>}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/news" element={<News />} />
+                      <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
+                      <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
+                      <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
+                      <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
+                      <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
+                      <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
+                      <Route path="/settings" element={<AuthGuard requireAdmin><GlobalSettings /></AuthGuard>} />
+                      <Route path="/stream/:id" element={<StreamView />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
+                      <Route path="/web" element={<WebPlatform />} />
+                      <Route path="/shorts" element={<Shorts />} />
+                      <Route path="/conference/:roomId" element={<AuthGuard><PrivateConference /></AuthGuard>} />
+                    </Routes>
+                  </Suspense>
+                </MaintenanceGuard>
+              </Layout>
+            </Router>
+            <Analytics />
+          </HelmetProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </GlobalErrorBoundary>
   );
 }

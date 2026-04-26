@@ -15,7 +15,7 @@ const FileStorage: React.FC = () => {
 
   const fetchFiles = async () => {
     if (!user) return;
-    const folderRef = ref(storage, `users/${user.uid}/files`);
+    const folderRef = ref(storage, `v-uploads/users/${user.uid}/files`);
     try {
       const res = await listAll(folderRef);
       const fileData = await Promise.all(res.items.map(async (itemRef) => {
@@ -34,7 +34,7 @@ const FileStorage: React.FC = () => {
     if (!file || !user) return;
 
     setUploading(true);
-    const fileRef = ref(storage, `users/${user.uid}/files/${file.name}`);
+    const fileRef = ref(storage, `v-uploads/users/${user.uid}/files/${file.name}`);
     
     try {
       const uploadTask = uploadBytesResumable(fileRef, file);

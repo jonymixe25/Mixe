@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 
@@ -162,6 +162,57 @@ const AdminDashboard = () => {
     });
   };
 
+  const formatDuration = (start: any, end: any) => {
+    if (!start) return '--:--';
+    
+    const startTime = start.toDate ? start.toDate().getTime() : (typeof start === 'number' ? start : new Date(start).getTime());
+    const endTime = end 
+      ? (end.toDate ? end.toDate().getTime() : (typeof end === 'number' ? end : new Date(end).getTime())) 
+      : Date.now();
+    
+    const diffMs = Math.max(0, endTime - startTime);
+    const totalSeconds = Math.floor(diffMs / 1000);
+    
+    const seconds = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const minutes = totalMinutes % 60;
+    const hours = Math.floor(totalMinutes / 60);
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+
+  const [testingLiveKit, setTestingLiveKit] = useState(false);
+  const [liveKitStatus, setLiveKitStatus] = useState<{ type: 'success' | 'error', message: string, debug?: any, hint?: string } | null>(null);
+
+  const testLiveKit = async () => {
+    setTestingLiveKit(true);
+    setLiveKitStatus(null);
+    try {
+      const res = await fetch('/api/livekit/test');
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setLiveKitStatus({ 
+          type: 'success', 
+          message: data.message || '¡Conexión exitosa! Tus credenciales de LiveKit son correctas.',
+          debug: data.debug
+        });
+      } else {
+        setLiveKitStatus({ 
+          type: 'error', 
+          message: data.message || 'Credenciales inválidas',
+          debug: data.debug,
+          hint: data.hint
+        });
+      }
+    } catch (err) {
+      setLiveKitStatus({ type: 'error', message: 'No se pudo contactar con el servidor de prueba.' });
+    } finally {
+      setTestingLiveKit(false);
+    }
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -198,10 +249,97 @@ const AdminDashboard = () => {
             <Shield className="w-5 h-5" />
             <span className="text-xs font-black uppercase tracking-[0.3em]">Administración</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Panel de Control</span></h1>
+          <div className="flex flex-col md:flex-row md:items-center gap-6">
+            <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Panel de Control</span></h1>
+            
+            <button
+              onClick={testLiveKit}
+              disabled={testingLiveKit}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border shrink-0 ${
+                testingLiveKit 
+                ? 'opacity-50 cursor-not-allowed border-white/10 bg-white/5' 
+                : 'border-[#ff4e00]/20 bg-[#ff4e00]/5 hover:bg-[#ff4e00]/10 text-[#ff4e00] active:scale-95'
+              }`}
+            >
+              {testingLiveKit ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                    className="w-3 h-3 border-2 border-[#ff4e00] border-t-transparent rounded-full"
+                  />
+                  <span>Verificando...</span>
+                </>
+              ) : (
+                <>
+                  <Wifi className="w-3 h-3" />
+                  <span>Probar LiveKit</span>
+                </>
+              )}
+            </button>
+          </div>
           <p className="text-white/40 text-sm font-medium italic max-w-md">
             <span>Gestiona usuarios, transmisiones y el contenido de noticias de la plataforma.</span>
           </p>
+          
+          {liveKitStatus && (
+            <div className="space-y-4 max-w-2xl">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={`p-4 rounded-xl border ${
+                  liveKitStatus.type === 'success' 
+                  ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                  : 'bg-red-500/10 border-red-500/20 text-red-500'
+                } flex items-center gap-3 font-mono text-[10px] uppercase tracking-wider font-bold`}
+              >
+                {liveKitStatus.type === 'success' ? (
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4" />
+                )}
+                {liveKitStatus.message}
+              </motion.div>
+
+              {liveKitStatus.debug && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-black/40 border border-white/5 rounded-xl p-4 font-mono text-[9px] text-white/40 space-y-2"
+                >
+                  <p className="text-white/60 font-black mb-2 uppercase tracking-widest">Información de Depuración:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p>URL Detectada: <span className={liveKitStatus.debug.urlFound ? 'text-green-500' : 'text-red-500'}>{liveKitStatus.debug.urlFound ? 'SÍ' : 'NO'}</span></p>
+                      <p>API Key Detectada: <span className={liveKitStatus.debug.keyFound ? 'text-green-500' : 'text-red-500'}>{liveKitStatus.debug.keyFound ? 'SÍ' : 'NO'}</span></p>
+                      <p>Secret Detectado: <span className={liveKitStatus.debug.secretFound ? 'text-green-500' : 'text-red-500'}>{liveKitStatus.debug.secretFound ? 'SÍ' : 'NO'}</span></p>
+                    </div>
+                    <div className="space-y-1 text-right sm:text-left">
+                      <p>Host: <span className="text-white/60 truncate max-w-[120px] inline-block align-bottom">{liveKitStatus.debug.url}</span></p>
+                      <p>Clave: <span className="text-white/60">{liveKitStatus.debug.keyPrefix}...{liveKitStatus.debug.keySuffix}</span></p>
+                      <p>Longitud: <span className="text-white/60">{liveKitStatus.debug.keyLength} / {liveKitStatus.debug.secretLength} ch</span></p>
+                    </div>
+                  </div>
+                  
+                  {liveKitStatus.type === 'error' && (
+                    <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                        <p className="text-[#ff4e00] font-black uppercase">Sugerencia:</p>
+                        <p className="text-white/80 italic">{liveKitStatus.hint || 'Revisa tus credenciales en el panel de Secrets.'}</p>
+                        <ul className="list-disc list-inside space-y-1 text-white/50 text-[9px] mt-2">
+                            {liveKitStatus.debug.keyLength > 0 && !liveKitStatus.debug.keyPrefix?.startsWith('API') && liveKitStatus.debug.isCloud && (
+                                <li>Tu API Key no empieza por 'API'. Copia la 'API Key' de LiveKit Cloud (en Settings {'>'} Keys), no el 'Project ID'.</li>
+                            )}
+                            {liveKitStatus.debug.secretLength < 10 && liveKitStatus.debug.secretFound && (
+                                <li>Tu Secret parece demasiado corto.</li>
+                            )}
+                            <li>Verifica que no haya espacios extras en el panel de Secrets.</li>
+                        </ul>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="flex glass p-1.5 rounded-2xl border-white/10 shadow-xl">
@@ -272,6 +410,7 @@ const AdminDashboard = () => {
                     <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Stream</th>
                     <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Streamer</th>
                     <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Estado</th>
+                    <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Duración</th>
                     <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Espectadores</th>
                     <th className="p-8 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Acciones</th>
                   </tr>
@@ -308,6 +447,11 @@ const AdminDashboard = () => {
                         }`}>
                           {s.status === 'live' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />}
                           <span>{s.status === 'live' ? 'En Vivo' : 'Finalizado'}</span>
+                        </div>
+                      </td>
+                      <td className="p-8">
+                        <div className="text-sm font-mono font-bold text-white/40">
+                             {formatDuration(s.startedAt, s.endedAt)}
                         </div>
                       </td>
                       <td className="p-8">
