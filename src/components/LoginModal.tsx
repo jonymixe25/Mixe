@@ -19,7 +19,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     type: 'success',
     isVisible: false
   });
-  const { loginWithEmail, login, user } = useAuth();
+  const { loginWithEmail, login, loginAnonymously, user } = useAuth();
+
+  const handleAnonymousLogin = async () => {
+    try {
+      await loginAnonymously();
+      onClose();
+    } catch (error) {
+      console.error('Anonymous login error:', error);
+      setToast({ message: 'Error al acceder como invitado', type: 'error', isVisible: true });
+    }
+  };
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -133,6 +143,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               </svg>
             )}
             <span>{isGoogleLoading ? 'Cargando...' : 'Google'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleAnonymousLogin}
+            className="w-full bg-white/5 text-white/50 p-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-white/10 transition-all active:scale-[0.98]"
+          >
+            Continuar como Invitado
           </button>
           <div className="text-center text-white/50 text-sm">
             ¿No tienes cuenta?{' '}

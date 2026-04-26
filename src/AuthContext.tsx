@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError, createUserWithEmailAndPassword, signInWithEmailAndPassword } from './firebase';
+import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously } from './firebase';
 import { UserProfile, OperationType } from './types';
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: () => Promise<void>;
+  loginAnonymously: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -15,6 +16,7 @@ export const AuthContext = React.createContext<AuthContextType>({
   user: null,
   loading: true,
   login: async () => {},
+  loginAnonymously: async () => {},
   loginWithEmail: async () => {},
   registerWithEmail: async () => {},
   logout: async () => {},
@@ -81,10 +83,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unsubscribeUserDoc = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
             setUser(doc.data() as UserProfile);
+          } else if (firebaseUser.isAnonymous) {
+            // Special handling for anonymous users who might not have a document yet
+            setUser({
+              uid: firebaseUser.uid,
+              displayName: 'Invitado',
+              displayNameLowercase: 'invitado',
+              email: '',
+              emailLowercase: '',
+              photoURL: '',
+              role: 'user',
+              createdAt: serverTimestamp(),
+            } as UserProfile);
           }
           setLoading(false);
         }, (error) => {
           console.error('Error listening to user profile:', error);
+          // If we can't read the profile but we are authenticated (e.g. anonymous or new user)
+          if (firebaseUser.isAnonymous) {
+            setUser({
+              uid: firebaseUser.uid,
+              displayName: 'Invitado',
+              displayNameLowercase: 'invitado',
+              email: '',
+              emailLowercase: '',
+              photoURL: '',
+              role: 'user',
+              createdAt: serverTimestamp(),
+            } as UserProfile);
+          }
           setLoading(false);
         });
       } else {
@@ -109,6 +136,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         console.error('Login error:', error);
       }
+      throw error;
+    }
+  };
+
+  const loginAnonymously = async () => {
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      console.error('Anonymous login error:', error);
       throw error;
     }
   };
@@ -142,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithEmail, registerWithEmail, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginAnonymously, loginWithEmail, registerWithEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );

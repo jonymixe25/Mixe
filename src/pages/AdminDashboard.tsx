@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 
@@ -16,7 +16,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'streams' | 'users' | 'news'>('streams');
+  const [activeTab, setActiveTab] = useState<'streams' | 'users' | 'news' | 'alerts'>('streams');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
     title: string;
@@ -42,6 +42,13 @@ const AdminDashboard = () => {
   const [newsImage, setNewsImage] = useState('');
   const [savingNews, setSavingNews] = useState(false);
 
+  // Alerts state
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertLink, setAlertLink] = useState('');
+  const [savingAlert, setSavingAlert] = useState(false);
+
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
 
@@ -50,29 +57,40 @@ const AdminDashboard = () => {
     const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
       setStreams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession)));
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'streams');
+      console.error('Firestore Error (streams):', error);
+      setToast({ message: 'Error cargando transmisiones', type: 'error', isVisible: true });
     });
 
     // Fetch all users
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'users');
+      console.error('Firestore Error (users):', error);
     });
 
     // Fetch all news
     const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
     const unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
       setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error('Firestore Error (news):', error);
+    });
+
+    // Fetch all alerts
+    const alertsQuery = query(collection(db, 'alerts'), orderBy('createdAt', 'desc'));
+    const unsubscribeAlerts = onSnapshot(alertsQuery, (snapshot) => {
+      setAlerts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'news');
+      console.error('Firestore Error (alerts):', error);
+      setLoading(false);
     });
 
     return () => {
       unsubscribeStreams();
       unsubscribeUsers();
       unsubscribeNews();
+      unsubscribeAlerts();
     };
   }, [user]);
 
@@ -157,6 +175,58 @@ const AdminDashboard = () => {
           setToast({ message: `Rol actualizado a ${newRole}`, type: 'success', isVisible: true });
         } catch (error) {
           handleFirestoreError(error, OperationType.UPDATE, `users/${targetUser.uid}`);
+        }
+      }
+    });
+  };
+
+  const handleCreateAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !alertTitle || !alertMessage) return;
+
+    setSavingAlert(true);
+    try {
+      await addDoc(collection(db, 'alerts'), {
+        title: alertTitle,
+        message: alertMessage,
+        link: alertLink,
+        active: true,
+        createdAt: serverTimestamp(),
+      });
+      setAlertTitle('');
+      setAlertMessage('');
+      setAlertLink('');
+      setToast({ message: 'Alerta enviada a todos los usuarios', type: 'success', isVisible: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'alerts');
+    } finally {
+      setSavingAlert(false);
+    }
+  };
+
+  const toggleAlertStatus = async (alertId: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'alerts', alertId), {
+        active: !currentStatus
+      });
+      setToast({ message: `Alerta ${!currentStatus ? 'activada' : 'desactivada'}`, type: 'success', isVisible: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `alerts/${alertId}`);
+    }
+  };
+
+  const handleDeleteAlert = (alertId: string) => {
+    showConfirm({
+      title: '¿Eliminar alerta?',
+      message: 'Esta alerta se eliminará permanentemente de los registros.',
+      confirmText: 'Eliminar',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'alerts', alertId));
+          setToast({ message: 'Alerta eliminada', type: 'success', isVisible: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `alerts/${alertId}`);
         }
       }
     });
@@ -342,21 +412,21 @@ const AdminDashboard = () => {
           )}
         </div>
         
-        <div className="flex glass p-1.5 rounded-2xl border-white/10 shadow-xl">
-          {(['streams', 'users', 'news'] as const).map((tab) => (
+        <div className="flex glass p-1.5 rounded-2xl border-white/10 shadow-xl overflow-x-auto custom-scrollbar">
+          {(['streams', 'users', 'news', 'alerts'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+              className={`px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 shrink-0 ${
                 activeTab === tab 
                   ? 'bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20' 
                   : 'text-white/40 hover:text-white hover:bg-white/5'
               }`}
             >
-              {tab === 'streams' ? 'Streams' : tab === 'users' ? 'Usuarios' : 'Noticias'}
+              {tab === 'streams' ? 'Streams' : tab === 'users' ? 'Usuarios' : tab === 'news' ? 'Noticias' : 'Alertas'}
             </button>
           ))}
-          <a href="/settings" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2">
+          <a href="/settings" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2 shrink-0">
             <SettingsIcon className="w-4 h-4" /> Ajustes
           </a>
         </div>
@@ -473,6 +543,120 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          ) : activeTab === 'alerts' ? (
+            <div className="p-10 lg:p-16 space-y-16">
+              <form onSubmit={handleCreateAlert} className="space-y-10 glass p-10 rounded-[3rem] border-white/10 shadow-inner">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center">
+                    <Bell className="w-6 h-6 text-red-500 animate-pulse" />
+                  </div>
+                  <h3 className="text-2xl font-display font-black uppercase italic">
+                    Enviar Nueva Alerta Global
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                  <div className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Título de la alerta</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Transmisión especial en 10 min o Mantenimiento"
+                        value={alertTitle}
+                        onChange={(e) => setAlertTitle(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-white/10 transition-all outline-none"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Mensaje</label>
+                      <textarea
+                        placeholder="Escribe el mensaje que verán todos los usuarios..."
+                        value={alertMessage}
+                        onChange={(e) => setAlertMessage(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-white/10 transition-all outline-none min-h-[120px] resize-none leading-relaxed"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-1">Enlace opcional (Ruta interna)</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: /news o /stream/ID"
+                        value={alertLink}
+                        onChange={(e) => setAlertLink(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-white/10 transition-all outline-none"
+                      />
+                    </div>
+                    
+                    <div className="pt-4">
+                      <button
+                        type="submit"
+                        disabled={savingAlert}
+                        className="w-full bg-red-600 text-white px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-red-700 transition-all duration-500 shadow-2xl shadow-red-600/20 disabled:opacity-50 active:scale-95"
+                      >
+                        {savingAlert ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Bell className="w-5 h-5" />}
+                        <span>Emitir Alerta Global</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+
+              <div className="space-y-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
+                    <Bell className="w-6 h-6 text-white/20" />
+                  </div>
+                  <h3 className="text-2xl font-display font-black uppercase italic">Historial de Alertas</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {alerts.map(a => (
+                    <div key={a.id} className={`flex items-center justify-between p-6 glass rounded-[2.5rem] border-white/10 group transition-all duration-500 shadow-xl ${a.active ? 'border-red-500/20' : 'opacity-60'}`}>
+                      <div className="flex items-center gap-6 overflow-hidden">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${a.active ? 'bg-red-500/20 text-red-500' : 'bg-white/10 text-white/20'}`}>
+                          <Bell className={`w-6 h-6 ${a.active ? 'animate-pulse' : ''}`} />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <p className="font-display font-bold text-lg leading-tight truncate group-hover:text-brand transition-colors">{a.title}</p>
+                          <p className="text-[10px] text-white/20 font-black uppercase tracking-widest truncate">{a.message}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleAlertStatus(a.id, a.active)}
+                          className={`p-3 rounded-xl transition-all duration-300 ${a.active ? 'bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white' : 'bg-white/5 text-white/20 hover:bg-white/10 hover:text-white'}`}
+                          title={a.active ? "Desactivar" : "Activar"}
+                        >
+                          <CheckCircle2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAlert(a.id)}
+                          className="p-3 bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all duration-300"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {alerts.length === 0 && (
+                    <div className="col-span-full py-24 text-center glass rounded-[3rem] border-dashed border-white/10 flex flex-col items-center justify-center gap-6">
+                      <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center">
+                        <Bell className="w-10 h-10 text-white/10" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-white/40 font-display text-2xl italic uppercase font-black">No hay alertas</p>
+                        <p className="text-white/20 text-sm max-w-xs mx-auto">Las alertas globales que envíes aparecerán aquí para que puedas gestionarlas.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           ) : activeTab === 'users' ? (
             <div className="overflow-x-auto custom-scrollbar">

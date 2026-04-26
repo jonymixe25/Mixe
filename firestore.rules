@@ -55,14 +55,14 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
     function isAdmin() {
       return isAuthenticated() &&
-        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          request.auth.token.email == "jonyoax95@gmail.com");
+        (request.auth.token.get('email', '') == "jonyoax95@gmail.com" ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin'));
     }
 
     function hasRequiredFields(fields) {
@@ -85,7 +85,7 @@ service cloud.firestore {
     // Domain Validators
     // ===============================================================
     function isValidUser(data, isUpdate) {
-      return (isUpdate || hasRequiredFields(['uid', 'displayName', 'email', 'role', 'createdAt'])) &&
+      return (isUpdate || hasRequiredFields(['uid', 'displayName', 'role', 'createdAt'])) &&
              hasOnlyAllowedFields(['uid', 'displayName', 'displayNameLowercase', 'email', 'emailLowercase', 'photoURL', 'bio', 'socialLinks', 'role', 'createdAt']) &&
              (data.uid == request.auth.uid || isAdmin()) &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100)) &&
@@ -198,51 +198,68 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidAlert(data) {
+      return hasRequiredFields(['title', 'message', 'active', 'createdAt']) &&
+             hasOnlyAllowedFields(['title', 'message', 'link', 'active', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 2000 &&
+             data.active is bool &&
+             data.createdAt is timestamp &&
+             isValidOptionalString('link', 1000);
+    }
+
+    // ===============================================================
+    // Global Safety Net
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
     match /chats/{chatId} {
       // chatId is formatted as uid1_uid2
-      allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+      allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
       
       match /messages/{messageId} {
-        allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
         allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidPrivateMessage(request.resource.data);
       }
     }
 
     match /calls/{chatId} {
       // chatId is formatted as uid1_uid2
-      allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+      allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
       allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
       allow update: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
       allow delete: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
 
       match /callerCandidates/{candidateId} {
-        allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
         allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
       }
 
       match /receiverCandidates/{candidateId} {
-        allow read: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
         allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
       }
     }
 
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow get, list: if true;
       allow create: if isAuthenticated() && isValidUser(request.resource.data, false) && (request.resource.data.role == 'user' || isAdmin());
       allow update: if isAuthenticated() && isValidUser(request.resource.data, true) && (isOwner(uid) || isAdmin()) && (request.resource.data.role == resource.data.role || isAdmin());
     }
 
     match /media/{mediaId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get, list: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && isValidMedia(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /streams/{streamId} {
-      allow read: if true; // Publicly readable for live streams
+      allow get, list: if true; // Publicly readable for live streams
       allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
       allow update: if (
         // Owner/Admin can update everything
@@ -261,68 +278,68 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
 
       match /signaling/{signalingId} {
-        allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
         allow update: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow delete: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
 
         match /adminCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         }
 
         match /viewerCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow get, list: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
         }
       }
 
       match /messages/{messageId} {
-        allow read: if true;
+        allow get, list: if true;
         allow create: if isAuthenticated() && isValidMessage(request.resource.data);
         allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       }
 
       match /joinRequests/{requestId} {
-        allow read: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow get, list: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && request.auth.uid == requestId;
         allow update: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
       }
 
       match /guestSignaling/{guestId} {
-        allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
         allow update: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         allow delete: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
 
         match /guestCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
         }
 
         match /adminCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+          allow get, list: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
           allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
         }
       }
     }
 
     match /users/{uid}/contacts/{contactId} {
-      allow read: if isOwner(uid);
+      allow get, list: if isOwner(uid);
       allow create: if isOwner(uid) && isValidContact(request.resource.data);
       allow update: if isOwner(uid) && isValidContact(request.resource.data);
       allow delete: if isOwner(uid);
     }
 
     match /news/{newsId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create: if isAdmin() && isValidNews(request.resource.data);
       allow update: if isAdmin() && isValidNews(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /shorts/{shortId} {
-      allow read: if true;
+      allow get, list: if true;
       allow create: if isAuthenticated() && isValidShort(request.resource.data);
       allow update: if isAuthenticated() && (
         (isOwner(resource.data.userId) || isAdmin()) ||
@@ -336,7 +353,12 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
-      allow read: if true;
+      allow get, list: if true;
+      allow write: if isAdmin();
+    }
+
+    match /alerts/{alertId} {
+      allow get, list: if true;
       allow write: if isAdmin();
     }
   }

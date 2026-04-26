@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
 import { useTheme } from '../ThemeContext';
@@ -26,6 +27,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isAnyStreamLive, setIsAnyStreamLive] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [activeAlert, setActiveAlert] = useState<any>(null);
+
+  useEffect(() => {
+    const alertsQuery = query(
+      collection(db, 'alerts'),
+      where('active', '==', true),
+      orderBy('createdAt', 'desc'),
+      firestoreLimit(1)
+    );
+
+    const unsubscribe = onSnapshot(alertsQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const alertData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+        setActiveAlert(alertData);
+      } else {
+        setActiveAlert(null);
+      }
+    }, (error) => {
+      console.error('Firestore Error (alerts):', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const colors = [
     { name: 'Naranja', value: '#ff4e00' },
@@ -42,6 +66,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const streamsQuery = query(collection(db, 'streams'), where('status', '==', 'live'), firestoreLimit(1));
     const unsubscribe = onSnapshot(streamsQuery, (snapshot) => {
       setIsAnyStreamLive(!snapshot.empty);
+    }, (error) => {
+      console.error('Firestore Error (streams-check):', error);
     });
     return () => unsubscribe();
   }, []);
@@ -58,6 +84,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           setPrimaryColor(data.themeColor);
         }
       }
+    }, (error) => {
+      console.error('Firestore Error (settings):', error);
     });
     return () => unsubscribe();
   }, [setPrimaryColor]);
@@ -421,6 +449,49 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       />
 
       <main className="pt-32 pb-24 px-6 relative z-10">
+        <AnimatePresence>
+          {activeAlert && (
+            <motion.div
+              initial={{ opacity: 0, y: -50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -50, scale: 0.95 }}
+              className="fixed top-32 left-1/2 -translate-x-1/2 z-[150] w-full max-w-2xl px-6"
+            >
+              <div className={`glass p-6 rounded-[2rem] border-brand/30 shadow-2xl relative overflow-hidden group`}>
+                <div className="absolute inset-0 bg-brand/5 animate-pulse pointer-events-none" />
+                <div className="flex items-start gap-5 relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center shrink-0">
+                    <Bell className="w-6 h-6 text-brand animate-bounce" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">Alerta Global</p>
+                      <button 
+                        onClick={() => setActiveAlert(null)}
+                        className="text-white/20 hover:text-white transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <h4 className="font-display font-black text-xl italic uppercase leading-none tracking-tighter">{activeAlert.title}</h4>
+                    <p className="text-sm text-white/60 italic leading-relaxed">{activeAlert.message}</p>
+                    {activeAlert.link && (
+                      <Link 
+                        to={activeAlert.link}
+                        onClick={() => setActiveAlert(null)}
+                        className="inline-flex items-center gap-2 text-brand text-[10px] font-black uppercase tracking-widest mt-4 hover:translate-x-2 transition-transform"
+                      >
+                        <span>Más información</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

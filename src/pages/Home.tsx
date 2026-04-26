@@ -22,6 +22,8 @@ const Home: React.FC = () => {
       if (snapshot.exists()) {
         setGlobalSettings(snapshot.data());
       }
+    }, (error) => {
+      console.error('Firestore Error (settings):', error);
     });
     return () => unsubscribe();
   }, []);

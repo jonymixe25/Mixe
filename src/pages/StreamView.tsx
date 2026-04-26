@@ -115,7 +115,22 @@ const StreamView = () => {
   const { token, url: liveKitUrl, error: tokenError } = useLiveKitToken(id || '', viewerIdentity);
   const roomRef = useRef<Room | null>(null);
 
+  // Connection and token status logging
   useEffect(() => {
+    if (tokenError) {
+      console.error('LiveKit Token Error:', tokenError);
+      setToast({ message: `Error de señal: ${tokenError}`, type: 'error', isVisible: true });
+    }
+  }, [tokenError]);
+
+  useEffect(() => {
+    if (token) {
+      console.log('LiveKit Token received for identity:', viewerIdentity);
+    }
+  }, [token, viewerIdentity]);
+
+  useEffect(() => {
+    if (!id) return;
     const q = query(
       collection(db, 'streams'),
       where('status', '==', 'live'),
@@ -132,12 +147,6 @@ const StreamView = () => {
 
     return () => unsubscribe();
   }, [id]);
-
-  useEffect(() => {
-    if (tokenError) {
-      setToast({ message: `Error de LiveKit: ${tokenError}`, type: 'error', isVisible: true });
-    }
-  }, [tokenError]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'global'), (snapshot) => {

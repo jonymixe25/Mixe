@@ -29,12 +29,12 @@ async function startServer() {
     try {
       const cleanEnvVar = (val: string | undefined) => {
         if (!val) return '';
-        // Remove all invisible/non-printable characters except standard whitespace
-        let cleaned = val.replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, "").trim();
+        // Remove ANY non-standard characters, invisible control characters, and trim
+        let cleaned = val.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim();
         
         // Remove surrounding quotes ONLY IF they wrap the entire string
         if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-          cleaned = cleaned.substring(1, cleaned.length - 1);
+          cleaned = cleaned.substring(1, cleaned.length - 1).trim();
         }
         
         // Handle case where user pasted "KEY=VALUE" (common in .env copy-paste)
@@ -43,12 +43,12 @@ async function startServer() {
           cleaned = cleaned.substring(firstEq + 1).trim();
           // Re-check for quotes after splitting
           if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-            cleaned = cleaned.substring(1, cleaned.length - 1);
+            cleaned = cleaned.substring(1, cleaned.length - 1).trim();
           }
         }
         
         // Final trim and character cleaning
-        return cleaned.trim();
+        return cleaned;
       };
 
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT);
@@ -140,30 +140,20 @@ async function startServer() {
       // Function to clean environment variables from common copy-paste issues (spaces, quotes)
       const cleanEnvVar = (val: string | undefined) => {
         if (!val) return '';
-        let cleaned = val.trim();
+        let cleaned = val.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim();
         // Remove surrounding quotes ONLY IF they wrap the entire string
         if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-          cleaned = cleaned.substring(1, cleaned.length - 1);
+          cleaned = cleaned.substring(1, cleaned.length - 1).trim();
         }
         
         // Handle case where user pasted "KEY=VALUE"
-        // We only split if the string starts with a typical env var name followed by =
-        // AND doesn't look like a base64 string (which can contain = anywhere but usually ends with it)
         if (/^[A-Z0-9_]+=[^=]/.test(cleaned)) {
           const firstEq = cleaned.indexOf('=');
           cleaned = cleaned.substring(firstEq + 1).trim();
           // Re-check for quotes after splitting KEY=VALUE
           if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-            cleaned = cleaned.substring(1, cleaned.length - 1);
+            cleaned = cleaned.substring(1, cleaned.length - 1).trim();
           }
-        }
-        
-        // Remove trailing semicolons or commas common in some config formats BUT NOT if it's base64 padding
-        // Actually, LiveKit keys don't usually end in ; or ,
-        // We'll be very conservative here.
-        if (cleaned.endsWith(';') || cleaned.endsWith(',')) {
-          // Only remove if there's only one and it's not a common base64 character
-          cleaned = cleaned.substring(0, cleaned.length - 1);
         }
         
         return cleaned;
@@ -171,8 +161,18 @@ async function startServer() {
 
       // Prioritize environment variables from Secrets panel
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT);
-      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET);
-      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL);
+      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA);
+      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL);
+
+      // Advanced cleaning for Secret (extra cautious about invisible chars)
+      const sanitizeSecret = (s: string) => s.replace(/[^\x20-\x7E]/g, '').trim();
+      const finalSecret = sanitizeSecret(apiSecret);
+
+      // Log configuration status (WITHOUT showing the full secret)
+      console.log(`[LiveKit] Token Request - Room: ${room}, Identity: ${identity}`);
+      console.log(`[LiveKit] Config - Key: ${apiKey ? 'Found (' + apiKey.substring(0, 4) + '...)' : 'MISSING'}`);
+      console.log(`[LiveKit] Config - Secret: ${finalSecret ? 'Found (' + finalSecret.length + ' chars, ' + (finalSecret !== apiSecret ? 'CLEANED' : 'CLEAN') + ')' : 'MISSING'}`);
+      console.log(`[LiveKit] Config - URL: ${livekitUrl || 'MISSING'}`);
 
       // Clean identity and room (no spaces allowed in some LiveKit identifiers)
       const cleanIdentity = (typeof identity === 'string' ? identity : '').trim().replace(/\s+/g, '_');
@@ -228,7 +228,7 @@ async function startServer() {
       console.log(`[API] Solicitud de Token: Sala=${cleanRoom}, Usuario=${cleanIdentity}, URL=${livekitUrl}`);
       
       try {
-        const at = new AccessToken(apiKey, apiSecret, { 
+        const at = new AccessToken(apiKey, finalSecret, { 
           identity: cleanIdentity,
           name: cleanIdentity,
           ttl: 3600
