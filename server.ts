@@ -44,24 +44,53 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Serve static uploads
-  app.use("/v-uploads", express.static(UPLOADS_DIR));
+  // Helper to clean environment variables from common copy-paste issues (spaces, quotes)
+  const cleanEnvVar = (val: string | undefined): string => {
+    if (!val) return '';
+    // Remove ANY non-standard characters, invisible control characters, and trim
+    let cleaned = val.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim();
+    
+    // Remove surrounding quotes ONLY IF they wrap the entire string
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+      cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+    }
+    
+    // Handle case where user pasted "KEY=VALUE" (common in .env copy-paste)
+    if (/^[A-Z0-9_]+=[^=]/.test(cleaned)) {
+      const firstEq = cleaned.indexOf('=');
+      cleaned = cleaned.substring(firstEq + 1).trim();
+      // Re-check for quotes after splitting
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+      }
+    }
+    
+    return cleaned;
+  };
 
   const apiRouter = express.Router();
 
-  // Root level API check (no router)
-  app.get("/api/ping", (req, res) => res.json({ status: "pong" }));
-
-  apiRouter.use((req, res, next) => {
-    console.log(`[API Request] ${req.method} ${req.path}`);
-    next();
+  // Explicitly defined API routes on the app object for maximum reliability
+  app.get("/api/ping", (req, res) => {
+    console.log("[API] Ping received");
+    res.json({ status: "pong", timestamp: new Date().toISOString() });
   });
 
-  apiRouter.get("/health", (req, res) => {
+  app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
-  // File Upload API
+  // Proxy to apiRouter for structured routes
+  app.use("/api", (req, res, next) => {
+    console.log(`[API Incoming] ${req.method} ${req.path}`);
+    next();
+  }, apiRouter);
+
+  apiRouter.get("/ping", (req, res) => {
+    res.json({ status: "api-router-pong" });
+  });
+
+  // File Upload API directly on app or router
   apiRouter.post("/upload", upload.single("file"), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "No se subió ningún archivo" });
@@ -115,30 +144,6 @@ async function startServer() {
 
   apiRouter.get("/livekit/test", async (req, res) => {
     try {
-      const cleanEnvVar = (val: string | undefined) => {
-        if (!val) return '';
-        // Remove ANY non-standard characters, invisible control characters, and trim
-        let cleaned = val.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim();
-        
-        // Remove surrounding quotes ONLY IF they wrap the entire string
-        if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-          cleaned = cleaned.substring(1, cleaned.length - 1).trim();
-        }
-        
-        // Handle case where user pasted "KEY=VALUE" (common in .env copy-paste)
-        if (/^[A-Z0-9_]+=[^=]/.test(cleaned)) {
-          const firstEq = cleaned.indexOf('=');
-          cleaned = cleaned.substring(firstEq + 1).trim();
-          // Re-check for quotes after splitting
-          if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-            cleaned = cleaned.substring(1, cleaned.length - 1).trim();
-          }
-        }
-        
-        // Final trim and character cleaning
-        return cleaned;
-      };
-
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
       const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
       let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || 'wss://new-app-6tu2ilh8.livekit.cloud');
@@ -225,28 +230,6 @@ async function startServer() {
         return res.status(400).json({ error: "Se requiere nombre de sala e identidad válida" });
       }
 
-      // Function to clean environment variables from common copy-paste issues (spaces, quotes)
-      const cleanEnvVar = (val: string | undefined) => {
-        if (!val) return '';
-        let cleaned = val.replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, "").trim();
-        // Remove surrounding quotes ONLY IF they wrap the entire string
-        if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-          cleaned = cleaned.substring(1, cleaned.length - 1).trim();
-        }
-        
-        // Handle case where user pasted "KEY=VALUE"
-        if (/^[A-Z0-9_]+=[^=]/.test(cleaned)) {
-          const firstEq = cleaned.indexOf('=');
-          cleaned = cleaned.substring(firstEq + 1).trim();
-          // Re-check for quotes after splitting KEY=VALUE
-          if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-            cleaned = cleaned.substring(1, cleaned.length - 1).trim();
-          }
-        }
-        
-        return cleaned;
-      };
-
       // Prioritize environment variables from Secrets panel
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
       const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
@@ -330,10 +313,6 @@ async function startServer() {
         });
 
         const token = await at.toJwt();
-
-        // Optional: Verify token signature locally to catch early mismatches (though at.toJwt() already uses them)
-        // There's no easy way to test the secret without an external call or manual signature check,
-        // so we'll just log and return.
         
         console.log(`[API] Token generado con éxito para ${cleanIdentity}`);
         res.json({ token, url: livekitUrl });
@@ -346,9 +325,6 @@ async function startServer() {
       res.status(500).json({ error: "Error interno al generar el token de acceso" });
     }
   });
-
-  // Mount the router at /api
-  app.use("/api", apiRouter);
 
   // Fallback for /api that didn't match any route
   app.all("/api/*", (req, res) => {
