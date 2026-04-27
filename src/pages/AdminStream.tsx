@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs, storage, ref, uploadBytesResumable, getDownloadURL } from '../firebase';
+import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Radio, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize } from 'lucide-react';
+import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -160,6 +160,8 @@ export default function AdminStream() {
     const unsubscribe = onSnapshot(requestsRef, (snapshot) => {
       const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setJoinRequests(requests);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `streams/${activeStream.id}/joinRequests`);
     });
 
     return () => unsubscribe();
@@ -185,6 +187,8 @@ export default function AdminStream() {
       if (snapshot.exists()) {
         setModerationSensitivity(snapshot.data().moderationSensitivity || 'medium');
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/global');
     });
     return () => unsubscribe();
   }, []);
@@ -480,45 +484,46 @@ export default function AdminStream() {
     try {
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `grabacion_${Date.now()}.${ext}`;
-      const storagePath = `v-uploads/recordings/${user.uid}/${fileName}`;
-      const storageRefPtr = ref(storage, storagePath);
+      const folder = `recordings/${user.uid}`;
       
-      const uploadTask = uploadBytesResumable(storageRefPtr, blob);
+      const formData = new FormData();
+      formData.append('file', blob, fileName);
+      formData.append('folder', folder);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Error en la subida de la grabación');
       
-      uploadTask.on('state_changed', 
-        null, 
-        (error) => {
-          console.error('Error uploading recording:', error);
-          setToast({ message: 'Error al subir la grabación a la nube', type: 'error', isVisible: true });
-        }, 
-        async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          
-          const recordingData = {
-            userId: user.uid,
-            url: downloadUrl,
-            fileName,
-            fileSize: blob.size,
-            fileType: mimeType,
-            streamId: activeStream?.id || 'manual',
-            streamTitle: activeStream?.title || 'Grabación manual',
-            createdAt: serverTimestamp()
-          };
+      const data = await response.json();
+      const downloadUrl = data.url;
+      
+      const recordingData = {
+        userId: user.uid,
+        url: downloadUrl,
+        fileName,
+        fileSize: blob.size,
+        fileType: mimeType,
+        streamId: activeStream?.id || 'manual',
+        streamTitle: activeStream?.title || 'Grabación manual',
+        createdAt: serverTimestamp()
+      };
 
-          await addDoc(collection(db, 'recordings'), recordingData);
+      await addDoc(collection(db, 'recordings'), recordingData);
 
-          // Also add to general media for the gallery
-          await addDoc(collection(db, 'media'), {
-            ...recordingData,
-            folder: 'Transmisiones Guardadas',
-            isPublic: false,
-          });
+      // Also add to general media for the gallery
+      await addDoc(collection(db, 'media'), {
+        ...recordingData,
+        folder: 'Transmisiones Guardadas',
+        isPublic: false,
+      });
 
-          setToast({ message: 'Grabación guardada con éxito en tu galería', type: 'success', isVisible: true });
-        }
-      );
+      setToast({ message: 'Grabación guardada con éxito en tu galería', type: 'success', isVisible: true });
     } catch (err) {
       console.error('Error saving recording:', err);
+      setToast({ message: 'Error al salvar la grabación localmente', type: 'error', isVisible: true });
     }
   };
 
@@ -614,6 +619,8 @@ export default function AdminStream() {
         invites[doc.data().to] = doc.data().status;
       });
       setActiveInvitations(invites);
+    }, (error) => {
+      console.error('Invitations listener error:', error);
     });
     
     return () => unsubscribe();
@@ -813,23 +820,25 @@ export default function AdminStream() {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const storageRef = ref(storage, `v-uploads/chat/${activeStream.id}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', `chat/${activeStream.id}`);
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload', true);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const p = (event.loaded / event.total) * 100;
           setChatUploadProgress(p);
-        },
-        (error) => {
-          console.error('Error uploading chat image:', error);
-          if (error.code === 'storage/retry-limit-exceeded') {
-            alert('Error de conexión: Se superó el límite de reintentos. Verifica tu conexión.');
-          }
-          setIsUploadingChatImage(false);
-        },
-        async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
+        }
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const response = JSON.parse(xhr.responseText);
+          const url = response.url;
+          
           await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
             userId: user.uid,
             userName: user.displayName,
@@ -839,10 +848,19 @@ export default function AdminStream() {
           setIsUploadingChatImage(false);
           setChatUploadProgress(0);
           if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+        } else {
+          throw new Error('Error en la subida');
         }
-      );
-    } catch (error) {
-      console.error('Error starting chat image upload:', error);
+      };
+
+      xhr.onerror = () => {
+        throw new Error('Error de red');
+      };
+
+      xhr.send(formData);
+    } catch (error: any) {
+      console.error('Error uploading chat image:', error);
+      setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
       setIsUploadingChatImage(false);
     }
   };
@@ -870,7 +888,7 @@ export default function AdminStream() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 bg-[#151619] p-8 rounded-[2rem] border border-white/5 shadow-2xl">
         <div className="space-y-4">
           <div className="flex items-center gap-3 text-[#ff4e00]">
-            <Radio className={`w-4 h-4 ${activeStream ? 'animate-pulse' : ''}`} />
+            <Video className={`w-4 h-4 ${activeStream ? 'animate-pulse' : ''}`} />
             <span className="text-[10px] font-mono uppercase tracking-[0.3em]">Transmisión</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-white">Panel de Control</h1>
@@ -1105,7 +1123,7 @@ export default function AdminStream() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-[#151619] rounded-3xl p-8 space-y-4 border border-white/5 shadow-xl">
                 <div className="flex items-center gap-3 text-[#ff4e00]">
-                  <Radio className="w-4 h-4" />
+                  <Video className="w-4 h-4" />
                   <span className="text-[10px] font-mono uppercase tracking-widest">Información del Stream</span>
                 </div>
                 <h2 className="text-3xl font-display font-bold tracking-tight leading-tight text-white">{activeStream.title}</h2>
@@ -1311,7 +1329,7 @@ export default function AdminStream() {
           ) : (
             <div className="bg-[#151619] rounded-[2rem] p-12 text-center space-y-6 border border-white/5 shadow-2xl">
               <div className="w-20 h-20 bg-[#1a1b1e] border border-white/5 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                <Radio className="w-8 h-8 text-[#8E9299]" />
+                <Video className="w-8 h-8 text-[#8E9299]" />
               </div>
               <div className="space-y-3">
                 <h3 className="text-2xl font-display font-bold tracking-tight text-white">Listo para transmitir</h3>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, storage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, listAll, getMetadata, addDoc, collection, serverTimestamp } from '../firebase';
+import { db, addDoc, collection, serverTimestamp } from '../firebase';
 import { Folder, Upload, Download, FileText, Trash2 } from 'lucide-react';
 
 const FileStorage: React.FC = () => {
@@ -15,14 +15,11 @@ const FileStorage: React.FC = () => {
 
   const fetchFiles = async () => {
     if (!user) return;
-    const folderRef = ref(storage, `v-uploads/users/${user.uid}/files`);
     try {
-      const res = await listAll(folderRef);
-      const fileData = await Promise.all(res.items.map(async (itemRef) => {
-        const url = await getDownloadURL(itemRef);
-        const metadata = await getMetadata(itemRef);
-        return { name: itemRef.name, url, size: metadata.size, contentType: metadata.contentType };
-      }));
+      const folderPath = `users/${user.uid}/files`;
+      const response = await fetch(`/api/files/${folderPath}`);
+      if (!response.ok) throw new Error('Error al obtener archivos');
+      const fileData = await response.json();
       setFiles(fileData);
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -34,31 +31,24 @@ const FileStorage: React.FC = () => {
     if (!file || !user) return;
 
     setUploading(true);
-    const fileRef = ref(storage, `v-uploads/users/${user.uid}/files/${file.name}`);
     
     try {
-      const uploadTask = uploadBytesResumable(fileRef, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', `users/${user.uid}/files`);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Error en la subida');
       
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          // Progress can be added here if needed
-        },
-        (error) => {
-          console.error('Error uploading file:', error);
-          if (error.code === 'storage/retry-limit-exceeded') {
-            alert('Error de conexión: Se superó el límite de reintentos. Por favor, verifica tu conexión a internet o intenta más tarde.');
-          } else {
-            alert('Error al subir el archivo: ' + error.message);
-          }
-          setUploading(false);
-        },
-        async () => {
-          await fetchFiles();
-          setUploading(false);
-        }
-      );
-    } catch (error) {
-      console.error('Error starting upload:', error);
+      await fetchFiles();
+      setUploading(false);
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      alert('Error al subir el archivo: ' + error.message);
       setUploading(false);
     }
   };

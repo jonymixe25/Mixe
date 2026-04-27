@@ -2,343 +2,225 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {uid}
-    // Fields:
-    //   - uid: string (required)
-    //   - displayName: string (required)
-    //   - email: string (required)
-    //   - photoURL: string (optional)
-    //   - bio: string (optional)
-    //   - role: string (required, enum: ['admin', 'user'])
-    //   - createdAt: timestamp (required)
-    //
-    // Collection: streams
-    // Document ID: {streamId}
-    // Fields:
-    //   - userId: string (required)
-    //   - userName: string (required)
-    //   - title: string (required)
-    //   - description: string (optional)
-    //   - status: string (required, enum: ['live', 'ended'])
-    //   - startedAt: timestamp (required)
-    //   - endedAt: timestamp (optional)
-    //   - viewerCount: number (required)
-    //
-    // Collection: users/{uid}/contacts
-    // Document ID: {contactId}
-    // Fields:
-    //   - userId: string (required)
-    //   - contactId: string (required)
-    //   - contactName: string (required)
-    //   - contactPhoto: string (optional)
-    //   - addedAt: timestamp (required)
-    //
-    // Collection: streams/{streamId}/messages
-    // Document ID: {messageId}
-    // Fields:
-    //   - userId: string (required)
-    //   - userName: string (required)
-    //   - text: string (required)
-    //   - createdAt: timestamp (required)
-    //
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && (request.auth.uid == userId || isAdmin());
-    }
-
-    function isAdmin() {
-      return isAuthenticated() &&
-        (request.auth.token.get('email', '') == "jonyoax95@gmail.com" ||
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin'));
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    function isValidOptionalString(field, maxLen) {
-      return !(field in request.resource.data) || (request.resource.data[field] is string && request.resource.data[field].size() <= maxLen);
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-    function isValidUser(data, isUpdate) {
-      return (isUpdate || hasRequiredFields(['uid', 'displayName', 'role', 'createdAt'])) &&
-             hasOnlyAllowedFields(['uid', 'displayName', 'displayNameLowercase', 'email', 'emailLowercase', 'photoURL', 'bio', 'socialLinks', 'role', 'createdAt']) &&
-             (data.uid == request.auth.uid || isAdmin()) &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100)) &&
-             (!('email' in data) || isValidEmail(data.email)) &&
-             (!('role' in data) || data.role in ['admin', 'user']) &&
-             (!('createdAt' in data) || data.createdAt is timestamp) &&
-             isValidOptionalString('bio', 5000) &&
-             isValidOptionalString('photoURL', 1000) &&
-             isValidOptionalString('displayNameLowercase', 100) &&
-             isValidOptionalString('emailLowercase', 200) &&
-             (!('socialLinks' in data) || (data.socialLinks is list && data.socialLinks.size() <= 5));
-    }
-
-    function isValidStream(data) {
-      return hasRequiredFields(['userId', 'userName', 'title', 'status', 'startedAt', 'viewerCount', 'likes']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'title', 'description', 'thumbnailUrl', 'category', 'status', 'startedAt', 'endedAt', 'viewerCount', 'likes', 'privacy', 'latency', 'resolution']) &&
-             data.userId is string &&
-             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             (!('category' in data) || (data.category is string && data.category in ['cultura', 'musica', 'tradicion', 'noticias'])) &&
-             (!('privacy' in data) || data.privacy in ['public', 'private']) &&
-             (!('latency' in data) || data.latency in ['normal', 'low']) &&
-             (!('resolution' in data) || data.resolution in ['720p', '1080p']) &&
-             data.status in ['live', 'ended'] &&
-             data.startedAt is timestamp &&
-             data.viewerCount is number && data.viewerCount >= 0 &&
-             data.likes is number && data.likes >= 0 &&
-             isValidOptionalString('description', 2000) &&
-             isValidOptionalString('thumbnailUrl', 1000);
-    }
-
-    function isStreamUpdateValid(newData, oldData) {
-      return isValidStream(newData) &&
-             newData.userId == oldData.userId &&
-             newData.userName == oldData.userName &&
-             newData.startedAt == oldData.startedAt;
-    }
-
-    function isValidContact(data) {
-      return hasRequiredFields(['userId', 'contactId', 'contactName', 'addedAt']) &&
-             hasOnlyAllowedFields(['userId', 'contactId', 'contactName', 'contactPhoto', 'addedAt']) &&
-             data.userId == request.auth.uid &&
-             data.contactId is string && data.contactId.size() > 0 &&
-             data.contactName is string && data.contactName.size() > 0 && data.contactName.size() < 100 &&
-             data.addedAt is timestamp &&
-             isValidOptionalString('contactPhoto', 1000);
-    }
-
-    function isValidNews(data) {
-      return hasRequiredFields(['title', 'content', 'authorId', 'authorName', 'createdAt']) &&
-             hasOnlyAllowedFields(['title', 'content', 'authorId', 'authorName', 'imageUrl', 'createdAt']) &&
-             data.authorId == request.auth.uid &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
-             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() < 100 &&
-             data.createdAt is timestamp &&
-             isValidOptionalString('imageUrl', 1000);
-    }
-
-    function isValidMedia(data) {
-      return hasRequiredFields(['userId', 'url', 'folder', 'fileName', 'createdAt']) &&
-             hasOnlyAllowedFields(['userId', 'url', 'folder', 'fileName', 'createdAt']) &&
-             data.userId == request.auth.uid &&
-             data.url is string && data.url.size() > 0 && data.url.size() < 2000 &&
-             data.folder is string && data.folder.size() > 0 && data.folder.size() < 100 &&
-             data.fileName is string && data.fileName.size() > 0 && data.fileName.size() < 255 &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidMessage(data) {
-      return hasRequiredFields(['userId', 'userName', 'createdAt']) &&
-             hasOnlyAllowedFields(['userId', 'userName', 'text', 'imageUrl', 'createdAt']) &&
-             data.userId == request.auth.uid &&
-             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
-             data.createdAt is timestamp &&
-             isValidOptionalString('text', 500) &&
-             isValidOptionalString('imageUrl', 2000);
-    }
-
-    function isValidPrivateMessage(data) {
-      return hasRequiredFields(['senderId', 'senderName', 'text', 'createdAt']) &&
-             hasOnlyAllowedFields(['senderId', 'senderName', 'text', 'imageUrl', 'createdAt']) &&
-             data.senderId == request.auth.uid &&
-             data.senderName is string && data.senderName.size() > 0 && data.senderName.size() < 100 &&
-             data.createdAt is timestamp &&
-             isValidOptionalString('text', 5000) &&
-             isValidOptionalString('imageUrl', 2000);
-    }
-
-    function isValidCall(data) {
-      return hasRequiredFields(['callerId', 'receiverId', 'status', 'createdAt']) &&
-             hasOnlyAllowedFields(['callerId', 'receiverId', 'status', 'offer', 'answer', 'createdAt']) &&
-             data.callerId is string &&
-             data.receiverId is string &&
-             data.status in ['calling', 'connected', 'ended'] &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidAlert(data) {
-      return hasRequiredFields(['title', 'message', 'active', 'createdAt']) &&
-             hasOnlyAllowedFields(['title', 'message', 'link', 'active', 'createdAt']) &&
-             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
-             data.message is string && data.message.size() > 0 && data.message.size() < 2000 &&
-             data.active is bool &&
-             data.createdAt is timestamp &&
-             isValidOptionalString('link', 1000);
-    }
-
-    // ===============================================================
-    // Global Safety Net
+    // Global Safety Net - Default Deny
     // ===============================================================
     match /{document=**} {
       allow read, write: if false;
     }
 
     // ===============================================================
-    // Match Rules
+    // Global Helpers
     // ===============================================================
-    match /chats/{chatId} {
-      // chatId is formatted as uid1_uid2
-      allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-      
-      match /messages/{messageId} {
-        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-        allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidPrivateMessage(request.resource.data);
-      }
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    match /calls/{chatId} {
-      // chatId is formatted as uid1_uid2
-      allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-      allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
-      allow update: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*")) && isValidCall(request.resource.data);
-      allow delete: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
 
-      match /callerCandidates/{candidateId} {
-        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-        allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-      }
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
 
-      match /receiverCandidates/{candidateId} {
-        allow get, list: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-        allow create: if isAuthenticated() && (chatId.matches(".*" + request.auth.uid + ".*"));
-      }
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "jonyoax95@gmail.com" || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isValidId(id) {
+       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ===============================================================
+    // Collection: Users
+    // ===============================================================
+    function isValidUser(data) {
+      return data.uid is string && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt is timestamp;
     }
 
     match /users/{uid} {
-      allow read: if true;
-      allow create: if isAuthenticated() && isValidUser(request.resource.data, false) && (request.resource.data.role == 'user' || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data, true) && (isOwner(uid) || isAdmin()) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow read: if true; // Public profiles
+      allow create: if isUser(uid) && isValidId(uid) && isValidUser(incoming()) && incoming().role == 'user';
+      allow update: if (isUser(uid) || isAdmin()) && 
+                    isValidId(uid) &&
+                    isValidUser(incoming()) && 
+                    (incoming().role == existing().role || isAdmin()) &&
+                    incoming().createdAt == existing().createdAt;
     }
 
-    match /media/{mediaId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && isValidMedia(request.resource.data);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    // ===============================================================
+    // Collection: Streams
+    // ===============================================================
+    function isValidStream(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.status in ['live', 'ended'] &&
+             data.startedAt is timestamp &&
+             data.viewerCount is number &&
+             data.likes is number &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+             (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 1000)) &&
+             (!('privacy' in data) || (data.privacy in ['public', 'private'])) &&
+             (!('latency' in data) || (data.latency in ['normal', 'low'])) &&
+             (!('resolution' in data) || (data.resolution in ['720p', '1080p']));
     }
 
     match /streams/{streamId} {
-      allow read: if true; // Publicly readable for live streams
-      allow create: if isAuthenticated() && isValidStream(request.resource.data) && request.resource.data.userId == request.auth.uid;
-      allow update: if (
-        // Owner/Admin can update everything
-        (isAuthenticated() && isStreamUpdateValid(request.resource.data, resource.data) && (resource.data.userId == request.auth.uid || isAdmin())) ||
-        // Viewers (including unauthenticated) can ONLY update viewerCount or likes
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount', 'likes']) && 
-         (
-           ('viewerCount' in request.resource.data.diff(resource.data).affectedKeys() && 
-            request.resource.data.viewerCount is number &&
-            math.abs(request.resource.data.viewerCount - resource.data.viewerCount) == 1) ||
-           ('likes' in request.resource.data.diff(resource.data).affectedKeys() && 
-            request.resource.data.likes is number &&
-            math.abs(request.resource.data.likes - resource.data.likes) == 1)
-         ))
+      allow read: if true; 
+      allow create: if isVerified() && isValidId(streamId) && isValidStream(incoming()) && 
+                     incoming().startedAt == request.time;
+      allow update: if isValidId(streamId) && (
+        // Action: Owner/Admin Full Update
+        ((isUser(existing().userId) || isAdmin()) && isValidStream(incoming()) && (
+          // Prevent restarting ended streams
+          existing().status != 'ended' || incoming().status == 'ended' || isAdmin()
+        )) ||
+        // Action: Viewer Update (Likes/Viewers)
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['viewerCount', 'likes']) &&
+          (
+            ('viewerCount' in incoming().diff(existing()).affectedKeys() && math.abs(incoming().viewerCount - existing().viewerCount) == 1) ||
+            ('likes' in incoming().diff(existing()).affectedKeys() && math.abs(incoming().likes - existing().likes) == 1)
+          )
+        )
       );
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin() || isUser(existing().userId);
 
-      match /signaling/{signalingId} {
-        allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
-        allow update: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        allow delete: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-
-        match /adminCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-          allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        }
-
-        match /viewerCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-          allow create: if isAuthenticated() && (request.auth.uid == signalingId || isAdmin());
-        }
-      }
-
+      // Sub-collection: Stream Messages
       match /messages/{messageId} {
         allow read: if true;
-        allow create: if isAuthenticated() && isValidMessage(request.resource.data);
-        allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+        allow create: if isSignedIn() && 
+                       isValidId(messageId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().text is string && incoming().text.size() <= 1000 &&
+                       incoming().createdAt == request.time;
+        allow delete: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
       }
 
+      // Sub-collection: Join Requests
       match /joinRequests/{requestId} {
-        allow read: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        allow create: if isAuthenticated() && request.auth.uid == requestId;
-        allow update: if isAuthenticated() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow read: if isSignedIn() && (request.auth.uid == requestId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+        allow write: if isSignedIn() && isValidId(requestId) && (
+          // Create/Update own request
+          (request.auth.uid == requestId && incoming().status in ['pending', 'none']) ||
+          // Host accepts/rejects
+          (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId && 
+           incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+          isAdmin()
+        );
       }
 
+      // Sub-collection: Invitations
+      match /invitations/{invitationId} {
+        allow read: if isSignedIn() && (request.auth.uid == invitationId.split('_')[1] || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin() || (resource != null && resource.data.to == request.auth.uid));
+        allow create: if isSignedIn() && isValidId(invitationId) && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin()) && 
+                       incoming().from == request.auth.uid && 
+                       incoming().createdAt == request.time;
+        allow update: if isSignedIn() && (
+          (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin()) ||
+          (existing().to == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'acceptedAt', 'rejectedAt']))
+        );
+        allow delete: if isSignedIn() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+      }
+      
+      // Signaling subcollections
+      match /signaling/{signalingId} {
+        allow read, write: if isSignedIn() && isValidId(signalingId) && (request.auth.uid == signalingId || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
+      }
+      
       match /guestSignaling/{guestId} {
-        allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
-        allow update: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        allow delete: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-
-        match /guestCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-          allow create: if isAuthenticated() && (guestId == request.auth.uid || isAdmin());
-        }
-
-        match /adminCandidates/{candidateId} {
-          allow read: if isAuthenticated() && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-          allow create: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
-        }
+        allow read, write: if isSignedIn() && isValidId(guestId) && (guestId == request.auth.uid || request.auth.uid == get(/databases/$(database)/documents/streams/$(streamId)).data.userId || isAdmin());
       }
     }
 
-    match /users/{uid}/contacts/{contactId} {
-      allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && isValidContact(request.resource.data);
-      allow update: if isOwner(uid) && isValidContact(request.resource.data);
-      allow delete: if isOwner(uid);
-    }
-
+    // ===============================================================
+    // Collection: News
+    // ===============================================================
     match /news/{newsId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidNews(request.resource.data);
-      allow update: if isAdmin() && isValidNews(request.resource.data);
+      allow create: if isAdmin() && isValidId(newsId) &&
+                     incoming().authorId == request.auth.uid &&
+                     incoming().createdAt == request.time;
+      allow update: if isAdmin() && 
+                     incoming().authorId == existing().authorId &&
+                     incoming().createdAt == existing().createdAt;
       allow delete: if isAdmin();
     }
 
+    // ===============================================================
+    // Collection: Settings & Alerts
+    // ===============================================================
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidId(settingId);
     }
 
     match /alerts/{alertId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidId(alertId);
     }
 
     // ===============================================================
-    // Global Safety Net
+    // Collection: Media & Recordings
     // ===============================================================
-    match /{document=**} {
-      allow read, write: if false;
+    match /media/{mediaId} {
+      allow read: if isSignedIn() && (resource.data.isPublic == true || resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(mediaId) && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /recordings/{recordingId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(recordingId) && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // ===============================================================
+    // Collection: Private Chats & Calls
+    // ===============================================================
+    match /chats/{chatId} {
+      allow read: if isSignedIn() && chatId.matches(".*" + request.auth.uid + ".*");
+      
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && chatId.matches(".*" + request.auth.uid + ".*");
+        allow create: if isSignedIn() && isValidId(messageId) && chatId.matches(".*" + request.auth.uid + ".*") && incoming().senderId == request.auth.uid && incoming().createdAt == request.time;
+      }
+    }
+
+    match /calls/{callId} {
+      allow read, write: if isSignedIn() && isValidId(callId) && callId.matches(".*" + request.auth.uid + ".*");
+      
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn() && callId.matches(".*" + request.auth.uid + ".*");
+      }
+    }
+    
+    // User Contacts
+    match /users/{uid}/contacts/{contactId} {
+      allow read: if isUser(uid) || isAdmin();
+      allow create: if isUser(uid) && isValidId(contactId) && incoming().userId == request.auth.uid && incoming().addedAt == request.time;
+      allow update: if isUser(uid) && incoming().userId == existing().userId;
+      allow delete: if isUser(uid) || isAdmin();
     }
   }
 }
+

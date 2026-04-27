@@ -53,7 +53,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setPreview(null);
     }
 
-    // Upload to Firebase
+    // Upload to LOCAL API
     setUploading(true);
     setProgress(0);
     
@@ -61,30 +61,24 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const sanitizedFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       const targetFolder = folder === 'AUTO' ? sanitizedFileName : folder;
 
-      // Wrap everything in a v-uploads root folder as requested by the user
-      const storageRef = ref(storage, `v-uploads/${targetFolder}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', targetFolder);
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload', true);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const p = (event.loaded / event.total) * 100;
           setProgress(p);
-        }, 
-        (error) => {
-          console.error('Error uploading file:', error);
-          let message = 'Error al subir el archivo: ' + error.message;
-          if (error.code === 'storage/retry-limit-exceeded') {
-            message = 'Error de conexión: Se superó el límite de reintentos. Verifica tu conexión a internet.';
-          }
-          setToast({
-            message,
-            type: 'error',
-            isVisible: true
-          });
-          setUploading(false);
-        }, 
-        async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
+        }
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const response = JSON.parse(xhr.responseText);
+          const url = response.url;
           
           // Save metadata to Firestore if user is logged in
           if (user) {
@@ -112,10 +106,23 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             isVisible: true
           });
           setUploading(false);
+        } else {
+          throw new Error('Error en la subida');
         }
-      );
-    } catch (error) {
-      console.error('Error starting upload:', error);
+      };
+
+      xhr.onerror = () => {
+        throw new Error('Error de red');
+      };
+
+      xhr.send(formData);
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      setToast({
+        message: 'Error al subir el archivo: ' + (error.message || 'Error desconocido'),
+        type: 'error',
+        isVisible: true
+      });
       setUploading(false);
     }
   };

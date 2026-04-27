@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, updateDoc, handleFirestoreError } from '../firebase';
 import { OperationType } from '../types';
-import { Settings as SettingsIcon, Save, AlertTriangle, Languages, ShieldAlert, UserPlus, ShieldCheck, Facebook, Twitter, Instagram, Globe } from 'lucide-react';
+import { Settings as SettingsIcon, Save, AlertTriangle, Languages, ShieldAlert, UserPlus, ShieldCheck, Facebook, Twitter, Instagram, Globe, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react';
 import Toast from '../components/Toast';
 
 const GlobalSettings = () => {
@@ -10,6 +10,7 @@ const GlobalSettings = () => {
   const [appName, setAppName] = useState('');
   const [heroTitle, setHeroTitle] = useState('');
   const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
   const [footerText, setFooterText] = useState('');
   const [themeColor, setThemeColor] = useState('#ff4e00');
   const [contactEmail, setContactEmail] = useState('');
@@ -37,6 +38,7 @@ const GlobalSettings = () => {
           setAppName(data.appName || 'Voz Mixe');
           setHeroTitle(data.heroTitle || 'La Voz Mixe');
           setHeroSubtitle(data.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
+          setHeroImageUrl(data.heroImageUrl || '');
           setFooterText(data.footerText || 'La región de los jamás conquistados.');
           setThemeColor(data.themeColor || '#ff4e00');
           setContactEmail(data.contactEmail || 'contacto@vozmixe.mx');
@@ -69,6 +71,7 @@ const GlobalSettings = () => {
       setAppName('Voz Mixe');
       setHeroTitle('La Voz Mixe');
       setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
+      setHeroImageUrl('');
       setFooterText('La región de los jamás conquistados.');
       setThemeColor('#ff4e00');
       setContactEmail('contacto@vozmixe.mx');
@@ -89,6 +92,7 @@ const GlobalSettings = () => {
         appName,
         heroTitle,
         heroSubtitle,
+        heroImageUrl,
         footerText,
         themeColor,
         contactEmail,
@@ -106,6 +110,34 @@ const GlobalSettings = () => {
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'settings/global');
       setToast({ message: 'Error al guardar.', type: 'error', isVisible: true });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'site-assets');
+
+    try {
+      setSaving(true);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Error al subir imagen');
+      
+      const data = await response.json();
+      setHeroImageUrl(data.url);
+      setToast({ message: 'Imagen cargada temporalmente. No olvides guardar.', type: 'success', isVisible: true });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setToast({ message: 'Error al subir la imagen.', type: 'error', isVisible: true });
     } finally {
       setSaving(false);
     }
@@ -183,6 +215,63 @@ const GlobalSettings = () => {
                   onChange={(e) => setHeroSubtitle(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all min-h-[100px] resize-none"
                 />
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Imagen de Fondo (Hero)</label>
+                <div className="glass p-6 rounded-3xl border-white/10 flex flex-col md:flex-row items-center gap-6">
+                  {heroImageUrl ? (
+                    <div className="relative group w-full md:w-48 h-32 rounded-2xl overflow-hidden shrink-0">
+                      <img 
+                        src={heroImageUrl} 
+                        alt="Hero Preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback if local image fails to load
+                          console.error("Image load error:", heroImageUrl);
+                        }}
+                      />
+                      <button 
+                        onClick={() => setHeroImageUrl('')}
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-8 h-8 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full md:w-48 h-32 rounded-2xl bg-white/5 flex flex-col items-center justify-center border-2 border-dashed border-white/10 shrink-0">
+                       <ImageIcon className="w-8 h-8 text-white/20 mb-2" />
+                       <span className="text-[10px] font-black uppercase text-white/20 tracking-widest">Sin Imagen</span>
+                    </div>
+                  )}
+
+                  <div className="flex-1 space-y-4 text-center md:text-left">
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">
+                      Recomendado: 1920x1080px. Máximo 10MB.
+                      Esta imagen aparecerá en el fondo de la pantalla de inicio.
+                    </p>
+                    <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                      <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        {heroImageUrl ? 'Reemplazar Imagen' : 'Subir Imagen'}
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                        />
+                      </label>
+                      {heroImageUrl && (
+                        <button 
+                          onClick={() => setHeroImageUrl('')}
+                          className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500/60 hover:text-red-500 transition-all"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Texto del Footer</label>

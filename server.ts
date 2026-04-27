@@ -4,8 +4,34 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import 'dotenv/config';
+import fs from "fs-extra";
+import multer from "multer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.join(__dirname, "v-uploads");
+
+// Ensure uploads directory exists
+fs.ensureDirSync(UPLOADS_DIR);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = req.body.folder || "uploads";
+    // Sanitize folder path to prevent directory traversal
+    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
+    const dest = path.join(UPLOADS_DIR, safeFolder);
+    fs.ensureDirSync(dest);
+    cb(null, dest);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+});
 
 async function startServer() {
   const app = express();
@@ -13,6 +39,13 @@ async function startServer() {
   const NODE_ENV = process.env.NODE_ENV || 'development';
 
   console.log(`[Server] Starting in ${NODE_ENV} mode...`);
+
+  // Middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Serve static uploads
+  app.use("/v-uploads", express.static(UPLOADS_DIR));
 
   const apiRouter = express.Router();
 
@@ -23,6 +56,58 @@ async function startServer() {
 
   apiRouter.get("/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // File Upload API
+  apiRouter.post("/upload", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se subió ningún archivo" });
+    }
+    
+    // Construct the URL relative to the server
+    const folder = req.body.folder || "uploads";
+    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
+    const fileUrl = `/v-uploads/${safeFolder}/${req.file.filename}`;
+    
+    res.json({ 
+      url: fileUrl,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileType: req.file.mimetype
+    });
+  });
+
+  // List Files API (to replace Firebase listAll)
+  apiRouter.get("/files/:folder(*)", async (req, res) => {
+    try {
+      const folder = req.params.folder || "";
+      const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
+      const fullPath = path.join(UPLOADS_DIR, safeFolder);
+      
+      if (!fs.existsSync(fullPath)) {
+        return res.json([]);
+      }
+
+      const files = await fs.readdir(fullPath);
+      const fileData = await Promise.all(
+        files.map(async (fileName) => {
+          const stats = await fs.stat(path.join(fullPath, fileName));
+          if (stats.isDirectory()) return null;
+          
+          return {
+            name: fileName,
+            url: `/v-uploads/${safeFolder}/${fileName}`,
+            size: stats.size,
+            mtime: stats.mtime
+          };
+        })
+      );
+
+      res.json(fileData.filter(Boolean));
+    } catch (error) {
+      console.error("[API] Error listing files:", error);
+      res.status(500).json({ error: "No se pudieron listar los archivos" });
+    }
   });
 
   apiRouter.get("/livekit/test", async (req, res) => {

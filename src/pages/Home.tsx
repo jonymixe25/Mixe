@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info } from 'lucide-react';
+import { Video, Users, Play, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -96,7 +96,7 @@ const Home: React.FC = () => {
               
               <div className="flex items-start gap-5">
                 <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center relative shrink-0">
-                  <Radio className="w-7 h-7 text-brand animate-pulse" />
+                  <Video className="w-7 h-7 text-brand animate-pulse" />
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full animate-pulse border-2 border-[#0a0502]" />
                 </div>
                 
@@ -133,9 +133,13 @@ const Home: React.FC = () => {
           initial={{ scale: 1.15 }}
           animate={{ scale: 1 }}
           transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-          src="https://picsum.photos/seed/mixe-culture/1920/1080?blur=1"
+          src={globalSettings?.heroImageUrl || "https://picsum.photos/seed/mixe-culture/1920/1080?blur=1"}
           alt="Voz Mixe Hero"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+          onError={(e) => {
+            // If local image fails, use fallback
+            (e.target as HTMLImageElement).src = "https://picsum.photos/seed/mixe-culture/1920/1080?blur=1";
+          }}
           referrerPolicy="no-referrer"
         />
         <div className="relative z-20 text-center max-w-5xl px-6">
@@ -184,7 +188,7 @@ const Home: React.FC = () => {
                 to={`/stream/${streams[0].id}`}
                 className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} glass text-white px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white/10 transition-all duration-500 transform hover:-translate-y-2 active:scale-95`}
               >
-                <Radio className="w-6 h-6 text-brand animate-pulse" />
+                <Video className="w-6 h-6 text-brand animate-pulse" />
                 <span>En Vivo Ahora</span>
               </Link>
             )}
@@ -308,7 +312,7 @@ const Home: React.FC = () => {
         <div className="flex items-end justify-between px-2">
           <div className="space-y-2">
             <div className="flex items-center gap-3 text-[#ff4e00]">
-              <Radio className="w-5 h-5 animate-pulse" />
+              <Video className="w-5 h-5 animate-pulse" />
               <span className="text-xs font-black uppercase tracking-[0.3em]">Directo</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic"><span>En Vivo Ahora</span></h2>

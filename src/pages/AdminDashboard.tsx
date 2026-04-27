@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError, limit, startAfter } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Settings as SettingsIcon, Wifi, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 
@@ -492,7 +492,7 @@ const AdminDashboard = () => {
         {[
           { label: 'Total Usuarios', value: users.length, icon: Users, color: 'text-blue-500' },
           { label: 'Total Streams', value: totalStreams, icon: Video, color: 'text-purple-500' },
-          { label: 'Streams Activos', value: streams.filter(s => s.status === 'live').length, icon: Radio, color: 'text-red-500', live: true }
+          { label: 'Streams Activos', value: streams.filter(s => s.status === 'live').length, icon: Video, color: 'text-red-500', live: true }
         ].map((stat, i) => (
           <motion.div 
             key={stat.label}

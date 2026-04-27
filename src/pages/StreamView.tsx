@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, storage, ref, uploadBytesResumable, getDownloadURL, where } from '../firebase';
+import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, where } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Radio, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock, Video } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -220,6 +220,8 @@ const StreamView = () => {
           setIncomingInvitation(invite);
           setIsInvitationModalOpen(true);
         }
+      }, (error) => {
+        console.error('Invitations listener error:', error);
       });
     }
 
@@ -233,6 +235,8 @@ const StreamView = () => {
         } else {
           setJoinStatus('none');
         }
+      }, (error) => {
+        console.error('Join status listener error:', error);
       });
     }
 
@@ -270,7 +274,15 @@ const StreamView = () => {
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
-        track.detach().forEach((element) => element.remove());
+        track.detach().forEach((element) => {
+          try {
+            if (element.parentNode) {
+              element.parentNode.removeChild(element);
+            }
+          } catch (e) {
+            console.warn("Error removing track element:", e);
+          }
+        });
         if (track.kind === Track.Kind.Video) {
           if (isMounted) setHasVideo(false);
           videoElementRef.current = null;
@@ -455,36 +467,48 @@ const StreamView = () => {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const storageRef = ref(storage, `v-uploads/chat/${id}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', `chat/${id}`);
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload', true);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const p = (event.loaded / event.total) * 100;
           setChatUploadProgress(p);
-        },
-        (error) => {
-          console.error('Error uploading chat image:', error);
-          if (error.code === 'storage/retry-limit-exceeded') {
-            alert('Error de conexión: Se superó el límite de reintentos. Verifica tu conexión.');
-          }
-          setIsUploadingChatImage(false);
-        },
-        async () => {
-          const url = await getDownloadURL(uploadTask.snapshot.ref);
+        }
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const response = JSON.parse(xhr.responseText);
+          const url = response.url;
+          
           await addDoc(collection(db, 'streams', id, 'messages'), {
             userId: user.uid,
             userName: user.displayName,
             imageUrl: url,
             createdAt: serverTimestamp(),
           });
+          
           setIsUploadingChatImage(false);
           setChatUploadProgress(0);
           if (chatImageInputRef.current) chatImageInputRef.current.value = '';
+        } else {
+          throw new Error('Error en la subida');
         }
-      );
-    } catch (error) {
-      console.error('Error starting chat image upload:', error);
+      };
+
+      xhr.onerror = () => {
+        throw new Error('Error de red');
+      };
+
+      xhr.send(formData);
+    } catch (error: any) {
+      console.error('Error uploading chat image:', error);
+      setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
       setIsUploadingChatImage(false);
     }
   };
@@ -629,7 +653,7 @@ const StreamView = () => {
         {stream?.status === 'ended' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl z-[70]">
             <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/10">
-              <Radio className="w-10 h-10 text-white/20" />
+              <Video className="w-10 h-10 text-white/20" />
             </div>
             <h2 className="text-3xl font-display font-black uppercase italic tracking-tighter mb-4">La transmisión ha finalizado</h2>
             <p className="text-white/40 italic mb-10">Gracias por acompañarnos en esta sesión cultural.</p>
@@ -647,7 +671,7 @@ const StreamView = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl z-50">
             <div className="relative">
               <div className="w-24 h-24 border-2 border-[#ff4e00]/20 rounded-full animate-spin border-t-[#ff4e00] shadow-[0_0_30px_rgba(255,78,0,0.15)]" />
-              <Radio className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
+              <Video className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
             </div>
             <p className="mt-8 font-mono uppercase tracking-[0.3em] text-[10px] text-[#ff4e00]/80">
               <span>{connectionStatus === 'connecting' ? 'CONECTANDO CON EL ANFITRIÓN...' : 'ERROR DE SEÑAL'}</span>
@@ -674,7 +698,7 @@ const StreamView = () => {
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md z-40">
             <div className="relative">
               <div className="w-20 h-20 border border-white/10 rounded-full flex items-center justify-center mb-6">
-                <Radio className="w-8 h-8 text-white/20 animate-pulse" />
+                <Video className="w-8 h-8 text-white/20 animate-pulse" />
               </div>
             </div>
             <p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.3em] italic">
@@ -960,7 +984,7 @@ const StreamView = () => {
           <div className="bg-black/40 backdrop-blur-2xl p-8 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3 text-[#ff4e00]">
-                <Radio className="w-4 h-4" />
+                <Video className="w-4 h-4" />
                 <span className="text-[10px] font-mono uppercase tracking-widest">Descripción</span>
               </div>
               <button 
@@ -1095,7 +1119,7 @@ const StreamView = () => {
         {suggestedStreams.length > 0 && (
           <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-6 shadow-2xl">
             <h3 className="text-[#ff4e00] font-mono uppercase tracking-widest text-xs mb-6 flex items-center gap-2">
-              <Radio className="w-4 h-4" />
+              <Video className="w-4 h-4" />
               Transmisiones Sugeridas
             </h3>
             <div className="space-y-4">
