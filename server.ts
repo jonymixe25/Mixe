@@ -44,6 +44,9 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Serve static uploads
+  app.use("/v-uploads", express.static(UPLOADS_DIR));
+
   // Helper to clean environment variables from common copy-paste issues (spaces, quotes)
   const cleanEnvVar = (val: string | undefined): string => {
     if (!val) return '';

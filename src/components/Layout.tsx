@@ -157,7 +157,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-brand selection:text-white overflow-x-hidden">
+    <div translate="no" className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-brand selection:text-white overflow-x-hidden">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />
@@ -280,10 +280,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <item.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${location.pathname === item.path ? 'text-brand' : ''}`} />
                   <span>{item.label}</span>
                   {location.pathname === item.path && (
-                    <motion.div 
-                      layoutId="nav-indicator"
-                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand rounded-full shadow-[0_0_10px_var(--primary-color)]"
-                    />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand rounded-full shadow-[0_0_10px_var(--primary-color)]" />
                   )}
                 </Link>
               ))}
@@ -491,13 +488,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full"
           >
             {children}
           </motion.div>
