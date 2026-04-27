@@ -8,6 +8,9 @@ import Toast from '../components/Toast';
 const GlobalSettings = () => {
   const { user } = useAuth();
   const [appName, setAppName] = useState('');
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [footerText, setFooterText] = useState('');
   const [themeColor, setThemeColor] = useState('#ff4e00');
   const [contactEmail, setContactEmail] = useState('');
   const [enableMixe, setEnableMixe] = useState(false);
@@ -31,9 +34,12 @@ const GlobalSettings = () => {
         const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
-          setAppName(data.appName || '');
+          setAppName(data.appName || 'Voz Mixe');
+          setHeroTitle(data.heroTitle || 'La Voz Mixe');
+          setHeroSubtitle(data.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
+          setFooterText(data.footerText || 'La región de los jamás conquistados.');
           setThemeColor(data.themeColor || '#ff4e00');
-          setContactEmail(data.contactEmail || '');
+          setContactEmail(data.contactEmail || 'contacto@vozmixe.mx');
           setEnableMixe(data.enableMixe || false);
           setMaintenanceMode(data.maintenanceMode || false);
           setRegistrationEnabled(data.registrationEnabled ?? true);
@@ -41,6 +47,13 @@ const GlobalSettings = () => {
           setFacebookUrl(data.socialLinks?.facebook || '');
           setTwitterUrl(data.socialLinks?.twitter || '');
           setInstagramUrl(data.socialLinks?.instagram || '');
+        } else {
+          // Defaults if document doesn't exist
+          setAppName('Voz Mixe');
+          setHeroTitle('La Voz Mixe');
+          setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
+          setFooterText('La región de los jamás conquistados.');
+          setContactEmail('contacto@vozmixe.mx');
         }
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'settings/global');
@@ -51,11 +64,32 @@ const GlobalSettings = () => {
     fetchSettings();
   }, []);
 
+  const resetDefaults = () => {
+    if (window.confirm('¿Estás seguro de que deseas restablecer todos los ajustes a los valores predeterminados?')) {
+      setAppName('Voz Mixe');
+      setHeroTitle('La Voz Mixe');
+      setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
+      setFooterText('La región de los jamás conquistados.');
+      setThemeColor('#ff4e00');
+      setContactEmail('contacto@vozmixe.mx');
+      setEnableMixe(false);
+      setMaintenanceMode(false);
+      setRegistrationEnabled(true);
+      setModerationSensitivity('medium');
+      setFacebookUrl('');
+      setTwitterUrl('');
+      setInstagramUrl('');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'settings', 'global'), {
         appName,
+        heroTitle,
+        heroSubtitle,
+        footerText,
         themeColor,
         contactEmail,
         enableMixe,
@@ -94,6 +128,14 @@ const GlobalSettings = () => {
           <span className="text-xs font-black uppercase tracking-[0.3em]">Configuración Global</span>
         </div>
         <h1 className="text-5xl font-display font-black tracking-tighter uppercase italic">Ajustes de la App</h1>
+        <div className="flex justify-end">
+          <button 
+            onClick={resetDefaults}
+            className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-red-500 transition-colors"
+          >
+            Restablecer Predeterminados
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -120,6 +162,35 @@ const GlobalSettings = () => {
                   value={themeColor}
                   onChange={(e) => setThemeColor(e.target.value)}
                   className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl p-1 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Título de Bienvenida (Hero)</label>
+                <input 
+                  type="text"
+                  value={heroTitle}
+                  onChange={(e) => setHeroTitle(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Subtítulo de Bienvenida (Hero)</label>
+                <textarea 
+                  value={heroSubtitle}
+                  onChange={(e) => setHeroSubtitle(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all min-h-[100px] resize-none"
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Texto del Footer</label>
+                <input 
+                  type="text"
+                  value={footerText}
+                  onChange={(e) => setFooterText(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all"
                 />
               </div>
             </div>

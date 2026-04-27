@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, Clock, Volume2, X, Info } from 'lucide-react';
+import { Video, Users, Play, Radio, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -153,9 +153,9 @@ const Home: React.FC = () => {
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className={`${isMobile ? 'text-5xl' : 'text-6xl sm:text-8xl md:text-[10rem]'} font-display font-black tracking-tighter uppercase italic leading-[0.8] mb-10`}
           >
-            <span className="block">{globalSettings?.appName?.split(' ')[0] || 'La Voz'}</span>
+            <span className="block">{globalSettings?.heroTitle?.split(' ')[0] || 'La Voz'}</span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-brand/80 to-brand bg-[length:200%_auto] animate-gradient">
-              {globalSettings?.appName?.split(' ').slice(1).join(' ') || 'Mixe'}
+              {globalSettings?.heroTitle?.split(' ').slice(1).join(' ') || 'Mixe'}
             </span>
           </motion.h1>
           <motion.p 
@@ -164,7 +164,7 @@ const Home: React.FC = () => {
             transition={{ delay: 0.5, duration: 1 }}
             className={`${isMobile ? 'text-lg' : 'text-xl sm:text-2xl md:text-3xl'} text-white/60 font-medium italic max-w-3xl mx-auto leading-tight`}
           >
-            <span>"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.</span>
+            <span>{globalSettings?.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.'}</span>
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -383,70 +383,6 @@ const Home: React.FC = () => {
             </Link>
           </div>
         )}
-      </section>
-
-      {/* Mixe Radio Section */}
-      <section className="space-y-12">
-        <div className="flex items-center justify-between px-2">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 text-[#ff4e00]">
-              <Volume2 className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-[0.3em]">Radio en Línea</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic"><span>Radio Ayuujk</span></h2>
-          </div>
-        </div>
-        <div className="glass p-8 md:p-12 rounded-[3rem] border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Radio className="w-64 h-64 text-[#ff4e00]" />
-          </div>
-          <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
-            <div className="w-48 h-48 bg-[#ff4e00] rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-[#ff4e00]/30 group-hover:rotate-6 transition-transform duration-700">
-              <Radio className="w-24 h-24 text-white" />
-            </div>
-            <div className="flex-1 space-y-6 text-center md:text-left">
-              <div className="space-y-2">
-                <h3 className="text-3xl font-display font-black uppercase italic tracking-tight">Sintonía Directa</h3>
-                <p className="text-white/40 text-lg italic">Escucha la música y las voces de nuestra tierra en cualquier parte del mundo.</p>
-              </div>
-              <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                <button className="bg-white text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all shadow-xl">
-                  <Play className="w-5 h-5 fill-current" />
-                  <span>Escuchar Ahora</span>
-                </button>
-                <div className="glass px-8 py-5 rounded-2xl border-white/10 flex items-center gap-4">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/60">124 Oyentes en línea</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stream Schedule Section */}
-      <section className="space-y-12">
-        <div className="flex items-center gap-3 text-[#ff4e00] px-2">
-          <Clock className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-[0.3em]">Programación</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
-          {[
-            { day: 'Lunes', time: '18:00', title: 'Música Tradicional', host: 'Juan P.' },
-            { day: 'Miércoles', time: '19:30', title: 'Historias Ayuujk', host: 'María G.' },
-            { day: 'Viernes', time: '20:00', title: 'Noticias de la Región', host: 'Pedro S.' },
-            { day: 'Domingo', time: '10:00', title: 'Misa y Comunidad', host: 'Padre Luis' }
-          ].map((item, i) => (
-            <div key={i} className="glass p-6 rounded-[2rem] border-white/10 hover:border-[#ff4e00]/30 transition-all group">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">{item.day}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{item.time}</span>
-              </div>
-              <h4 className="font-bold text-sm group-hover:text-[#ff4e00] transition-colors mb-2">{item.title}</h4>
-              <p className="text-[10px] text-white/20 font-black uppercase tracking-widest italic">{item.host}</p>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* Latest News Section */}

@@ -517,7 +517,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </span>
             </div>
             <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.3em] italic">
-              La región de los jamás conquistados.
+              {globalSettings?.footerText || 'La región de los jamás conquistados.'}
             </p>
           </div>
           

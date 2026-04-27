@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError } from '../firebase';
+import { db, collection, getDocs, doc, deleteDoc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp, handleFirestoreError, limit, startAfter } from '../firebase';
 import { StreamSession, UserProfile, OperationType } from '../types';
-import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi, Bell } from 'lucide-react';
+import { Shield, Users, Video, Trash2, UserCog, AlertTriangle, Newspaper, Plus, Save, ExternalLink, CheckCircle2, Radio, Settings as SettingsIcon, Wifi, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Modal from '../components/Modal';
 
@@ -13,6 +14,14 @@ import Toast from '../components/Toast';
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [streams, setStreams] = useState<StreamSession[]>([]);
+  const [totalStreams, setTotalStreams] = useState(0);
+  const [streamsPage, setStreamsPage] = useState(1);
+  const [lastVisibleDoc, setLastVisibleDoc] = useState<any>(null);
+  const [firstVisibleDoc, setFirstVisibleDoc] = useState<any>(null);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const STREAMS_PER_PAGE = 8;
+  const [pageHistory, setPageHistory] = useState<any[]>([null]); // Stores starting cursors
+
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,13 +61,44 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
 
-    // Listen to all streams
-    const streamsQuery = query(collection(db, 'streams'), orderBy('startedAt', 'desc'));
+    // Separate effect for streams with pagination
+    let streamsQuery = query(
+      collection(db, 'streams'), 
+      orderBy('startedAt', 'desc'),
+      limit(STREAMS_PER_PAGE + 1)
+    );
+
+    // Apply cursor if we are not on the first page
+    const currentCursor = pageHistory[streamsPage - 1];
+    if (currentCursor) {
+      streamsQuery = query(
+        collection(db, 'streams'),
+        orderBy('startedAt', 'desc'),
+        startAfter(currentCursor),
+        limit(STREAMS_PER_PAGE + 1)
+      );
+    }
+
     const unsubscribeStreams = onSnapshot(streamsQuery, (snapshot) => {
-      setStreams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession)));
+      const docs = snapshot.docs;
+      const hasMore = docs.length > STREAMS_PER_PAGE;
+      const visibleDocs = hasMore ? docs.slice(0, STREAMS_PER_PAGE) : docs;
+      
+      setStreams(visibleDocs.map(doc => ({ id: doc.id, ...doc.data() } as StreamSession)));
+      setHasNextPage(hasMore);
+      
+      // Store the last doc of the current PAGE for next button
+      if (visibleDocs.length > 0) {
+        setLastVisibleDoc(visibleDocs[visibleDocs.length - 1]);
+      }
     }, (error) => {
       console.error('Firestore Error (streams):', error);
       setToast({ message: 'Error cargando transmisiones', type: 'error', isVisible: true });
+    });
+
+    // Fetch total count for stats (Note: if volume is huge, use a counter doc or count())
+    getDocs(collection(db, 'streams')).then(snap => {
+      setTotalStreams(snap.size);
     });
 
     // Fetch all users
@@ -92,7 +132,22 @@ const AdminDashboard = () => {
       unsubscribeNews();
       unsubscribeAlerts();
     };
-  }, [user]);
+  }, [user, streamsPage, pageHistory]);
+
+  const handleNextPage = () => {
+    if (!hasNextPage || !lastVisibleDoc) return;
+    setPageHistory(prev => {
+        const next = [...prev];
+        next[streamsPage] = lastVisibleDoc;
+        return next;
+    });
+    setStreamsPage(p => p + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (streamsPage === 1) return;
+    setStreamsPage(p => p - 1);
+  };
 
   const handleCreateNews = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -426,9 +481,9 @@ const AdminDashboard = () => {
               {tab === 'streams' ? 'Streams' : tab === 'users' ? 'Usuarios' : tab === 'news' ? 'Noticias' : 'Alertas'}
             </button>
           ))}
-          <a href="/settings" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2 shrink-0">
+          <Link to="/settings" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all duration-300 flex items-center gap-2 shrink-0">
             <SettingsIcon className="w-4 h-4" /> Ajustes
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -436,7 +491,7 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {[
           { label: 'Total Usuarios', value: users.length, icon: Users, color: 'text-blue-500' },
-          { label: 'Total Streams', value: streams.length, icon: Video, color: 'text-purple-500' },
+          { label: 'Total Streams', value: totalStreams, icon: Video, color: 'text-purple-500' },
           { label: 'Streams Activos', value: streams.filter(s => s.status === 'live').length, icon: Radio, color: 'text-red-500', live: true }
         ].map((stat, i) => (
           <motion.div 
@@ -543,6 +598,31 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              <div className="p-8 border-t border-white/5 flex items-center justify-between bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 italic">
+                  Página <span className="text-white/60">{streamsPage}</span> de {Math.ceil(totalStreams / STREAMS_PER_PAGE) || 1}
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={streamsPage === 1}
+                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-white/10 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white disabled:opacity-20 active:scale-95"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                    <span>Anterior</span>
+                  </button>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={!hasNextPage}
+                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-white/10 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white disabled:opacity-20 active:scale-95"
+                  >
+                    <span>Siguiente</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           ) : activeTab === 'alerts' ? (
             <div className="p-10 lg:p-16 space-y-16">
