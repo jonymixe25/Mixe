@@ -34,8 +34,8 @@ const FileStorage: React.FC = () => {
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
       formData.append('folder', `users/${user.uid}/files`);
+      formData.append('file', file);
 
       const response = await fetch('/api/upload', {
         method: 'POST',

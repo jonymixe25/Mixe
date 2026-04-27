@@ -468,8 +468,8 @@ const StreamView = () => {
     setChatUploadProgress(0);
     try {
       const formData = new FormData();
-      formData.append('file', file);
       formData.append('folder', `chat/${id}`);
+      formData.append('file', file);
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);

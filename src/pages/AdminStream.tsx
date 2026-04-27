@@ -487,8 +487,8 @@ export default function AdminStream() {
       const folder = `recordings/${user.uid}`;
       
       const formData = new FormData();
-      formData.append('file', blob, fileName);
       formData.append('folder', folder);
+      formData.append('file', blob, fileName);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -821,8 +821,8 @@ export default function AdminStream() {
     setChatUploadProgress(0);
     try {
       const formData = new FormData();
-      formData.append('file', file);
       formData.append('folder', `chat/${activeStream.id}`);
+      formData.append('file', file);
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);

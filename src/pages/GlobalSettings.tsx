@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, doc, getDoc, updateDoc, handleFirestoreError } from '../firebase';
+import { db, doc, getDoc, setDoc, handleFirestoreError } from '../firebase';
 import { OperationType } from '../types';
 import { Settings as SettingsIcon, Save, AlertTriangle, Languages, ShieldAlert, UserPlus, ShieldCheck, Facebook, Twitter, Instagram, Globe, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react';
 import Toast from '../components/Toast';
@@ -88,7 +88,7 @@ const GlobalSettings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'settings', 'global'), {
+      await setDoc(doc(db, 'settings', 'global'), {
         appName,
         heroTitle,
         heroSubtitle,
@@ -105,7 +105,7 @@ const GlobalSettings = () => {
           twitter: twitterUrl,
           instagram: instagramUrl
         }
-      });
+      }, { merge: true });
       setToast({ message: 'Configuración guardada.', type: 'success', isVisible: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'settings/global');
@@ -120,8 +120,8 @@ const GlobalSettings = () => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append('file', file);
     formData.append('folder', 'site-assets');
+    formData.append('file', file);
 
     try {
       setSaving(true);

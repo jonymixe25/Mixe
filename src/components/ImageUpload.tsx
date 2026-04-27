@@ -62,8 +62,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const targetFolder = folder === 'AUTO' ? sanitizedFileName : folder;
 
       const formData = new FormData();
-      formData.append('file', file);
       formData.append('folder', targetFolder);
+      formData.append('file', file);
 
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
