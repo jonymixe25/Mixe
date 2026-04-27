@@ -142,7 +142,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const navItems = [
     { path: '/', label: 'Inicio', icon: Home },
-    { path: '/shorts', label: 'Shorts', icon: Film },
     { path: '/news', label: 'Noticias', icon: Newspaper },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },

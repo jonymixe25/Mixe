@@ -27,7 +27,6 @@ const Register = lazy(() => import('./pages/Register'));
 const FileStorage = lazy(() => import('./pages/FileStorage'));
 const GlobalSettings = lazy(() => import('./pages/GlobalSettings'));
 const WebPlatform = lazy(() => import('./pages/WebPlatform'));
-const Shorts = lazy(() => import('./pages/Shorts'));
 const PrivateConference = lazy(() => import('./pages/PrivateConference'));
 
 export default function App() {
@@ -54,7 +53,6 @@ export default function App() {
                       <Route path="/register" element={<Register />} />
                       <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
                       <Route path="/web" element={<WebPlatform />} />
-                      <Route path="/shorts" element={<Shorts />} />
                       <Route path="/conference/:roomId" element={<AuthGuard><PrivateConference /></AuthGuard>} />
                     </Routes>
                   </Suspense>
