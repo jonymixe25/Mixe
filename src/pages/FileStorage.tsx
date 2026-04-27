@@ -18,7 +18,20 @@ const FileStorage: React.FC = () => {
     try {
       const folderPath = `users/${user.uid}/files`;
       const response = await fetch(`/api/files/${folderPath}`);
-      if (!response.ok) throw new Error('Error al obtener archivos');
+      const contentType = response.headers.get('content-type');
+
+      if (!response.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al obtener archivos');
+        }
+        throw new Error(`Servidor respondió con status: ${response.status}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Respuesta no válida del servidor (JSON esperado).');
+      }
+
       const fileData = await response.json();
       setFiles(fileData);
     } catch (error) {
@@ -42,7 +55,18 @@ const FileStorage: React.FC = () => {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Error en la subida');
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error en la subida');
+        }
+        throw new Error(`Error del servidor: ${response.status}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Respuesta no válida del servidor (JSON esperado).');
+      }
       
       await fetchFiles();
       setUploading(false);

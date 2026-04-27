@@ -495,7 +495,18 @@ export default function AdminStream() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Error en la subida de la grabación');
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al subir la grabación');
+        }
+        throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('El servidor no devolvió una respuesta válida (JSON esperado).');
+      }
       
       const data = await response.json();
       const downloadUrl = data.url;

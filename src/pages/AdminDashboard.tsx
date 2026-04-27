@@ -316,6 +316,27 @@ const AdminDashboard = () => {
     setLiveKitStatus(null);
     try {
       const res = await fetch('/api/livekit/test');
+      const contentType = res.headers.get('content-type');
+
+      if (!res.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          setLiveKitStatus({ 
+            type: 'error', 
+            message: data.message || 'Error del servidor',
+            debug: data.debug,
+            hint: data.hint
+          });
+          return;
+        }
+        throw new Error(`Servidor respondió con status: ${res.status}`);
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(`Respuesta no válida (esperado JSON, recibido HTML/Texto). Verifica la ruta de la API.`);
+      }
+
       const data = await res.json();
       if (data.status === 'ok') {
         setLiveKitStatus({ 
@@ -332,7 +353,10 @@ const AdminDashboard = () => {
         });
       }
     } catch (err) {
-      setLiveKitStatus({ type: 'error', message: 'No se pudo contactar con el servidor de prueba.' });
+      setLiveKitStatus({ 
+        type: 'error', 
+        message: err instanceof Error ? err.message : 'No se pudo contactar con el servidor de prueba.' 
+      });
     } finally {
       setTestingLiveKit(false);
     }

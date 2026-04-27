@@ -49,8 +49,11 @@ async function startServer() {
 
   const apiRouter = express.Router();
 
+  // Root level API check (no router)
+  app.get("/api/ping", (req, res) => res.json({ status: "pong" }));
+
   apiRouter.use((req, res, next) => {
-    console.log(`[API] ${req.method} ${req.path}`);
+    console.log(`[API Request] ${req.method} ${req.path}`);
     next();
   });
 
@@ -136,9 +139,9 @@ async function startServer() {
         return cleaned;
       };
 
-      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT);
-      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET);
-      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST);
+      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
+      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
+      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || 'wss://new-app-6tu2ilh8.livekit.cloud');
 
       const debugInfo = {
         urlFound: !!livekitUrl,
@@ -245,9 +248,9 @@ async function startServer() {
       };
 
       // Prioritize environment variables from Secrets panel
-      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT);
-      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA);
-      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL);
+      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
+      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
+      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL || 'wss://new-app-6tu2ilh8.livekit.cloud');
 
       // Basic cleaning for Secret (just trim standard whitespace)
       const finalSecret = apiSecret.trim();
@@ -344,13 +347,14 @@ async function startServer() {
     }
   });
 
-  // API 404 handler
-  apiRouter.use((req, res) => {
-    console.warn(`[API] Route not found: ${req.method} ${req.path}`);
-    res.status(404).json({ error: `API route not found: ${req.path}` });
-  });
-
+  // Mount the router at /api
   app.use("/api", apiRouter);
+
+  // Fallback for /api that didn't match any route
+  app.all("/api/*", (req, res) => {
+    console.warn(`[API] 404 - Not Found: ${req.method} ${req.originalUrl}`);
+    res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

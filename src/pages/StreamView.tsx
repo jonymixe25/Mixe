@@ -206,7 +206,7 @@ const StreamView = () => {
 
     // Listen for invitations
     let unsubscribeInvitations = () => {};
-    if (id && viewerIdentity) {
+    if (id && user && viewerIdentity) {
       const q = query(
         collection(db, 'streams', id, 'invitations'),
         where('to', '==', viewerIdentity),
