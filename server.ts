@@ -8,10 +8,18 @@ import fs from "fs-extra";
 import multer from "multer";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.join(__dirname, "v-uploads");
+const UPLOADS_DIR = path.join(process.cwd(), "v-uploads");
+const SITE_ASSETS_DIR = path.join(UPLOADS_DIR, "site-assets");
+const THUMBNAILS_DIR = path.join(UPLOADS_DIR, "thumbnails");
+const CHAT_UPLOADS_DIR = path.join(UPLOADS_DIR, "chat-uploads");
 
-// Ensure uploads directory exists
-fs.ensureDirSync(UPLOADS_DIR);
+// Ensure all required upload directories exist immediately
+[UPLOADS_DIR, SITE_ASSETS_DIR, THUMBNAILS_DIR, CHAT_UPLOADS_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    console.log(`[Server] Creating directory: ${dir}`);
+    fs.ensureDirSync(dir);
+  }
+});
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -39,6 +47,21 @@ async function startServer() {
   const NODE_ENV = process.env.NODE_ENV || 'development';
 
   console.log(`[Server] Starting in ${NODE_ENV} mode...`);
+  
+  // Debug: Check existing files in v-uploads
+  try {
+    const folders = await fs.readdir(UPLOADS_DIR);
+    console.log(`[Server] Found ${folders.length} folders in v-uploads`);
+    for (const folder of folders) {
+      const stats = await fs.stat(path.join(UPLOADS_DIR, folder));
+      if (stats.isDirectory()) {
+         const files = await fs.readdir(path.join(UPLOADS_DIR, folder));
+         console.log(`[Server] Folder: ${folder} - Files: ${files.length}`);
+      }
+    }
+  } catch (err) {
+    console.log(`[Server] Note: v-uploads is currently empty or just created.`);
+  }
 
   // Middleware
   app.use(express.json());
