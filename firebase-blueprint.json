@@ -208,6 +208,10 @@
     "/settings/global": {
       "schema": "Settings",
       "description": "Global application settings"
+    },
+    "/admins/{uid}": {
+      "schema": "object",
+      "description": "Admin status documents"
     }
   }
 }

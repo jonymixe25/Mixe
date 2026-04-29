@@ -13,7 +13,7 @@ async function updateSettings() {
 
     const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
     const settingsRef = doc(db, 'settings', 'global');
     const settingsSnap = await getDoc(settingsRef);

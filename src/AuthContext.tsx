@@ -49,6 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             try {
               await setDoc(userDocRef, newUser);
+              if (newUser.role === 'admin') {
+                const adminDocRef = doc(db, 'admins', firebaseUser.uid);
+                await setDoc(adminDocRef, { email: firebaseUser.email, createdAt: serverTimestamp() });
+              }
             } catch (error) {
               handleFirestoreError(error, OperationType.WRITE, `users/${firebaseUser.uid}`);
             }
@@ -57,8 +61,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const currentData = userDoc.data() as UserProfile;
             const updates: any = {};
             
-            if (firebaseUser.email === 'jonyoax95@gmail.com' && currentData.role !== 'admin') {
-               updates.role = 'admin';
+            if (firebaseUser.email === 'jonyoax95@gmail.com') {
+               if (currentData.role !== 'admin') {
+                 updates.role = 'admin';
+               }
+               // Also ensure they exist in 'admins' collection for Firestore rules
+               const adminDocRef = doc(db, 'admins', firebaseUser.uid);
+               const adminDoc = await getDoc(adminDocRef);
+               if (!adminDoc.exists()) {
+                 try {
+                   await setDoc(adminDocRef, { email: firebaseUser.email, createdAt: serverTimestamp() });
+                 } catch (admErr) {
+                    console.error("Could not create admin doc:", admErr);
+                    // This might fail if rules are already tight, but if we are hardcoded as admin in users, 
+                    // we might have permission to write to admins too if we set the rules accordingly.
+                 }
+               }
             }
             
             // Ensure lowercase fields exist for existing users

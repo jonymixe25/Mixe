@@ -13,14 +13,16 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 async function testConnection() {
+  console.log("Testing Firestore connection with project:", firebaseConfig.projectId, "and database:", firebaseConfig.firestoreDatabaseId);
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    const connDoc = doc(db, 'test', 'connection');
+    await getDocFromServer(connDoc);
     console.log("Firestore connection successful.");
   } catch (error) {
+    console.error("Firestore connection test failed:", error);
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration. The client is offline.");
     }
-    // Skip logging for other errors, as this is simply a connection test.
   }
 }
 testConnection();

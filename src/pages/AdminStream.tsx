@@ -52,27 +52,22 @@ export default function AdminStream() {
     const checkHealth = async () => {
       try {
         console.log('Checking API health...');
-        const pingRes = await fetch('/api/ping');
-        const pingData = await pingRes.json().catch(() => ({}));
-        console.log('API Ping Result:', pingData);
-
         const res = await fetch('/api/livekit/test');
-        const apiVersion = res.headers.get('X-API-Version') || 'Unknown';
+        const data = await res.json().catch(() => ({}));
+        const apiVersion = res.headers.get('X-API-Version') || data.version || 'Unknown';
         console.log(`LiveKit API Version: ${apiVersion}, Status: ${res.status}`);
 
         if (res.status === 404) {
           console.error('LiveKit Test API not found (404)');
           setToast({ 
-            message: `Error 404: El servidor (v${apiVersion}) no reconoce la ruta. Intente recargar la página.`, 
+            message: `Error 404: El servidor (v${apiVersion}) no responde. Intente recargar.`, 
             type: 'error', 
             isVisible: true 
           });
         } else if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           console.warn('LiveKit Test failed:', data);
-          if (data.hint) {
-            setToast({ message: `Cuidado: ${data.message}. ${data.hint}`, type: 'error', isVisible: true });
-          }
+          const message = data.message || 'Error de conexión con el servidor';
+          setToast({ message: `Cuidado: ${message}`, type: 'error', isVisible: true });
         } else {
           console.log('LiveKit API is healthy');
         }
