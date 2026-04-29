@@ -25,6 +25,7 @@ export interface StreamSession {
   privacy?: 'public' | 'private';
   latency?: 'normal' | 'low';
   resolution?: '720p' | '1080p';
+  thumbnailUrl?: string;
   status: 'live' | 'ended';
   startedAt: any;
   endedAt?: any;

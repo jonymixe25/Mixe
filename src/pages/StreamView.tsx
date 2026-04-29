@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, doc, onSnapshot, updateDoc, increment, handleFirestoreError, collection, addDoc, serverTimestamp, query, orderBy, limit, setDoc, where } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Users, Heart, MessageSquare, Share2, X, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock, Video } from 'lucide-react';
+import { Users, Heart, MessageSquare, Share2, X, Volume2, Play, Pause, Maximize, VolumeX, Settings, Send, Image as ImageIcon, Loader2, Camera, UserPlus, Linkedin, PictureInPicture2, Gauge, Clock, CheckCircle2, Shield, Sparkles, Wand2, Lock, Video, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
@@ -608,589 +608,365 @@ const StreamView = () => {
   );
 
   return (
-    <div className="max-w-[1800px] mx-auto space-y-8 relative">
-      {/* Atmospheric Background */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-radial from-[#ff4e00]/10 to-transparent blur-[120px] opacity-50" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-radial from-[#3a1510]/30 to-transparent blur-[100px] opacity-60" />
+    <div className="min-h-screen bg-[#070504] text-white selection:bg-[#ff4e00]/30 -mx-4 md:-mx-8 lg:-mx-12 -mt-8">
+      {/* Immersive Background Layers */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-radial from-[#ff4e00]/10 to-transparent blur-[120px] opacity-30 animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-radial from-[#3a1510]/40 to-transparent blur-[120px] opacity-50" />
       </div>
 
-      {/* Private Stream Warning */}
-      {stream?.privacy === 'private' && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] bg-black/40 backdrop-blur-xl px-6 py-2 rounded-full border border-yellow-500/30 flex items-center gap-3 shadow-[0_0_30px_rgba(234,179,8,0.1)]">
-          <Lock className="w-3 h-3 text-yellow-500" />
-          <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-yellow-500/80">Transmisión Privada</span>
-        </div>
-      )}
-
-      {/* Immersive Stream Container */}
-      <div className="relative w-full aspect-video bg-black/80 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl shadow-black/80 group border border-white/5 backdrop-blur-sm z-10">
-        {/* Floating Reactions Container */}
-        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
-          <AnimatePresence>
-            {reactions.map(r => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: '100%', x: `${r.x}%` }}
-                animate={{ opacity: 1, y: '-20%', x: `${r.x + (Math.random() * 20 - 10)}%` }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 2, ease: "easeOut" }}
-                className="absolute bottom-0"
+      <div className="relative z-10 flex flex-col lg:flex-row h-screen lg:overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-y-auto lg:overflow-hidden">
+          {/* Header Bar */}
+          <header className="px-6 py-4 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent backdrop-blur-md border-b border-white/5 shrink-0">
+            <div className="flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/')}
+                className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all cursor-pointer group"
               >
-                <Heart className="w-8 h-8 text-[#ff4e00] fill-current drop-shadow-[0_0_15px_rgba(255,78,0,0.6)]" />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* LiveKit Video Container */}
-        <div
-          ref={videoRef}
-          className="w-full h-full flex items-center justify-center gap-4 p-4 [&>video]:flex-1 [&>video]:h-full [&>video]:object-cover [&>video]:rounded-2xl [&>video]:border [&>video]:border-white/10"
-        />
-
-        {/* Stream Ended Overlay */}
-        {stream?.status === 'ended' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl z-[70]">
-            <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/10">
-              <Video className="w-10 h-10 text-white/20" />
-            </div>
-            <h2 className="text-3xl font-display font-black uppercase italic tracking-tighter mb-4">La transmisión ha finalizado</h2>
-            <p className="text-white/40 italic mb-10">Gracias por acompañarnos en esta sesión cultural.</p>
-            <button 
-              onClick={() => navigate('/')}
-              className="bg-[#ff4e00] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20"
-            >
-              Volver al Inicio
-            </button>
-          </div>
-        )}
-
-        {/* Connection Status Overlay */}
-        {connectionStatus !== 'connected' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl z-50">
-            <div className="relative">
-              <div className="w-24 h-24 border-2 border-[#ff4e00]/20 rounded-full animate-spin border-t-[#ff4e00] shadow-[0_0_30px_rgba(255,78,0,0.15)]" />
-              <Video className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto animate-pulse" />
-            </div>
-            <p className="mt-8 font-mono uppercase tracking-[0.3em] text-[10px] text-[#ff4e00]/80">
-              <span>{connectionStatus === 'connecting' ? 'CONECTANDO CON EL ANFITRIÓN...' : 'ERROR DE SEÑAL'}</span>
-            </p>
-            {tokenError && (
-              <div className="mt-6 bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex flex-col gap-2 text-red-500 text-xs font-mono max-w-md text-center">
-                <p className="font-bold">Error de Configuración</p>
-                <p className="text-red-400/80">{tokenError}</p>
+                <ChevronLeft className="w-5 h-5 text-white/70 group-hover:-translate-x-1 transition-transform" />
               </div>
-            )}
-            {connectionStatus === 'failed' && (
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-8 bg-transparent border border-[#ff4e00]/50 text-[#ff4e00] px-8 py-3 rounded-full text-[10px] font-mono uppercase tracking-widest hover:bg-[#ff4e00]/10 transition-all active:scale-95"
-              >
-                <span>Reintentar</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Waiting for Host Overlay */}
-        {connectionStatus === 'connected' && !hasVideo && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md z-40">
-            <div className="relative">
-              <div className="w-20 h-20 border border-white/10 rounded-full flex items-center justify-center mb-6">
-                <Video className="w-8 h-8 text-white/20 animate-pulse" />
-              </div>
-            </div>
-            <p className="text-white/40 text-[10px] font-mono uppercase tracking-[0.3em] italic">
-              Esperando la señal del anfitrión...
-            </p>
-          </div>
-        )}
-
-        {/* Top Overlay Bar */}
-        <div className="absolute top-0 left-0 right-0 p-6 md:p-8 flex items-start justify-between z-30 bg-gradient-to-b from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <AnimatePresence>
-            {showStats && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute top-24 right-8 z-50 glass p-6 rounded-3xl border-white/10 shadow-2xl w-64 space-y-4"
-              >
-                <div className="flex items-center gap-3 text-[#ff4e00] mb-2">
-                  <Gauge className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Estado de la Señal</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Resolución</span>
-                    <span className="text-[10px] font-bold text-white">{stream?.resolution || '720p'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Latencia</span>
-                    <span className="text-[10px] font-bold text-white uppercase">{stream?.latency || 'Normal'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Conexión</span>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === 'connected' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                      <span className="text-[10px] font-bold text-white uppercase">{connectionStatus}</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <div className="bg-[#ff4e00]/20 backdrop-blur-md border border-[#ff4e00]/30 px-3 py-1.5 rounded-full flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]">
-                <div className="w-1.5 h-1.5 bg-[#ff4e00] rounded-full animate-pulse shadow-[0_0_8px_#ff4e00]" />
-                <span>En Vivo</span>
-              </div>
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest">
-                <Users className="w-3 h-3 text-white/60" />
-                <span>{stream.viewerCount}</span>
-              </div>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-display font-bold tracking-tight text-white drop-shadow-xl">
-              {stream.title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowStats(!showStats)}
-              className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-            >
-              <Gauge className="w-4 h-4 text-white/70" />
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Chat Overlay (Desktop) */}
-        <div className="absolute top-8 right-8 bottom-8 w-80 z-40 hidden lg:flex flex-col glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
-          <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-brand" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
-            </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-            {chat.map((msg) => (
-              <motion.div 
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                key={msg.id} 
-                className="flex flex-col gap-1"
-              >
+              <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-brand' : 'text-white/80'}`}>
-                    {msg.userName}
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff4e00] flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-[#ff4e00] rounded-full animate-pulse shadow-[0_0_10px_#ff4e00]" />
+                    En Vivo
                   </span>
-                  {msg.userId === stream?.userId && (
-                    <Shield className="w-3 h-3 text-brand" />
-                  )}
-                  <span className="text-[9px] font-mono text-white/30">
-                    {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </span>
-                </div>
-                <div className="text-sm text-white/70 leading-relaxed">
-                  {msg.text && <p>{msg.text}</p>}
-                  {msg.imageUrl && (
-                    <img 
-                      src={msg.imageUrl} 
-                      alt="chat" 
-                      className="mt-2 rounded-xl w-full object-cover border border-white/10"
-                      referrerPolicy="no-referrer"
-                    />
+                  {stream?.privacy === 'private' && (
+                    <span className="text-[9px] font-mono uppercase tracking-widest text-yellow-500/60 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Privado
+                    </span>
                   )}
                 </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {user ? (
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
-              <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
-                />
-                <div className="flex items-center gap-1 pr-1">
-                  <button
-                    type="button"
-                    onClick={handleReaction}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
-                  >
-                    <Heart className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => chatImageInputRef.current?.click()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!message.trim()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
-                  >
-                    <Send className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-              <input
-                type="file"
-                ref={chatImageInputRef}
-                onChange={handleChatImageUpload}
-                className="hidden"
-                accept="image/*"
-              />
-            </form>
-          ) : (
-            <div className="p-4 border-t border-white/5 bg-black/20 text-center">
-              <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Controls Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-30 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={togglePlay}
-                  className="w-12 h-12 rounded-full bg-brand flex items-center justify-center text-white shadow-2xl shadow-brand/40 hover:scale-110 transition-all active:scale-95"
-                >
-                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
-                </button>
-                <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden bg-black/50 backdrop-blur-md">
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`}
-                    alt="avatar"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="hidden sm:block">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium tracking-wide">{stream.userName}</p>
-                    <div className="flex items-center gap-1 bg-red-500 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest animate-pulse">
-                      <div className="w-1 h-1 bg-white rounded-full" />
-                      LIVE
-                    </div>
-                  </div>
-                  <p className="text-[9px] font-mono uppercase tracking-widest text-[#ff4e00]/80">Anfitrión</p>
-                </div>
-              </div>
-              
-              <div className="h-8 w-px bg-white/10 hidden sm:block" />
-              
-              <div className="flex items-center gap-2 group/volume">
-                <button onClick={toggleMute} className="p-2 text-white/60 hover:text-white transition-colors">
-                  {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                </button>
-                <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300 ease-out flex items-center">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
-                    step="0.01" 
-                    value={isMuted ? 0 : volume}
-                    onChange={handleVolumeChange}
-                    className="w-full h-1 bg-white/20 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-[#ff4e00] [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
-                  />
-                </div>
+                <h1 className="text-sm font-bold tracking-tight line-clamp-1">{stream?.title}</h1>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              {user && user.uid !== stream.userId && (
-                <button
-                  onClick={handleRequestJoin}
-                  disabled={joinStatus === 'pending' || joinStatus === 'accepted'}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
-                    joinStatus === 'pending' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
-                    joinStatus === 'accepted' ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30' :
-                    'bg-[#ff4e00]/20 text-[#ff4e00] hover:bg-[#ff4e00] hover:text-white border border-[#ff4e00]/30'
-                  }`}
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">
-                    {joinStatus === 'pending' ? 'Solicitud Enviada' :
-                     joinStatus === 'accepted' ? 'En Duo' :
-                     'Unirse en Duo'}
-                  </span>
-                </button>
-              )}
-              <button
-                onClick={handleLike}
-                className={`flex items-center gap-2 px-6 py-3 rounded-full font-mono uppercase tracking-widest text-[10px] transition-all duration-500 ${
-                  isLiked 
-                    ? 'bg-red-500/20 text-red-500 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-                    : 'bg-white/5 backdrop-blur-md text-white/60 hover:bg-white/10 border border-white/10'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                <span>{stream.likes || 0}</span>
-              </button>
-              <button 
-                onClick={handleShare}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={togglePiP}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-                title="Picture in Picture"
-              >
-                <PictureInPicture2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => setShowStats(!showStats)}
-                className={`w-10 h-10 rounded-full backdrop-blur-md border transition-all active:scale-90 flex items-center justify-center ${showStats ? 'text-[#ff4e00] bg-[#ff4e00]/10 border-[#ff4e00]/30' : 'text-white/60 hover:text-white bg-white/5 border-white/10 hover:bg-white/10'}`}
-                title="Estadísticas"
-              >
-                <Gauge className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={toggleFullScreen}
-                className="w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90"
-                title="Pantalla Completa"
-              >
-                <Maximize className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Info & Chat Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-black/40 backdrop-blur-2xl p-8 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3 text-[#ff4e00]">
-                <Video className="w-4 h-4" />
-                <span className="text-[10px] font-mono uppercase tracking-widest">Descripción</span>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                <Users className="w-3.5 h-3.5 text-white/40" />
+                <span className="text-[11px] font-mono font-bold">{stream?.viewerCount}</span>
               </div>
-              <button 
-                onClick={generateSummary}
-                disabled={isSummarizing || !stream?.description}
-                className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-[#ff4e00] transition-colors disabled:opacity-50 bg-white/5 px-4 py-2 rounded-full border border-white/5"
+              <button
+                onClick={handleShare}
+                className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                title="Compartir"
               >
-                {isSummarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                <span>Resumen IA</span>
+                <Share2 className="w-4 h-4 text-white/70" />
               </button>
             </div>
-            
+          </header>
+
+          {/* Video Player Section */}
+          <main className="flex-1 relative bg-black flex items-center justify-center overflow-hidden group/player shrink-0">
+            {/* LiveKit Video Container */}
+            <div
+              ref={videoRef}
+              className="w-full h-full flex items-center justify-center bg-black [&>video]:max-w-full [&>video]:max-h-full [&>video]:w-full [&>video]:h-full [&>video]:object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+            />
+
+            {/* Overlays */}
             <AnimatePresence>
-              {summary && (
+              {stream?.status === 'ended' && (
                 <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mb-6 p-6 bg-[#ff4e00]/10 border border-[#ff4e00]/20 rounded-[2rem] text-sm text-white/80 leading-relaxed"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 z-[70] flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl"
                 >
-                  <p>{summary}</p>
+                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/10">
+                    <Video className="w-8 h-8 text-white/20" />
+                  </div>
+                  <h2 className="text-2xl font-bold uppercase tracking-tighter mb-4 italic">La transmisión ha finalizado</h2>
+                  <p className="text-white/40 text-sm mb-10">Gracias por ser parte de esta experiencia cultural.</p>
+                  <button 
+                    onClick={() => navigate('/')}
+                    className="bg-[#ff4e00] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20"
+                  >
+                    Volver al Inicio
+                  </button>
+                </motion.div>
+              )}
+
+              {connectionStatus !== 'connected' && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-2xl"
+                >
+                  <div className="relative">
+                    <div className="w-24 h-24 border-2 border-[#ff4e00]/20 rounded-full animate-spin border-t-[#ff4e00]" />
+                    <Video className="w-8 h-8 text-[#ff4e00] absolute inset-0 m-auto" />
+                  </div>
+                  <p className="mt-8 text-[11px] font-mono uppercase tracking-[0.4em] text-[#ff4e00] animate-pulse">
+                    {connectionStatus === 'connecting' ? 'Sincronizando señal...' : 'Fallo de señal'}
+                  </p>
+                </motion.div>
+              )}
+
+              {connectionStatus === 'connected' && !hasVideo && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md"
+                >
+                  <Video className="w-12 h-12 text-white/10 animate-pulse mb-6" />
+                  <p className="text-[11px] font-mono uppercase tracking-[0.4em] text-white/30 italic">
+                    Esperando flujo del anfitrión...
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <p className="text-white/70 text-lg leading-relaxed font-medium">
-              {stream.description || 'Sin descripción disponible.'}
-            </p>
-          </div>
-        </div>
-
-        {/* Mobile Chat (visible only on small screens) */}
-        <div className="lg:hidden bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col h-[500px]">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
-              <span className="text-[10px] font-mono uppercase tracking-widest">Chat en Vivo</span>
+            {/* Reactions Overlay */}
+            <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+              <AnimatePresence>
+                {reactions.map(r => (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, scale: 0.5, y: '100%', x: `${r.x}%` }}
+                    animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1, 0.8], y: '-20%', x: `${r.x + (Math.random() * 20 - 10)}%` }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 2.5, ease: "easeOut" }}
+                    className="absolute bottom-0"
+                  >
+                    <Heart className="w-10 h-10 text-[#ff4e00] fill-current drop-shadow-[0_0_20px_#ff4e00]" />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-            {chat.map((msg) => (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                key={msg.id} 
-                className="flex flex-col gap-1.5"
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-white/80'}`}>
-                    {msg.userName}
-                  </span>
-                  {msg.userId === stream?.userId && (
-                    <Shield className="w-3 h-3 text-[#ff4e00]" />
-                  )}
-                  <span className="text-[9px] font-mono text-white/30">
-                    {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </span>
+
+            {/* Controls Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black to-transparent opacity-0 group-hover/player:opacity-100 transition-all duration-300 translate-y-2 group-hover/player:translate-y-0 z-40">
+              <div className="flex items-center justify-between max-w-5xl mx-auto">
+                <div className="flex items-center gap-4">
+                  <button onClick={togglePlay} className="w-12 h-12 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 fill-current" />}
+                  </button>
+                  <div className="flex items-center gap-2 group/vol">
+                    <button onClick={toggleMute} className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors">
+                      {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-[#ff4e00]" /> : <Volume2 className="w-5 h-5" />}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={isMuted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      className="w-0 group-hover/vol:w-24 overflow-hidden transition-all duration-300 accent-[#ff4e00] h-1 bg-white/20 rounded-full appearance-none cursor-pointer"
+                    />
+                  </div>
                 </div>
-                <div className="text-sm text-white/70 leading-relaxed">
-                  {msg.text && <p>{msg.text}</p>}
-                  {msg.imageUrl && (
-                    <img 
-                      src={msg.imageUrl} 
-                      alt="chat" 
-                      className="mt-2 rounded-xl w-full object-cover border border-white/10"
-                      referrerPolicy="no-referrer"
+
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowStats(!showStats)} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors" title="Estadísticas">
+                    <Gauge className="w-5 h-5 text-white/60" />
+                  </button>
+                  <button onClick={togglePiP} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors" title="Picture in Picture">
+                    <PictureInPicture2 className="w-5 h-5" />
+                  </button>
+                  <button onClick={toggleFullScreen} className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors" title="Pantalla Completa">
+                    <Maximize className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Click to React Area */}
+            <div className="absolute inset-0 cursor-pointer" onClick={handleReaction} />
+          </main>
+
+          {/* Social Bio Overlay */}
+          <div className="p-8 bg-[#0c0807] border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 shrink-0">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-[#ff4e00] to-orange-400 p-[1px]">
+                <div className="w-full h-full rounded-[1.9rem] bg-black flex items-center justify-center overflow-hidden">
+                  {stream?.thumbnailUrl ? (
+                    <img src={stream.thumbnailUrl} alt={stream.userName} className="w-full h-full object-cover" />
+                  ) : (
+                    <img
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream?.userId}`}
+                      alt="avatar"
+                      className="w-full h-full object-cover opacity-60"
                     />
                   )}
                 </div>
-              </motion.div>
-            ))}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight mb-1">{stream?.userName}</h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#ff4e00] font-black">Anfitrión Mixe</span>
+                  <div className="w-1 h-1 bg-white/10 rounded-full" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Cultura y Tradición</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleLike}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${isLiked ? 'bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20' : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'}`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                <span>{stream?.likes || 0}</span>
+              </button>
+              {user && user.uid !== stream?.userId && joinStatus === 'none' && (
+                <button 
+                  onClick={handleRequestJoin}
+                  className="px-6 py-2.5 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#ff4e00] hover:text-white transition-all shadow-xl"
+                >
+                  Unirse en Dúo
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Space */}
+        <aside className="w-full lg:w-[400px] xl:w-[450px] bg-[#0c0807] border-l border-white/5 flex flex-col h-full shrink-0">
+          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-white/5 to-transparent">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Chat de la Comunidad</span>
+            </div>
+            <div className="flex items-center gap-2">
+               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+               <span className="text-[9px] font-mono uppercase tracking-widest text-green-500/80">Activo</span>
+            </div>
+          </div>
+
+          {/* Chat Feed */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+            {chat.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full opacity-20 italic space-y-4">
+                <MessageSquare className="w-8 h-8" />
+                <p className="text-[10px] uppercase tracking-[0.2em] text-center">Inicia la conversación...</p>
+              </div>
+            ) : (
+              chat.map((msg) => (
+                <motion.div 
+                  key={msg.id}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-start gap-4"
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-[10px] font-black ${msg.userId === stream?.userId ? 'bg-[#ff4e00] text-white' : 'bg-white/5 text-white/40'}`}>
+                    {msg.userName?.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-white/60'}`}>
+                        {msg.userName}
+                      </span>
+                      {msg.userId === stream?.userId && <Shield className="w-3 h-3 text-[#ff4e00]" />}
+                    </div>
+                    {msg.text && (
+                      <div className="text-sm text-white/80 bg-white/5 p-3 rounded-2xl rounded-tl-none border border-white/5">
+                        {msg.text}
+                      </div>
+                    )}
+                    {msg.imageUrl && (
+                      <div className="mt-2 rounded-2xl overflow-hidden border border-white/10 shrink-0">
+                        <img src={msg.imageUrl} alt="Chat media" className="w-full h-auto max-h-60 object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))
+            )}
             <div ref={chatEndRef} />
           </div>
-          {user ? (
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
-              <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
+
+          {/* Input Area */}
+          <div className="p-6 bg-gradient-to-t from-[#070504] to-transparent">
+            {user ? (
+              <form onSubmit={handleSendMessage} className="relative">
                 <input
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
+                  placeholder="Escribe algo..."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-5 pr-20 text-sm focus:outline-none focus:border-[#ff4e00]/50 transition-all placeholder:text-white/20"
                 />
-                <div className="flex items-center gap-1 pr-1">
-                  <button
-                    type="button"
-                    onClick={handleReaction}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
-                  >
-                    <Heart className="w-4 h-4" />
-                  </button>
+                <div className="absolute right-2 top-2 bottom-2 flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => chatImageInputRef.current?.click()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                    disabled={isUploadingChatImage}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-white/5 text-white/30 transition-colors"
                   >
-                    <ImageIcon className="w-4 h-4" />
+                    {isUploadingChatImage ? <Loader2 className="w-4 h-4 animate-spin text-[#ff4e00]" /> : <ImageIcon className="w-4 h-4" />}
                   </button>
                   <button
                     type="submit"
                     disabled={!message.trim()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-30 transition-all"
                   >
-                    <Send className="w-3 h-3" />
+                    <Send className="w-4 h-4" />
                   </button>
                 </div>
+                <input type="file" ref={chatImageInputRef} onChange={handleChatImageUpload} className="hidden" accept="image/*" />
+              </form>
+            ) : (
+              <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-[10px] uppercase tracking-widest text-white/30">Inicia sesión para participar</p>
               </div>
-              <input
-                type="file"
-                ref={chatImageInputRef}
-                onChange={handleChatImageUpload}
-                className="hidden"
-                accept="image/*"
-              />
-            </form>
-          ) : (
-            <div className="p-6 border-t border-white/5 bg-black/20 text-center space-y-4">
-              <p className="text-[10px] text-white/40 font-black uppercase tracking-widest leading-relaxed">
-                Únete a la conversación
-              </p>
-              <button 
-                onClick={() => navigate('/register')}
-                className="w-full bg-brand text-white text-[9px] font-black uppercase tracking-[0.2em] py-3 rounded-xl hover:opacity-90 transition-all shadow-lg shadow-brand/20"
-              >
-                Registrarme para chatear
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </aside>
+      </div>
 
-        {/* Bottom Controls Overlay */}
-        {suggestedStreams.length > 0 && (
-          <div className="bg-black/40 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-6 shadow-2xl">
-            <h3 className="text-[#ff4e00] font-mono uppercase tracking-widest text-xs mb-6 flex items-center gap-2">
-              <Video className="w-4 h-4" />
-              Transmisiones Sugeridas
-            </h3>
+      {/* Modals */}
+      <AnimatePresence>
+        {isInvitationModalOpen && incomingInvitation && (
+          <Modal isOpen={isInvitationModalOpen} onClose={rejectInvitation} title="Invitación a Dúo">
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 bg-[#ff4e00]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#ff4e00]/20">
+                <Camera className="w-10 h-10 text-[#ff4e00]" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-lg font-bold tracking-tight">
+                  {incomingInvitation.fromName} te invita
+                </p>
+                <p className="text-sm text-white/40">
+                  ¿Quieres unirte a la transmisión en vivo ahora mismo?
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <button onClick={rejectInvitation} className="flex-1 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all uppercase text-[10px] font-black tracking-widest">
+                  Rechazar
+                </button>
+                <button onClick={acceptInvitation} className="flex-1 px-6 py-3 rounded-2xl bg-[#ff4e00] text-white hover:bg-[#ff4e00]/90 transition-all uppercase text-[10px] font-black tracking-widest shadow-xl shadow-[#ff4e00]/20">
+                  Aceptar
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {showStats && (
+          <Modal isOpen={showStats} onClose={() => setShowStats(false)} title="Telemetría de Señal">
             <div className="space-y-4">
-              {suggestedStreams.map(s => (
-                <div key={s.id} onClick={() => navigate(`/stream/${s.id}`)} className="flex gap-4 cursor-pointer group hover:bg-white/5 p-2 rounded-2xl transition-colors">
-                  <div className="w-24 h-16 bg-white/10 rounded-xl overflow-hidden relative flex-shrink-0">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${s.userId}`} alt="" className="w-full h-full object-cover opacity-50 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
-                    <div className="absolute bottom-1 right-1 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
-                      <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                      LIVE
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-center overflow-hidden">
-                    <h4 className="text-white text-sm font-medium truncate group-hover:text-[#ff4e00] transition-colors">{s.title}</h4>
-                    <p className="text-white/50 text-xs truncate">{s.userName}</p>
-                    <div className="flex items-center gap-1 text-white/40 text-[10px] mt-1">
-                      <Users className="w-3 h-3" />
-                      <span>{s.viewerCount}</span>
-                    </div>
-                  </div>
+              {[
+                { l: 'Banda base', v: stream?.resolution || '720p HD' },
+                { l: 'Sincronía', v: stream?.latency || 'Optimizado' },
+                { l: 'Audiencia', v: stream?.viewerCount || 0 },
+                { l: 'Enlace', v: connectionStatus === 'connected' ? 'En Línea' : 'Estableciendo' }
+              ].map((s, i) => (
+                <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                   <span className="text-[10px] font-mono uppercase tracking-widest text-[#ff4e00]">{s.l}</span>
+                   <span className="text-sm font-bold">{s.v}</span>
                 </div>
               ))}
             </div>
-          </div>
+          </Modal>
         )}
-      </div>
+      </AnimatePresence>
 
-      <Toast 
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={() => setToast({ ...toast, isVisible: false })}
-      />
-
-      <Modal
-        isOpen={isInvitationModalOpen}
-        onClose={() => setIsInvitationModalOpen(false)}
-        title="Invitación a Conferencia"
-      >
-        <div className="space-y-6">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-[#ff4e00]/10 rounded-full flex items-center justify-center border border-[#ff4e00]/20">
-              <Video className="w-8 h-8 text-[#ff4e00]" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-white text-lg font-display font-bold">
-                {incomingInvitation?.fromName || 'El streamer'} te invita a una conferencia privada
-              </p>
-              <p className="text-[#8E9299] text-sm">
-                ¿Deseas unirte a una videollamada privada 1:1 ahora mismo?
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex gap-4">
-            <button
-              onClick={rejectInvitation}
-              className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-mono uppercase tracking-widest text-[10px] rounded-xl transition-all border border-white/5"
-            >
-              Rechazar
-            </button>
-            <button
-              onClick={acceptInvitation}
-              className="flex-1 py-4 bg-[#ff4e00] hover:bg-[#ff4e00]/90 text-white font-mono uppercase tracking-widest text-[10px] rounded-xl transition-all shadow-[0_0_20px_rgba(255,78,0,0.3)] active:scale-95"
-            >
-              Aceptar e Ir
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <Toast message={toast.message} type={toast.type} isVisible={toast.isVisible} onClose={() => setToast({ ...toast, isVisible: false })} />
     </div>
   );
 };
