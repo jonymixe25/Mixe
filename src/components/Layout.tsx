@@ -529,7 +529,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <a href="https://vidamixe.mx" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00] hover:underline decoration-brand/30 underline-offset-4 transition-all">
                 Sitio Oficial
               </a>
-              <a href="https://mixe-production.up.railway.app/gallery" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
+              <a href="https://vidamixe.mx/gallery" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
                 Galería Socio
               </a>
             </div>

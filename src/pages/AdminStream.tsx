@@ -51,10 +51,22 @@ export default function AdminStream() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
+        console.log('Checking API health...');
+        const pingRes = await fetch('/api/ping');
+        const pingData = await pingRes.json().catch(() => ({}));
+        console.log('API Ping Result:', pingData);
+
         const res = await fetch('/api/livekit/test');
+        const apiVersion = res.headers.get('X-API-Version') || 'Unknown';
+        console.log(`LiveKit API Version: ${apiVersion}, Status: ${res.status}`);
+
         if (res.status === 404) {
           console.error('LiveKit Test API not found (404)');
-          setToast({ message: 'Error: El servidor no reconoce la ruta de LiveKit (404). Reporte este problema.', type: 'error', isVisible: true });
+          setToast({ 
+            message: `Error 404: El servidor (v${apiVersion}) no reconoce la ruta. Intente recargar la página.`, 
+            type: 'error', 
+            isVisible: true 
+          });
         } else if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           console.warn('LiveKit Test failed:', data);

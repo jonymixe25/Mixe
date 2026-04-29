@@ -188,7 +188,7 @@ const Gallery = () => {
               <span>Nuevo Archivo</span>
             </button>
             <a
-              href="https://mixe-production.up.railway.app/gallery"
+              href="https://vidamixe.mx/gallery"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full glass text-white/60 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-white hover:bg-white/10 transition-all active:scale-95"

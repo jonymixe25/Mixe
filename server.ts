@@ -67,8 +67,12 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Serve static uploads
-  app.use("/v-uploads", express.static(UPLOADS_DIR));
+  // Request logger for all /api requests
+  app.use("/api", (req, res, next) => {
+    res.setHeader('X-API-Version', '1.0.1');
+    console.log(`[API REQUEST] ${req.method} ${req.originalUrl} - Time: ${new Date().toISOString()}`);
+    next();
+  });
 
   // Helper to clean environment variables from common copy-paste issues (spaces, quotes)
   const cleanEnvVar = (val: string | undefined): string => {
@@ -95,19 +99,23 @@ async function startServer() {
   };
 
   const apiRouter = express.Router();
+  
+  // Mount the router immediately
+  app.use("/api", apiRouter);
 
-  // Explicitly defined API routes on the app object for maximum reliability
-  app.get("/api/ping", (req, res) => {
-    console.log("[API] Ping received");
-    res.json({ status: "pong", timestamp: new Date().toISOString() });
+  // Explicitly defined API routes on the apiRouter
+  apiRouter.get("/ping", (req, res) => {
+    console.log("[API] Ping received on router");
+    res.json({ status: "pong", source: "router", timestamp: new Date().toISOString() });
   });
 
-  app.get("/api/health", (req, res) => {
+  apiRouter.get("/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
-  // LiveKit Routes - Moved directly to app for reliability
-  app.get("/api/livekit/test", async (req, res) => {
+  // LiveKit Routes
+  apiRouter.get("/livekit/test", async (req, res) => {
+    console.log(`[API] LiveKit Test Hit - Version: 1.0.1`);
     try {
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIyitjwDR9K97b');
       const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || 'glnVXRbmmKcykLZmi6sxh9PIQpb07GNxzH2JihD9knF');
@@ -186,7 +194,7 @@ async function startServer() {
     }
   });
 
-  app.get("/api/livekit/token", async (req, res) => {
+  apiRouter.get("/livekit/token", async (req, res) => {
     try {
       const { room, identity } = req.query;
       
@@ -291,15 +299,8 @@ async function startServer() {
     }
   });
 
-  // Proxy to apiRouter for structured routes
-  app.use("/api", (req, res, next) => {
-    console.log(`[API Incoming] ${req.method} ${req.path}`);
-    next();
-  }, apiRouter);
-
-  apiRouter.get("/ping", (req, res) => {
-    res.json({ status: "api-router-pong" });
-  });
+  // Serve static uploads
+  app.use("/v-uploads", express.static(UPLOADS_DIR));
 
   // File Upload API directly on app or router
   apiRouter.post("/upload", upload.single("file"), (req, res) => {
