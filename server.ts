@@ -145,11 +145,33 @@ async function startServer() {
     }
   });
 
+  // Delete File API
+  apiRouter.delete("/files", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ error: "URL requerida" });
+      
+      // Convert URL back to path
+      const relativePath = url.replace("/v-uploads/", "");
+      const fullPath = path.join(UPLOADS_DIR, relativePath);
+      
+      if (fs.existsSync(fullPath)) {
+        await fs.remove(fullPath);
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Archivo no encontrado" });
+      }
+    } catch (error) {
+      console.error("[API] Error deleting file:", error);
+      res.status(500).json({ error: "No se pudo eliminar el archivo" });
+    }
+  });
+
   apiRouter.get("/livekit/test", async (req, res) => {
     try {
-      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
-      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
-      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || 'wss://new-app-6tu2ilh8.livekit.cloud');
+      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIyitjwDR9K97b');
+      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || 'glnVXRbmmKcykLZmi6sxh9PIQpb07GNxzH2JihD9knF');
+      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || 'wss://camweb-0hhnitxi.livekit.cloud');
 
       const debugInfo = {
         urlFound: !!livekitUrl,
@@ -234,9 +256,9 @@ async function startServer() {
       }
 
       // Prioritize environment variables from Secrets panel
-      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIc7VDQEHdtKH5');
-      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA || '8oJdsU0MvZm72Tcxnu69SnTpMtJEHqY28rGCB7nfGsH');
-      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL || 'wss://new-app-6tu2ilh8.livekit.cloud');
+      const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIyitjwDR9K97b');
+      const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || process.env.LIVEKIT_API_CLAVE_SECRETA || 'glnVXRbmmKcykLZmi6sxh9PIQpb07GNxzH2JihD9knF');
+      let livekitUrl = cleanEnvVar(process.env.LIVEKIT_URL || process.env.LIVEKIT_HOST || process.env.VITE_LIVEKIT_URL || 'wss://camweb-0hhnitxi.livekit.cloud');
 
       // Basic cleaning for Secret (just trim standard whitespace)
       const finalSecret = apiSecret.trim();

@@ -1,5 +1,5 @@
 {
   "name": "Voz Mixe Live",
-  "description": "Plataforma de transmisión en vivo para la cultura Mixe, con perfiles, contactos y gestión de streams.",
+  "description": "Plataforma de transmisión en vivo para la cultura Mixe con almacenamiento persistente de archivos, perfiles y gestión de streams.",
   "requestFramePermissions": ["camera", "microphone"]
 }

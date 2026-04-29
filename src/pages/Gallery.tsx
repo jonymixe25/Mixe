@@ -66,7 +66,26 @@ const Gallery = () => {
   const handleDelete = async () => {
     if (!itemToDelete) return;
     try {
+      const itemToDrop = media.find(m => m.id === itemToDelete);
+      
+      // Delete from Firestore
       await deleteDoc(doc(db, 'media', itemToDelete));
+      
+      // Delete from local server if it's a local URL
+      if (itemToDrop?.url?.startsWith('/v-uploads/')) {
+        try {
+          await fetch('/api/files', {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url: itemToDrop.url })
+          });
+        } catch (storageErr) {
+          console.warn('Could not delete from local storage:', storageErr);
+        }
+      }
+
       setToast({
         message: 'Archivo eliminado correctamente',
         type: 'success',

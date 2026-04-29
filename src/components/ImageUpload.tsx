@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { storage, ref, uploadBytesResumable, getDownloadURL, db, collection, addDoc, serverTimestamp } from '../firebase';
+import { db, collection, addDoc, serverTimestamp } from '../firebase';
 import { Upload, X, Loader2, Image as ImageIcon, FileText, CheckCircle } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -53,7 +53,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setPreview(null);
     }
 
-    // Upload to LOCAL API
+    // Upload to local server /api/upload for storage in v-uploads
     setUploading(true);
     setProgress(0);
     
@@ -101,7 +101,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
           onUploadComplete(url);
           setToast({
-            message: `Archivo subido con éxito (${sizeInMB.toFixed(1)} MB)`,
+            message: `Archivo guardado en v-uploads (${sizeInMB.toFixed(1)} MB)`,
             type: 'success',
             isVisible: true
           });
