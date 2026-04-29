@@ -47,6 +47,30 @@ export default function AdminStream() {
 
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
 
+  // Health check for LiveKit API
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/livekit/test');
+        if (res.status === 404) {
+          console.error('LiveKit Test API not found (404)');
+          setToast({ message: 'Error: El servidor no reconoce la ruta de LiveKit (404). Reporte este problema.', type: 'error', isVisible: true });
+        } else if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          console.warn('LiveKit Test failed:', data);
+          if (data.hint) {
+            setToast({ message: `Cuidado: ${data.message}. ${data.hint}`, type: 'error', isVisible: true });
+          }
+        } else {
+          console.log('LiveKit API is healthy');
+        }
+      } catch (err) {
+        console.error('Failed to check LiveKit health:', err);
+      }
+    };
+    checkHealth();
+  }, []);
+
   useEffect(() => {
     if (!activeStream || activeStream.status !== 'live') {
       setElapsedTime('00:00:00');

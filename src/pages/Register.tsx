@@ -137,7 +137,7 @@ const Register: React.FC = () => {
             <UserPlus className="w-8 h-8 text-[#ff4e00]" />
           </div>
           <h2 className="text-4xl font-display font-black tracking-tighter uppercase italic mb-4">Crear Cuenta</h2>
-          <p className="text-white/40 text-sm font-medium tracking-widest uppercase italic">Únete a la comunidad Voz Mixe</p>
+          <p className="text-white/40 text-sm font-medium tracking-widest uppercase italic">Únete a la comunidad Vida Mixe</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

@@ -33,7 +33,7 @@ const WebPlatform: React.FC = () => {
           </motion.div>
           <div className="space-y-4">
             <h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter uppercase italic">
-              Voz Mixe <span className="text-[#ff4e00]">Web</span>
+              Vida Mixe <span className="text-[#ff4e00]">Web</span>
             </h1>
             <p className="text-xl text-white/40 italic max-w-2xl mx-auto">
               La extensión digital de nuestra cultura. Accede a herramientas exclusivas y recursos comunitarios.

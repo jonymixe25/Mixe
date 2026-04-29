@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
@@ -179,7 +179,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl md:text-3xl font-display font-black tracking-tighter uppercase italic leading-none">
-                    {globalSettings?.appName?.split(' ')[0] || 'Voz'} <span className="text-[var(--primary-color,#ff4e00)]">{globalSettings?.appName?.split(' ').slice(1).join(' ') || 'Mixe'}</span>
+                    {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
                   </span>
                   <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-1">
                     {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
@@ -511,11 +511,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <Video className="w-4 h-4 text-[var(--primary-color,#ff4e00)]" />
               </div>
               <span className="font-display font-black tracking-tighter uppercase italic text-xl">
-                {globalSettings?.appName?.split(' ')[0] || 'Voz'} <span className="text-[var(--primary-color,#ff4e00)]">{globalSettings?.appName?.split(' ').slice(1).join(' ') || 'Mixe'}</span>
+                {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
               </span>
             </div>
             <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.3em] italic">
-              {globalSettings?.footerText || 'La región de los jamás conquistados.'}
+              {globalSettings?.footerText?.includes('Voz') ? 'La región de los jamás conquistados.' : (globalSettings?.footerText || 'La región de los jamás conquistados.')}
             </p>
           </div>
           
@@ -526,6 +526,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   {item}
                 </a>
               ))}
+              <a href="https://vidamixe.mx" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00] hover:underline decoration-brand/30 underline-offset-4 transition-all">
+                Sitio Oficial
+              </a>
+              <a href="https://mixe-production.up.railway.app/gallery" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
+                Galería Socio
+              </a>
             </div>
             {globalSettings?.socialLinks && (
               <div className="flex items-center gap-4">

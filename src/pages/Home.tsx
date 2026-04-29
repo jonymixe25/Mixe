@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info } from 'lucide-react';
+import { Video, Users, Play, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -134,7 +134,7 @@ const Home: React.FC = () => {
           animate={{ scale: 1 }}
           transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
           src={globalSettings?.heroImageUrl || "https://picsum.photos/seed/mixe-culture/1920/1080?blur=1"}
-          alt="Voz Mixe Hero"
+          alt="Vida Mixe Hero"
           className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
           onError={(e) => {
             // If local image fails, use fallback
@@ -157,9 +157,9 @@ const Home: React.FC = () => {
             transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className={`${isMobile ? 'text-5xl' : 'text-6xl sm:text-8xl md:text-[10rem]'} font-display font-black tracking-tighter uppercase italic leading-[0.8] mb-10`}
           >
-            <span className="block">{globalSettings?.heroTitle?.split(' ')[0] || 'La Voz'}</span>
+            <span className="block">{(globalSettings?.heroTitle?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.heroTitle || 'Vida')).split(' ')[0]}</span>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-brand/80 to-brand bg-[length:200%_auto] animate-gradient">
-              {globalSettings?.heroTitle?.split(' ').slice(1).join(' ') || 'Mixe'}
+              {(globalSettings?.heroTitle?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.heroTitle || 'Mixe')).split(' ').slice(1).join(' ')}
             </span>
           </motion.h1>
           <motion.p 
@@ -168,7 +168,7 @@ const Home: React.FC = () => {
             transition={{ delay: 0.5, duration: 1 }}
             className={`${isMobile ? 'text-lg' : 'text-xl sm:text-2xl md:text-3xl'} text-white/60 font-medium italic max-w-3xl mx-auto leading-tight`}
           >
-            <span>{globalSettings?.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.'}</span>
+            <span>{globalSettings?.heroSubtitle?.replace(/Voz Mixe/g, 'Vida Mixe') || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.'}</span>
           </motion.p>
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -199,6 +199,15 @@ const Home: React.FC = () => {
               <Folder className="w-6 h-6" />
               <span>Segunda Plataforma</span>
             </Link>
+            <a 
+              href="https://vidamixe.mx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} bg-[#0a0502] border border-brand/30 text-brand px-12 py-6 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand/10 transition-all duration-500 transform hover:-translate-y-2 active:scale-95 shadow-2xl`}
+            >
+              <ExternalLink className="w-6 h-6" />
+              <span>vidamixe.mx</span>
+            </a>
           </motion.div>
         </div>
       </section>

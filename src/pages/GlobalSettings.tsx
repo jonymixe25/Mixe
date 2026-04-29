@@ -35,13 +35,13 @@ const GlobalSettings = () => {
         const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
-          setAppName(data.appName || 'Voz Mixe');
-          setHeroTitle(data.heroTitle || 'La Voz Mixe');
+          setAppName(data.appName || 'Vida Mixe');
+          setHeroTitle(data.heroTitle || 'Vida Mixe');
           setHeroSubtitle(data.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
           setHeroImageUrl(data.heroImageUrl || '');
           setFooterText(data.footerText || 'La región de los jamás conquistados.');
           setThemeColor(data.themeColor || '#ff4e00');
-          setContactEmail(data.contactEmail || 'contacto@vozmixe.mx');
+          setContactEmail(data.contactEmail || 'contacto@vidamixe.mx');
           setEnableMixe(data.enableMixe || false);
           setMaintenanceMode(data.maintenanceMode || false);
           setRegistrationEnabled(data.registrationEnabled ?? true);
@@ -51,11 +51,11 @@ const GlobalSettings = () => {
           setInstagramUrl(data.socialLinks?.instagram || '');
         } else {
           // Defaults if document doesn't exist
-          setAppName('Voz Mixe');
-          setHeroTitle('La Voz Mixe');
+          setAppName('Vida Mixe');
+          setHeroTitle('Vida Mixe');
           setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
           setFooterText('La región de los jamás conquistados.');
-          setContactEmail('contacto@vozmixe.mx');
+          setContactEmail('contacto@vidamixe.mx');
         }
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, 'settings/global');
@@ -68,13 +68,13 @@ const GlobalSettings = () => {
 
   const resetDefaults = () => {
     if (window.confirm('¿Estás seguro de que deseas restablecer todos los ajustes a los valores predeterminados?')) {
-      setAppName('Voz Mixe');
-      setHeroTitle('La Voz Mixe');
+      setAppName('Vida Mixe');
+      setHeroTitle('Vida Mixe');
       setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
       setHeroImageUrl('');
       setFooterText('La región de los jamás conquistados.');
       setThemeColor('#ff4e00');
-      setContactEmail('contacto@vozmixe.mx');
+      setContactEmail('contacto@vidamixe.mx');
       setEnableMixe(false);
       setMaintenanceMode(false);
       setRegistrationEnabled(true);

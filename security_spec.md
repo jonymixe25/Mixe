@@ -1,4 +1,4 @@
-# Security Specification - Voz Mixe
+# Security Specification - Vida Mixe
 
 ## 1. Data Invariants
 - **User Integrity**: A user profile MUST match the `request.auth.uid`. Roles can only be upgraded by existing admins.

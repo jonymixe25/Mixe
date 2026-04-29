@@ -70,7 +70,7 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
             </button>
             
             <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold">
-              <span>Voz Mixe • Soporte Técnico</span>
+              <span>Vida Mixe • Soporte Técnico</span>
             </p>
           </div>
         </div>

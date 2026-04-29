@@ -55,7 +55,7 @@ const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children })
           </div>
           <div className="pt-8 border-t border-white/5 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
             <Radio className="w-4 h-4 animate-pulse" />
-            <span>Voz Mixe • La región de los jamás conquistados</span>
+            <span>Vida Mixe • La región de los jamás conquistados</span>
           </div>
         </motion.div>
       </div>

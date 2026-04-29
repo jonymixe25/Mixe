@@ -179,7 +179,7 @@ const Gallery = () => {
             </div>
           </div>
 
-          <div className="pt-6 border-t border-white/5">
+          <div className="pt-6 border-t border-white/5 space-y-3">
             <button
               onClick={() => setIsUploadModalOpen(true)}
               className="w-full bg-brand text-white py-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-brand/90 transition-all duration-500 shadow-2xl shadow-brand/20 active:scale-95 group"
@@ -187,6 +187,15 @@ const Gallery = () => {
               <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
               <span>Nuevo Archivo</span>
             </button>
+            <a
+              href="https://mixe-production.up.railway.app/gallery"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full glass text-white/60 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Galería Producción</span>
+            </a>
           </div>
 
           {/* Storage Stat */}

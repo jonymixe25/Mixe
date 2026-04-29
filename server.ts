@@ -106,91 +106,8 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  // Proxy to apiRouter for structured routes
-  app.use("/api", (req, res, next) => {
-    console.log(`[API Incoming] ${req.method} ${req.path}`);
-    next();
-  }, apiRouter);
-
-  apiRouter.get("/ping", (req, res) => {
-    res.json({ status: "api-router-pong" });
-  });
-
-  // File Upload API directly on app or router
-  apiRouter.post("/upload", upload.single("file"), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No se subió ningún archivo" });
-    }
-    
-    // Construct the URL relative to the server
-    const folder = req.body.folder || "uploads";
-    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
-    const fileUrl = `/v-uploads/${safeFolder}/${req.file.filename}`;
-    
-    res.json({ 
-      url: fileUrl,
-      fileName: req.file.originalname,
-      fileSize: req.file.size,
-      fileType: req.file.mimetype
-    });
-  });
-
-  // List Files API (to replace Firebase listAll)
-  apiRouter.get("/files/:folder(*)", async (req, res) => {
-    try {
-      const folder = req.params.folder || "";
-      const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
-      const fullPath = path.join(UPLOADS_DIR, safeFolder);
-      
-      if (!fs.existsSync(fullPath)) {
-        return res.json([]);
-      }
-
-      const files = await fs.readdir(fullPath);
-      const fileData = await Promise.all(
-        files.map(async (fileName) => {
-          const stats = await fs.stat(path.join(fullPath, fileName));
-          if (stats.isDirectory()) return null;
-          
-          return {
-            name: fileName,
-            url: `/v-uploads/${safeFolder}/${fileName}`,
-            size: stats.size,
-            mtime: stats.mtime
-          };
-        })
-      );
-
-      res.json(fileData.filter(Boolean));
-    } catch (error) {
-      console.error("[API] Error listing files:", error);
-      res.status(500).json({ error: "No se pudieron listar los archivos" });
-    }
-  });
-
-  // Delete File API
-  apiRouter.delete("/files", async (req, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) return res.status(400).json({ error: "URL requerida" });
-      
-      // Convert URL back to path
-      const relativePath = url.replace("/v-uploads/", "");
-      const fullPath = path.join(UPLOADS_DIR, relativePath);
-      
-      if (fs.existsSync(fullPath)) {
-        await fs.remove(fullPath);
-        res.json({ success: true });
-      } else {
-        res.status(404).json({ error: "Archivo no encontrado" });
-      }
-    } catch (error) {
-      console.error("[API] Error deleting file:", error);
-      res.status(500).json({ error: "No se pudo eliminar el archivo" });
-    }
-  });
-
-  apiRouter.get("/livekit/test", async (req, res) => {
+  // LiveKit Routes - Moved directly to app for reliability
+  app.get("/api/livekit/test", async (req, res) => {
     try {
       const apiKey = cleanEnvVar(process.env.LIVEKIT_API_KEY || process.env.CLAVE_API_DE_LIVEKIT || 'APIyitjwDR9K97b');
       const apiSecret = cleanEnvVar(process.env.LIVEKIT_API_SECRET || process.env.LIVEKIT_SECRET || 'glnVXRbmmKcykLZmi6sxh9PIQpb07GNxzH2JihD9knF');
@@ -269,7 +186,7 @@ async function startServer() {
     }
   });
 
-  apiRouter.get("/livekit/token", async (req, res) => {
+  app.get("/api/livekit/token", async (req, res) => {
     try {
       const { room, identity } = req.query;
       
@@ -371,6 +288,90 @@ async function startServer() {
     } catch (error) {
       console.error("[API] Error al generar el token de LiveKit:", error);
       res.status(500).json({ error: "Error interno al generar el token de acceso" });
+    }
+  });
+
+  // Proxy to apiRouter for structured routes
+  app.use("/api", (req, res, next) => {
+    console.log(`[API Incoming] ${req.method} ${req.path}`);
+    next();
+  }, apiRouter);
+
+  apiRouter.get("/ping", (req, res) => {
+    res.json({ status: "api-router-pong" });
+  });
+
+  // File Upload API directly on app or router
+  apiRouter.post("/upload", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se subió ningún archivo" });
+    }
+    
+    // Construct the URL relative to the server
+    const folder = req.body.folder || "uploads";
+    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
+    const fileUrl = `/v-uploads/${safeFolder}/${req.file.filename}`;
+    
+    res.json({ 
+      url: fileUrl,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileType: req.file.mimetype
+    });
+  });
+
+  // List Files API (to replace Firebase listAll)
+  apiRouter.get("/files/:folder(*)", async (req, res) => {
+    try {
+      const folder = req.params.folder || "";
+      const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
+      const fullPath = path.join(UPLOADS_DIR, safeFolder);
+      
+      if (!fs.existsSync(fullPath)) {
+        return res.json([]);
+      }
+
+      const files = await fs.readdir(fullPath);
+      const fileData = await Promise.all(
+        files.map(async (fileName) => {
+          const stats = await fs.stat(path.join(fullPath, fileName));
+          if (stats.isDirectory()) return null;
+          
+          return {
+            name: fileName,
+            url: `/v-uploads/${safeFolder}/${fileName}`,
+            size: stats.size,
+            mtime: stats.mtime
+          };
+        })
+      );
+
+      res.json(fileData.filter(Boolean));
+    } catch (error) {
+      console.error("[API] Error listing files:", error);
+      res.status(500).json({ error: "No se pudieron listar los archivos" });
+    }
+  });
+
+  // Delete File API
+  apiRouter.delete("/files", async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) return res.status(400).json({ error: "URL requerida" });
+      
+      // Convert URL back to path
+      const relativePath = url.replace("/v-uploads/", "");
+      const fullPath = path.join(UPLOADS_DIR, relativePath);
+      
+      if (fs.existsSync(fullPath)) {
+        await fs.remove(fullPath);
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Archivo no encontrado" });
+      }
+    } catch (error) {
+      console.error("[API] Error deleting file:", error);
+      res.status(500).json({ error: "No se pudo eliminar el archivo" });
     }
   });
 
