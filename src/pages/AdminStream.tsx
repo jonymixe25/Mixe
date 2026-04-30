@@ -896,6 +896,16 @@ export default function AdminStream() {
     }
   };
 
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'config'>('chat');
+
+  useEffect(() => {
+    if (activeStream) {
+       setActiveTab('chat');
+    } else {
+       setActiveTab('config');
+    }
+  }, [activeStream]);
+
   return (
     <div className="min-h-screen bg-[#070504] text-white selection:bg-[#ff4e00]/30 -mx-4 md:-mx-8 lg:-mx-12 -mt-8">
       {/* Immersive Background */}
@@ -1113,22 +1123,35 @@ export default function AdminStream() {
 
         {/* High-Performance Sidebar (Chat + Moderation) */}
         <aside className="w-full lg:w-[420px] bg-[#0c0a09]/80 backdrop-blur-3xl border-l border-white/5 flex flex-col shrink-0">
-          {/* Sidebar Tabs/Header */}
-          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20 shrink-0">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Comunicaciones</h3>
-            </div>
-            <div className="flex items-center gap-3">
-               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest italic">Live</span>
-               </div>
-            </div>
+          {/* Sidebar Tabs */}
+          <div className="flex items-center border-b border-white/5 bg-black/20 shrink-0">
+             <button 
+                onClick={() => setActiveTab('chat')}
+                className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'chat' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+              >
+                Chat
+             </button>
+             <button 
+                onClick={() => setActiveTab('participants')}
+                className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'participants' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+              >
+                Audencia
+                {joinRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="ml-2 w-2 h-2 bg-yellow-400 rounded-full inline-block animate-pulse" />
+                )}
+             </button>
+             {!activeStream && (
+               <button 
+                  onClick={() => setActiveTab('config')}
+                  className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'config' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+                >
+                  Config
+               </button>
+             )}
           </div>
 
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            {activeStream ? (
+            {activeTab === 'chat' && activeStream && (
               <>
                 {/* Real-time Feed */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
@@ -1214,7 +1237,81 @@ export default function AdminStream() {
                   </form>
                 </div>
               </>
-            ) : (
+            )}
+
+            {activeTab === 'participants' && activeStream && (
+              <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+                {/* Join Requests */}
+                <div className="space-y-4">
+                   <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
+                      <UserPlus className="w-3 h-3 text-[#ff4e00]" />
+                      Solicitudes de Dúo
+                   </h4>
+                   {joinRequests.filter(r => r.status === 'pending').length === 0 ? (
+                      <p className="text-[11px] text-white/20 italic p-4 glass border-white/5 rounded-2xl text-center">No hay solicitudes pendientes</p>
+                   ) : (
+                     <div className="space-y-3">
+                        {joinRequests.filter(r => r.status === 'pending').map((req) => (
+                           <motion.div 
+                              key={req.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="glass border-white/10 p-4 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all"
+                           >
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 rounded-xl bg-[#ff4e00]/10 flex items-center justify-center text-[#ff4e00] font-black">
+                                    {req.userName?.[0]}
+                                 </div>
+                                 <div>
+                                    <p className="text-xs font-bold text-white/90">{req.userName}</p>
+                                    <p className="text-[9px] font-mono text-white/30">Solicitó hace poco</p>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 <button 
+                                    onClick={() => handleAcceptRequest(req.id)}
+                                    className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 transition-all hover:text-white"
+                                 >
+                                    <Check className="w-4 h-4" />
+                                 </button>
+                                 <button 
+                                    onClick={() => handleRejectRequest(req.id)}
+                                    className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 transition-all hover:text-white"
+                                 >
+                                    <X className="w-4 h-4" />
+                                 </button>
+                              </div>
+                           </motion.div>
+                        ))}
+                     </div>
+                   )}
+                </div>
+
+                {/* Audience Insight */}
+                <div className="space-y-4">
+                   <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
+                      <Users className="w-3 h-3 text-[#ff4e00]" />
+                      Espectadores Activos
+                   </h4>
+                   <div className="bg-white/5 border border-white/5 p-6 rounded-2xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] text-white/40">Engagement</span>
+                        <span className="text-xs font-mono font-black text-emerald-400">+12%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                         <motion.div 
+                           initial={{ width: 0 }}
+                           animate={{ width: '65%' }}
+                           className="h-full bg-gradient-to-r from-[#ff4e00] to-orange-400"
+                         />
+                      </div>
+                      <p className="text-[9px] text-white/20 mt-3 italic text-center">La audiencia está respondiendo bien al contenido visual.</p>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'config' && (
                 /* Pre-Stream Configuration Panel */
                 <div className="flex-1 p-6 space-y-8 overflow-y-auto scrollbar-hide">
                   <div className="space-y-4">

@@ -53,6 +53,7 @@ export interface NewsItem {
 }
 
 export interface Contact {
+  id?: string;
   userId: string;
   contactId: string;
   contactName: string;

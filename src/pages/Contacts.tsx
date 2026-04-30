@@ -28,7 +28,7 @@ const Contacts: React.FC = () => {
 
     const q = query(collection(db, 'users', user.uid, 'contacts'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const contactList = snapshot.docs.map(doc => doc.data() as Contact);
+      const contactList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
       setContacts(contactList);
       setLoading(false);
     });
@@ -60,8 +60,8 @@ const Contacts: React.FC = () => {
         getDocs(nameQuery)
       ]);
 
-      const emailResults = emailSnap.docs.map(doc => doc.data() as UserProfile);
-      const nameResults = nameSnap.docs.map(doc => doc.data() as UserProfile);
+      const emailResults = emailSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const nameResults = nameSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
       
       // Combine and remove duplicates (by uid)
       const combined = [...emailResults, ...nameResults];
@@ -233,7 +233,7 @@ const Contacts: React.FC = () => {
               {contacts.map((contact) => (
                 <motion.div
                   layout
-                  key={contact.contactId}
+                  key={contact.id || contact.contactId}
                   className="glass border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between group hover:bg-white/5 transition-all duration-500 shadow-xl"
                 >
                   <div className="flex items-center gap-5">

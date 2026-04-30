@@ -103,7 +103,7 @@ const AdminDashboard = () => {
 
     // Fetch all users
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
+      setUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
     }, (error) => {
       console.error('Firestore Error (users):', error);
     });
