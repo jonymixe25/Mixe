@@ -1,44 +1,8 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import 'dotenv/config';
-import fs from "fs-extra";
-import multer from "multer";
 import cors from "cors";
-
-const UPLOADS_DIR = path.join(process.cwd(), "v-uploads");
-const SITE_ASSETS_DIR = path.join(UPLOADS_DIR, "site-assets");
-const THUMBNAILS_DIR = path.join(UPLOADS_DIR, "thumbnails");
-const CHAT_UPLOADS_DIR = path.join(UPLOADS_DIR, "chat-uploads");
-
-// Ensure all required upload directories exist immediately
-[UPLOADS_DIR, SITE_ASSETS_DIR, THUMBNAILS_DIR, CHAT_UPLOADS_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    console.log(`[Server] Creating directory: ${dir}`);
-    fs.ensureDirSync(dir);
-  }
-});
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = req.body.folder || "uploads";
-    // Sanitize folder path to prevent directory traversal
-    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
-    const dest = path.join(UPLOADS_DIR, safeFolder);
-    fs.ensureDirSync(dest);
-    cb(null, dest);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
-});
 
 async function startServer() {
   const app = express();
@@ -154,50 +118,6 @@ async function startServer() {
     }
   });
 
-  // File APIs
-  apiRouter.post("/upload", upload.single("file"), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
-    const folder = req.body.folder || "uploads";
-    const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
-    const fileUrl = `/v-uploads/${safeFolder}/${req.file.filename}`;
-    res.json({ url: fileUrl, fileName: req.file.originalname, fileSize: req.file.size, fileType: req.file.mimetype });
-  });
-
-  apiRouter.get("/files/:folder(*)", async (req, res) => {
-    try {
-      const folder = req.params.folder || "";
-      const safeFolder = folder.replace(/\.\./g, "").replace(/^\/+/, "");
-      const fullPath = path.join(UPLOADS_DIR, safeFolder);
-      if (!fs.existsSync(fullPath)) return res.json([]);
-      const files = await fs.readdir(fullPath);
-      const fileData = await Promise.all(files.map(async (fileName) => {
-        const stats = await fs.stat(path.join(fullPath, fileName));
-        if (stats.isDirectory()) return null;
-        return { name: fileName, url: `/v-uploads/${safeFolder}/${fileName}`, size: stats.size, mtime: stats.mtime };
-      }));
-      res.json(fileData.filter(Boolean));
-    } catch (error) {
-      res.status(500).json({ error: "Error listing files" });
-    }
-  });
-
-  apiRouter.delete("/files", async (req, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) return res.status(400).json({ error: "URL requerida" });
-      const relativePath = url.replace("/v-uploads/", "");
-      const fullPath = path.join(UPLOADS_DIR, relativePath);
-      if (fs.existsSync(fullPath)) {
-        await fs.remove(fullPath);
-        res.json({ success: true });
-      } else {
-        res.status(404).json({ error: "Archivo no encontrado" });
-      }
-    } catch (error) {
-      res.status(500).json({ error: "Error deleting file" });
-    }
-  });
-
   // Mount the router
   app.use("/api", apiRouter);
 
@@ -208,6 +128,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

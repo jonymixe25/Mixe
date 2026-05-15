@@ -193,17 +193,7 @@ const AdminDashboard = () => {
           const newsItem = news.find(n => n.id === newsId);
           await deleteDoc(doc(db, 'news', newsId));
           
-          if (newsItem?.imageUrl?.startsWith('/v-uploads/')) {
-             try {
-               await fetch('/api/files', {
-                 method: 'DELETE',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ url: newsItem.imageUrl })
-               });
-             } catch (err) {
-               console.warn('Error deleting news image from local storage:', err);
-             }
-          }
+          // Local uploads will expire naturally
           setToast({ message: 'Noticia eliminada', type: 'success', isVisible: true });
         } catch (error) {
           handleFirestoreError(error, OperationType.DELETE, `news/${newsId}`);
