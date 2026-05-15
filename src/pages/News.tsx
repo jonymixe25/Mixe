@@ -30,6 +30,8 @@ const News: React.FC = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const commentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
       setComments(commentList);
+    }, (error) => {
+      console.error('Error in comments listener:', error);
     });
     return () => unsubscribe();
   }, [selectedArticle]);

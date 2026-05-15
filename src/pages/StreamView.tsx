@@ -143,6 +143,8 @@ const StreamView = () => {
         .map(doc => ({ id: doc.id, ...doc.data() } as StreamSession))
         .filter(s => s.id !== id); // Exclude current stream
       setSuggestedStreams(streams);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'streams_suggested');
     });
 
     return () => unsubscribe();
@@ -153,6 +155,8 @@ const StreamView = () => {
       if (snapshot.exists()) {
         setModerationSensitivity(snapshot.data().moderationSensitivity || 'medium');
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/global');
     });
     return () => unsubscribe();
   }, []);

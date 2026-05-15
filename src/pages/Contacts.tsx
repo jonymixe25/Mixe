@@ -31,6 +31,9 @@ const Contacts: React.FC = () => {
       const contactList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Contact));
       setContacts(contactList);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/contacts`);
+      setLoading(false);
     });
 
     return () => unsubscribe();

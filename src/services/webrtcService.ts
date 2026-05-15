@@ -22,5 +22,7 @@ export const listenForIceCandidates = (streamId: string, viewerId: string, role:
         callback(new RTCIceCandidate(change.doc.data()));
       }
     });
+  }, (error) => {
+    console.error('ICE candidates listener error:', error);
   });
 };

@@ -23,6 +23,9 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if true;
       allow write: if isOwner(uid) || isAdmin();
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
     }
 
     match /test/connection {
@@ -49,6 +52,10 @@ service cloud.firestore {
     match /news/{newsId} {
       allow read: if true;
       allow write: if isAdmin();
+      match /comments/{commentId} {
+        allow read: if true;
+        allow write: if isSignedIn();
+      }
     }
 
     match /alerts/{alertId} {
@@ -80,6 +87,9 @@ service cloud.firestore {
 
     match /calls/{callId} {
       allow read, write: if isSignedIn();
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn();
+      }
     }
   }
 }
