@@ -513,48 +513,52 @@ export default function AdminStream() {
     if (!user) return;
     
     try {
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
       const fileName = `grabacion_${Date.now()}.${ext}`;
       const folder = `recordings/${user.uid}`;
+      const storageRef = ref(storage, `${folder}/${fileName}`);
       
-      const formData = new FormData();
-      formData.append('folder', folder);
-      formData.append('file', blob, fileName);
+      const uploadTask = uploadBytesResumable(storageRef, blob);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      setToast({ message: 'Subiendo grabación...', type: 'success', isVisible: true });
 
-      if (!response.ok) throw new Error('Error al subir la grabación');
-      
-      const data = await response.json();
-      const downloadUrl = data.url;
-      
-      const recordingData = {
-        userId: user.uid,
-        url: downloadUrl,
-        fileName,
-        fileSize: blob.size,
-        fileType: mimeType,
-        streamId: activeStream?.id || 'manual',
-        streamTitle: activeStream?.title || 'Grabación manual',
-        createdAt: serverTimestamp()
-      };
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+           // Optionally track progress
+        },
+        (error) => {
+          console.error("Error uploading recording:", error);
+          setToast({ message: 'Error al subir la grabación', type: 'error', isVisible: true });
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const recordingData = {
+            userId: user.uid,
+            url: downloadUrl,
+            fileName,
+            fileSize: blob.size,
+            fileType: mimeType,
+            streamId: activeStream?.id || 'manual',
+            streamTitle: activeStream?.title || 'Grabación manual',
+            createdAt: serverTimestamp()
+          };
 
-      await addDoc(collection(db, 'recordings'), recordingData);
+          await addDoc(collection(db, 'recordings'), recordingData);
 
-      // Also add to general media for the gallery
-      await addDoc(collection(db, 'media'), {
-        ...recordingData,
-        folder: 'Transmisiones Guardadas',
-        isPublic: false,
-      });
+          // Also add to general media for the gallery
+          await addDoc(collection(db, 'media'), {
+            ...recordingData,
+            folder: 'Transmisiones Guardadas',
+            isPublic: false,
+          });
 
-      setToast({ message: 'Grabación guardada con éxito en tu galería', type: 'success', isVisible: true });
+          setToast({ message: 'Grabación guardada con éxito en tu galería', type: 'success', isVisible: true });
+        }
+      );
     } catch (err) {
       console.error('Error saving recording:', err);
-      setToast({ message: 'Error al salvar la grabación localmente', type: 'error', isVisible: true });
+      setToast({ message: 'Error al salvar la grabación', type: 'error', isVisible: true });
     }
   };
 
@@ -851,25 +855,24 @@ export default function AdminStream() {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append('folder', `chat/${activeStream.id}`);
-      formData.append('file', file);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload', true);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const p = (event.loaded / event.total) * 100;
-          setChatUploadProgress(p);
-        }
-      };
-
-      xhr.onload = async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const response = JSON.parse(xhr.responseText);
-          const url = response.url;
-          
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `chat/${activeStream.id}/${filename}`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setChatUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading chat image:', error);
+          setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
+          setIsUploadingChatImage(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
           await addDoc(collection(db, 'streams', activeStream.id, 'messages'), {
             userId: user.uid,
             userName: user.displayName,
@@ -879,19 +882,11 @@ export default function AdminStream() {
           setIsUploadingChatImage(false);
           setChatUploadProgress(0);
           if (chatImageInputRef.current) chatImageInputRef.current.value = '';
-        } else {
-          throw new Error('Error en la subida');
         }
-      };
-
-      xhr.onerror = () => {
-        throw new Error('Error de red');
-      };
-
-      xhr.send(formData);
+      );
     } catch (error: any) {
       console.error('Error uploading chat image:', error);
-      setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
+      setToast({ message: 'Error al iniciar la subida', type: 'error', isVisible: true });
       setIsUploadingChatImage(false);
     }
   };

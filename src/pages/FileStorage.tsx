@@ -16,23 +16,18 @@ const FileStorage: React.FC = () => {
   const fetchFiles = async () => {
     if (!user) return;
     try {
-      const folderPath = `users/${user.uid}/files`;
-      const response = await fetch(`/api/files/${folderPath}`);
-      const contentType = response.headers.get('content-type');
-
-      if (!response.ok) {
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Error al obtener archivos');
-        }
-        throw new Error(`Servidor respondió con status: ${response.status}`);
-      }
-
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Respuesta no válida del servidor (JSON esperado).');
-      }
-
-      const fileData = await response.json();
+      const { ref, listAll, getDownloadURL, storage } = await import('../firebase');
+      const folderPath = `users/${user.uid}/files/`;
+      const storageRef = ref(storage, folderPath);
+      
+      const res = await listAll(storageRef);
+      const fileData = await Promise.all(res.items.map(async (itemRef) => {
+        const url = await getDownloadURL(itemRef);
+        return {
+          name: itemRef.name,
+          url
+        };
+      }));
       setFiles(fileData);
     } catch (error) {
       console.error('Error fetching files:', error);
@@ -46,33 +41,27 @@ const FileStorage: React.FC = () => {
     setUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('folder', `users/${user.uid}/files`);
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!response.ok) {
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Error en la subida');
-        }
-        throw new Error(`Error del servidor: ${response.status}`);
-      }
-
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Respuesta no válida del servidor (JSON esperado).');
-      }
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `users/${user.uid}/files/${filename}`);
       
-      await fetchFiles();
-      setUploading(false);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on('state_changed',
+        () => {},
+        (error) => {
+          console.error('Error uploading file:', error);
+          alert('Error al subir el archivo: ' + error.message);
+          setUploading(false);
+        },
+        async () => {
+          await fetchFiles(); // Although files now come from v-uploads...?
+          setUploading(false);
+        }
+      );
     } catch (error: any) {
       console.error('Error uploading file:', error);
-      alert('Error al subir el archivo: ' + error.message);
+      alert('Error de red al inicializar la subida: ' + error.message);
       setUploading(false);
     }
   };

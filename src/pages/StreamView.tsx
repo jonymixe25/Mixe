@@ -471,25 +471,24 @@ const StreamView = () => {
     setIsUploadingChatImage(true);
     setChatUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append('folder', `chat/${id}`);
-      formData.append('file', file);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload', true);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const p = (event.loaded / event.total) * 100;
-          setChatUploadProgress(p);
-        }
-      };
-
-      xhr.onload = async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const response = JSON.parse(xhr.responseText);
-          const url = response.url;
-          
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `chat/${id}/${filename}`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setChatUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading chat image:', error);
+          setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
+          setIsUploadingChatImage(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
           await addDoc(collection(db, 'streams', id, 'messages'), {
             userId: user.uid,
             userName: user.displayName,
@@ -500,19 +499,11 @@ const StreamView = () => {
           setIsUploadingChatImage(false);
           setChatUploadProgress(0);
           if (chatImageInputRef.current) chatImageInputRef.current.value = '';
-        } else {
-          throw new Error('Error en la subida');
         }
-      };
-
-      xhr.onerror = () => {
-        throw new Error('Error de red');
-      };
-
-      xhr.send(formData);
+      );
     } catch (error: any) {
       console.error('Error uploading chat image:', error);
-      setToast({ message: 'Error al subir la imagen', type: 'error', isVisible: true });
+      setToast({ message: 'Error al iniciar la subida', type: 'error', isVisible: true });
       setIsUploadingChatImage(false);
     }
   };

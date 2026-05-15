@@ -119,26 +119,31 @@ const GlobalSettings = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('folder', 'site-assets');
-    formData.append('file', file);
-
     try {
       setSaving(true);
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Error al subir imagen');
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `site-assets/${filename}`);
       
-      const data = await response.json();
-      setHeroImageUrl(data.url);
-      setToast({ message: 'Imagen cargada temporalmente. No olvides guardar.', type: 'success', isVisible: true });
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on('state_changed', 
+        () => {},
+        (error) => {
+          console.error('Error uploading image:', error);
+          setToast({ message: 'Error al subir la imagen.', type: 'error', isVisible: true });
+          setSaving(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          setHeroImageUrl(url);
+          setToast({ message: 'Imagen cargada temporalmente. No olvides guardar.', type: 'success', isVisible: true });
+          setSaving(false);
+        }
+      );
     } catch (error) {
       console.error('Error uploading image:', error);
-      setToast({ message: 'Error al subir la imagen.', type: 'error', isVisible: true });
-    } finally {
+      setToast({ message: 'Error al inicializar la subida.', type: 'error', isVisible: true });
       setSaving(false);
     }
   };

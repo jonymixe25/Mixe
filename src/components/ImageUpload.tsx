@@ -53,32 +53,35 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       setPreview(null);
     }
 
-    // Upload to local server /api/upload for storage in v-uploads
+    // Upload to Firebase Storage
     setUploading(true);
     setProgress(0);
     
     try {
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
       const sanitizedFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       const targetFolder = folder === 'AUTO' ? sanitizedFileName : folder;
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `${targetFolder}/${filename}`);
 
-      const formData = new FormData();
-      formData.append('folder', targetFolder);
-      formData.append('file', file);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload', true);
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const p = (event.loaded / event.total) * 100;
-          setProgress(p);
-        }
-      };
-
-      xhr.onload = async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const response = JSON.parse(xhr.responseText);
-          const url = response.url;
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading file:', error);
+          setToast({
+            message: 'Error al subir el archivo: ' + (error.message || 'Error desconocido'),
+            type: 'error',
+            isVisible: true
+          });
+          setUploading(false);
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
           
           // Save metadata to Firestore if user is logged in
           if (user) {
@@ -101,25 +104,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
           onUploadComplete(url);
           setToast({
-            message: `Archivo guardado en v-uploads (${sizeInMB.toFixed(1)} MB)`,
+            message: `Archivo guardado (${sizeInMB.toFixed(1)} MB)`,
             type: 'success',
             isVisible: true
           });
           setUploading(false);
-        } else {
-          throw new Error('Error en la subida');
         }
-      };
-
-      xhr.onerror = () => {
-        throw new Error('Error de red');
-      };
-
-      xhr.send(formData);
+      );
     } catch (error: any) {
-      console.error('Error uploading file:', error);
+      console.error('Error starting upload:', error);
       setToast({
-        message: 'Error al subir el archivo: ' + (error.message || 'Error desconocido'),
+        message: 'Error al iniciar la subida',
         type: 'error',
         isVisible: true
       });
