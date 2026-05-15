@@ -1,14 +1,12 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { fileURLToPath } from "url";
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import 'dotenv/config';
 import fs from "fs-extra";
 import multer from "multer";
 import cors from "cors";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOADS_DIR = path.join(process.cwd(), "v-uploads");
 const SITE_ASSETS_DIR = path.join(UPLOADS_DIR, "site-assets");
 const THUMBNAILS_DIR = path.join(UPLOADS_DIR, "thumbnails");
