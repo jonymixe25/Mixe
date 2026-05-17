@@ -247,7 +247,11 @@ export default function AdminStream() {
           let stream: MediaStream;
           try {
             stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: { ideal: facingMode } }, 
+              video: { 
+                facingMode: { ideal: facingMode },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              }, 
               audio: true 
             });
           } catch (e) {
@@ -309,7 +313,7 @@ export default function AdminStream() {
             stopMicTrackOnMute: true,
           },
           videoCaptureDefaults: {
-            resolution: { width: 1280, height: 720 },
+            resolution: { width: 1920, height: 1080 },
           }
         });
         roomRef.current = room;
@@ -1002,8 +1006,8 @@ export default function AdminStream() {
                     )}
                   </div>
 
-                  {/* Floating Action Menu (Hover) */}
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 opacity-0 group-hover/player:opacity-100 transition-all duration-300 translate-y-4 group-hover/player:translate-y-0 pointer-events-auto px-6 py-4 bg-black/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl">
+                  {/* Floating Action Menu */}
+                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 transition-all duration-300 pointer-events-auto px-6 py-4 bg-black/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl">
                     <button 
                       onClick={toggleCamera}
                       className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#ff4e00] hover:border-[#ff4e00]/50 transition-all shadow-xl active:scale-90"
@@ -1286,21 +1290,41 @@ export default function AdminStream() {
                 <div className="space-y-4">
                    <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
                       <Users className="w-3 h-3 text-[#ff4e00]" />
-                      Espectadores Activos
+                      Usuarios Activos
                    </h4>
-                   <div className="bg-white/5 border border-white/5 p-6 rounded-2xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] text-white/40">Engagement</span>
-                        <span className="text-xs font-mono font-black text-emerald-400">+12%</span>
+                   <div className="bg-white/5 border border-white/5 p-6 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
+                        <span className="text-[11px] text-white/40">Total</span>
+                        <span className="text-xs font-mono font-black text-emerald-400">{activeStream.viewerCount}</span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                         <motion.div 
-                           initial={{ width: 0 }}
-                           animate={{ width: '65%' }}
-                           className="h-full bg-gradient-to-r from-[#ff4e00] to-orange-400"
-                         />
+                      
+                      <div className="space-y-2">
+                         <p className="text-[9px] uppercase tracking-widest text-white/30 mb-2">Conectados al flujo (En sala)</p>
+                         {remoteParticipants.length === 0 ? (
+                           <p className="text-[10px] text-white/20 italic">No hay otros participantes conectados al flujo principal.</p>
+                         ) : (
+                           remoteParticipants.map((p, idx) => (
+                             <div key={idx} className="flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                               <span className="text-[11px] font-medium text-white/80">{p.identity || p.name || 'Anonymous'}</span>
+                             </div>
+                           ))
+                         )}
                       </div>
-                      <p className="text-[9px] text-white/20 mt-3 italic text-center">La audiencia está respondiendo bien al contenido visual.</p>
+
+                      <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
+                         <p className="text-[9px] uppercase tracking-widest text-white/30 mb-2">Interactuando en el chat</p>
+                         {Array.from(new Set(chatMessages.map(m => m.userName))).length === 0 ? (
+                           <p className="text-[10px] text-white/20 italic">Aún no hay mensajes.</p>
+                         ) : (
+                           Array.from(new Set(chatMessages.map(m => m.userName))).map((name, idx) => (
+                             <div key={idx} className="flex items-center gap-2">
+                               <MessageSquare className="w-3 h-3 text-white/30" />
+                               <span className="text-[11px] font-medium text-white/80">{name}</span>
+                             </div>
+                           ))
+                         )}
+                      </div>
                    </div>
                 </div>
               </div>

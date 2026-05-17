@@ -729,8 +729,8 @@ const StreamView = () => {
               )}
             </AnimatePresence>
 
-            {/* Minimal Playback Controls - Appears on Hover */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center opacity-0 group-hover/player:opacity-100 transition-all duration-300 translate-y-4 group-hover/player:translate-y-0">
+            {/* Minimal Playback Controls */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center transition-all duration-300">
                <div className="bg-black/80 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 flex items-center gap-6 shadow-2xl">
                   <button onClick={togglePlay} className="text-white/80 hover:text-[#ff4e00] transition-colors">
                     {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
