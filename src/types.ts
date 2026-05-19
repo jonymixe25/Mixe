@@ -123,3 +123,11 @@ export interface FirestoreErrorInfo {
     }[];
   }
 }
+
+export interface Call {
+  id: string;
+  callerId: string;
+  receiverId: string;
+  status: 'calling' | 'connected' | 'ended';
+  createdAt: any;
+}
