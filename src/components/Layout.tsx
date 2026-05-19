@@ -406,68 +406,339 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
-            <div className="lg:hidden">
+            {/* Mobile Actions: Simple Palette Trigger & User Profile / Login on Mobile Topbar */}
+            <div className="flex lg:hidden items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowColorPicker(!showColorPicker);
+                }}
+                className="p-3 glass text-black/50 hover:text-brand rounded-xl border-black/[0.06] transition-all"
+                title="Personalizar Tema"
+              >
+                <Palette className="w-5 h-5" />
+              </button>
+              
+              {user ? (
+                <Link to="/profile" className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06]">
+                  <img 
+                    src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                    className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0] object-cover" 
+                    alt="avatar" 
+                  />
+                </Link>
+              ) : (
+                <button
+                  onClick={handleLoginClick}
+                  className="bg-brand text-black p-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-md"
+                >
+                  <LogIn className="w-5 h-5" />
+                </button>
+              )}
+              
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-4 glass rounded-xl text-black/50 hover:text-black border-black/[0.06] transition-all duration-500 active:scale-90"
+                className="p-3 glass rounded-xl text-black/50 hover:text-black border-black/[0.06] transition-all active:scale-90"
+                title="Menú Completo"
               >
-                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Dynamic Color Picker Modal for Mobile when triggered from mobile topbar */}
         <AnimatePresence>
-          {isMenuOpen && (
+          {showColorPicker && isMobile && (
             <motion.div
-              initial={{ opacity: 0, height: 0, y: -20 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -20 }}
-              className="lg:hidden mt-4 glass rounded-3xl border-black/[0.06] overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] backdrop-blur-3xl"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 15 }}
+              className="lg:hidden mt-2 mx-4 glass p-6 rounded-3xl border-black/[0.06] shadow-xl relative z-50"
             >
-              <div className="p-8 space-y-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 ${
-                      location.pathname === item.path 
-                        ? 'bg-brand/10 text-brand border border-brand/20' 
-                        : 'text-black/50 hover:bg-black/[0.03] border border-transparent'
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/40 flex items-center gap-2">
+                  <Palette className="w-3 h-3" />
+                  <span>Personalizar Tema</span>
+                </p>
+                <button onClick={() => setShowColorPicker(false)} className="text-black/40 hover:text-black">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
+                {colors.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => {
+                      setPrimaryColor(color.value);
+                      setShowColorPicker(false);
+                    }}
+                    onMouseEnter={() => setHoveredColor(color)}
+                    onMouseLeave={() => setHoveredColor(null)}
+                    className={`w-10 h-10 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-90 relative ${
+                      primaryColor === color.value ? 'ring-2 ring-brand ring-offset-2 ring-offset-[#f5f5f0]' : ''
                     }`}
+                    style={{ backgroundColor: color.value }}
                   >
-                    <item.icon className="w-6 h-6" />
-                    <span className="font-semibold uppercase tracking-wider text-xs">{item.label}</span>
-                  </Link>
+                    <div className="absolute inset-0 bg-black/10 opacity-0 rounded-xl" />
+                  </button>
                 ))}
-                
-                <div className="pt-4 border-t border-black/[0.06]">
-                  {user ? (
-                    <button
-                      onClick={() => { logout(); navigate('/'); setIsMenuOpen(false); }}
-                      className="w-full flex items-center gap-4 p-5 rounded-xl text-red-500 bg-red-500/5 border border-red-500/10 hover:bg-red-500 hover:text-black transition-all duration-500"
-                    >
-                      <LogOut className="w-6 h-6" />
-                      <span className="font-semibold uppercase tracking-wider text-xs">Cerrar Sesión</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { handleLoginClick(); setIsMenuOpen(false); }}
-                      className="w-full flex items-center gap-4 p-5 rounded-xl bg-brand text-black shadow-lg shadow-black/[0.03] shadow-brand/20 transition-all duration-500"
-                    >
-                      <LogIn className="w-6 h-6" />
-                      <span className="font-semibold uppercase tracking-wider text-xs">Ingresar</span>
-                    </button>
-                  )}
-                </div>
+              </div>
+              <div className="mt-4 p-3 bg-black/[0.03] rounded-xl border border-black/[0.05]">
+                {hoveredColor ? (
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-black/80 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hoveredColor.value }} />
+                      {hoveredColor.name}
+                    </span>
+                    <p className="text-[9px] text-black/50 leading-relaxed italic">{hoveredColor.desc}</p>
+                  </div>
+                ) : (
+                  (() => {
+                    const active = colors.find(c => c.value.toLowerCase() === primaryColor.toLowerCase());
+                    return active ? (
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-bold text-brand flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: active.value }} />
+                          {active.name} (Activo)
+                        </span>
+                        <p className="text-[9px] text-black/50 leading-relaxed italic">{active.desc}</p>
+                      </div>
+                    ) : (
+                      <p className="text-[9px] text-black/40 italic font-medium text-center">Toca un color para cambiar el tema</p>
+                    );
+                  })()
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Mobile Full Navigation Menu & Search Drawer (Slide out from Right) */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <>
+              {/* Overlay Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMenuOpen(false)}
+                className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[140] lg:hidden"
+              />
+
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-[360px] bg-[#f5f5f0] border-l border-black/[0.06] shadow-2xl z-[150] lg:hidden flex flex-col overflow-hidden"
+              >
+                {/* Drawer Header */}
+                <div className="p-6 border-b border-black/[0.06] flex items-center justify-between bg-black/[0.01]">
+                  <div className="flex flex-col">
+                    <span className="text-lg font-bold font-display tracking-tight text-black/90">
+                      {(globalSettings?.appName || 'Vida Mixe')}
+                    </span>
+                    <span className="text-[8px] font-semibold uppercase tracking-wider text-black/30">Menú de Navegación</span>
+                  </div>
+                  <button
+                    onClick={() => setIsMenuOpen(false)}
+                    className="p-2 hover:bg-black/[0.05] rounded-xl text-black/50 hover:text-black transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Search in Drawer */}
+                <div className="p-4 border-b border-black/[0.03] bg-black/[0.01]">
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40" />
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Buscar noticias, transmisiones..." 
+                      className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-2.5 pl-10 pr-4 text-xs font-semibold outline-none focus:border-brand transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Drawer Contents / Navigation Links */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-2">
+                  {/* Dynamic Search Results in Drawer */}
+                  {searchQuery.length >= 2 && (
+                    <div className="mb-6 p-4 bg-black/[0.02] rounded-2xl border border-black/[0.04]">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-brand mb-3">Resultados de búsqueda</p>
+                      {isSearching ? (
+                        <p className="text-[10px] text-center text-black/40 py-2 animate-pulse">Buscando...</p>
+                      ) : (searchResults.news.length === 0 && searchResults.streams.length === 0) ? (
+                        <p className="text-[10px] text-center text-black/40 py-2">Sin resultados</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {searchResults.streams.map(stream => (
+                            <Link 
+                              key={stream.id} 
+                              to={`/stream/${stream.id}`}
+                              onClick={() => { setSearchQuery(''); setIsMenuOpen(false); }}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-black/[0.03] transition-colors"
+                            >
+                              <Play className="w-3.5 h-3.5 text-brand fill-current" />
+                              <span className="text-xs font-bold truncate">{stream.title}</span>
+                            </Link>
+                          ))}
+                          {searchResults.news.map(article => (
+                            <Link 
+                              key={article.id} 
+                              to="/news"
+                              onClick={() => { setSearchQuery(''); setIsMenuOpen(false); }}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-black/[0.03] transition-colors"
+                            >
+                              <Newspaper className="w-3.5 h-3.5 text-black/50" />
+                              <span className="text-xs font-semibold truncate">{article.title}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-black/30 mb-2">Secciones</p>
+                  {navItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setIsMenuOpen(false)}
+                        className={`flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-300 font-semibold uppercase tracking-wider text-[10px] ${
+                          isActive 
+                            ? 'bg-brand/10 text-brand border border-brand/15' 
+                            : 'text-black/60 hover:bg-black/[0.03] border border-transparent'
+                        }`}
+                      >
+                        <item.icon className={`w-4 h-4 ${isActive ? 'text-brand' : 'text-black/40'}`} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Drawer Footer Actions */}
+                <div className="p-6 border-t border-black/[0.06] bg-black/[0.01]">
+                  {user ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 px-2 py-1">
+                        <img 
+                          src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                          className="w-8 h-8 rounded-lg bg-white object-cover border border-black/[0.05]" 
+                          alt="avatar" 
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold truncate text-black/85">{user.displayName}</span>
+                          <span className="text-[8px] font-semibold text-black/40 uppercase tracking-wider">{user.role === 'admin' ? 'Administrador' : 'Socio Digital'}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { logout(); navigate('/'); setIsMenuOpen(false); }}
+                        className="w-full flex items-center justify-center gap-3 p-3.5 rounded-xl text-red-500 bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 active:scale-[0.98] transition-all"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span className="font-semibold uppercase tracking-wider text-[9px]">Cerrar Sesión</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { handleLoginClick(); setIsMenuOpen(false); }}
+                      className="w-full flex items-center justify-center gap-3 p-4 rounded-xl bg-brand text-black shadow-lg shadow-brand/20 active:scale-[0.98] transition-all font-semibold uppercase tracking-wider text-[10px]"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>Iniciar Sesión</span>
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </nav>
+
+      {/* Mobile Bottom Tab Bar (Ergonomic & Always Accessible) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[99] p-3 pb-safe bg-gradient-to-t from-[#f5f5f0] via-[#f5f5f0]/95 to-transparent pointer-events-none">
+        <div className="max-w-md mx-auto glass p-1.5 rounded-2xl border-black/[0.06] shadow-[0_-8px_24px_rgba(0,0,0,0.03)] backdrop-blur-2xl flex items-center justify-around pointer-events-auto">
+          {/* Home Tab */}
+          <Link
+            to="/"
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all ${
+              location.pathname === '/' ? 'text-brand' : 'text-black/45 hover:text-black'
+            }`}
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-[8px] font-bold uppercase tracking-wider">Inicio</span>
+          </Link>
+
+          {/* News Tab */}
+          <Link
+            to="/news"
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all ${
+              location.pathname === '/news' ? 'text-brand' : 'text-black/45 hover:text-black'
+            }`}
+          >
+            <Newspaper className="w-5 h-5" />
+            <span className="text-[8px] font-bold uppercase tracking-wider">Noticias</span>
+          </Link>
+
+          {/* Middle Highlighted Live Streaming Tab */}
+          <Link
+            to={user ? "/studio" : "#"}
+            onClick={(e) => {
+              if (!user) {
+                e.preventDefault();
+                handleLoginClick();
+              }
+            }}
+            className={`relative -top-4 w-12 h-12 rounded-full flex items-center justify-center transition-all bg-[var(--primary-color,#ff3e00)] text-black shadow-lg shadow-brand/35 select-none hover:scale-110 active:scale-90 ${
+              location.pathname === '/studio' ? 'ring-4 ring-brand/20 scale-105' : ''
+            }`}
+            title="Transmitir en Vivo"
+          >
+            <Video className="w-5 h-5 text-black" />
+            {isAnyStreamLive && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+              </span>
+            )}
+          </Link>
+
+          {/* Chat Tab if logged in, else Friends */}
+          <Link
+            to={user ? "/chat" : "/friends"}
+            onClick={(e) => {
+              if (!user) {
+                e.preventDefault();
+                handleLoginClick();
+              }
+            }}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all ${
+              (location.pathname === '/chat' || location.pathname === '/friends') ? 'text-brand' : 'text-black/45 hover:text-black'
+            }`}
+          >
+            {user ? <MessageSquare className="w-5 h-5" /> : <Users className="w-5 h-5" />}
+            <span className="text-[8px] font-bold uppercase tracking-wider">{user ? 'Chat' : 'Amigos'}</span>
+          </Link>
+
+          {/* Side Drawer Toggle / Menú */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all ${
+              isMenuOpen ? 'text-brand' : 'text-black/45 hover:text-black'
+            }`}
+          >
+            <Menu className="w-5 h-5" />
+            <span className="text-[8px] font-bold uppercase tracking-wider">Menú</span>
+          </button>
+        </div>
+      </div>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
       
