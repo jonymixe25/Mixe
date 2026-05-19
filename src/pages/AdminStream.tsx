@@ -237,7 +237,7 @@ export default function AdminStream() {
 
   useEffect(() => {
     const setupCamera = async () => {
-      if ((activeStream || isPreviewing) && videoRef.current) {
+      if (activeStream || isPreviewing) {
         try {
           // If we already have a stream and it's active, don't restart it unless facingMode changed
           if (localStream.current && localStream.current.active) {
@@ -248,7 +248,7 @@ export default function AdminStream() {
             if (settings.facingMode && settings.facingMode !== facingMode) {
               localStream.current.getTracks().forEach(track => track.stop());
             } else {
-              if (videoRef.current.srcObject !== localStream.current) {
+              if (videoRef.current && videoRef.current.srcObject !== localStream.current) {
                 videoRef.current.srcObject = localStream.current;
               }
               return;
@@ -1220,7 +1220,7 @@ export default function AdminStream() {
                       <Layout className="w-5 h-5" />
                     </button>
                     <button 
-                      onClick={() => videoRef.current?.parentElement?.requestFullscreen()}
+                      onClick={() => remoteVideoContainerRef.current?.requestFullscreen()}
                       className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shadow-lg shadow-black/[0.03] active:scale-90"
                     >
                       <Maximize className="w-5 h-5" />
