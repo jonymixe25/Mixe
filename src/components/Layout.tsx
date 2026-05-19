@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
@@ -145,9 +145,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: '/news', label: 'Noticias', icon: Newspaper },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
-      { path: '/friends', label: 'Amigos', icon: Users },
-      { path: '/notifications', label: 'Notificaciones', icon: Bell },
-      { path: '/chat', label: 'Mensajes', icon: MessageSquare },
+      { path: '/contacts', label: 'Contactos', icon: Users },
       { path: '/gallery', label: 'Mis Archivos', icon: Folder },
       { path: '/studio', label: 'Transmitir', icon: Video },
       ...(user.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
@@ -159,7 +157,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div translate="no" className="min-h-screen bg-[#fcf9f9] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
+    <div translate="no" className="min-h-screen bg-[#f5f5f0] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />

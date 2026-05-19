@@ -154,31 +154,6 @@
         "contactEmail": { "type": "string" }
       },
       "required": ["appName"]
-    },
-    "FriendRequest": {
-      "title": "Friend Request",
-      "description": "Incoming friend request",
-      "type": "object",
-      "properties": {
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["senderId", "senderName", "status", "createdAt"]
-    },
-    "Notification": {
-      "title": "Notification",
-      "description": "User notification",
-      "type": "object",
-      "properties": {
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "type": { "type": "string", "enum": ["stream", "news", "security", "friend"] },
-        "read": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["title", "description", "type", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -197,14 +172,6 @@
     "/users/{uid}/contacts/{contactId}": {
       "schema": "Contact",
       "description": "User contacts subcollection"
-    },
-    "/users/{uid}/friendRequests/{requestId}": {
-      "schema": "FriendRequest",
-      "description": "User friend requests subcollection"
-    },
-    "/users/{uid}/notifications/{notificationId}": {
-      "schema": "Notification",
-      "description": "User notifications subcollection"
     },
     "/news/{newsId}": {
       "schema": "News",
