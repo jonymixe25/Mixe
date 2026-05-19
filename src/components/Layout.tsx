@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot, updateDoc } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink } from 'lucide-react';
+import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
-import CallNotificationModal from './CallNotificationModal';
 import { useTheme } from '../ThemeContext';
 import { useDevice } from '../hooks/useDevice';
-import { Call } from '../types';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
@@ -21,7 +19,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showWelcomeToast, setShowWelcomeToast] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<Call | null>(null);
   const [prevUser, setPrevUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ news: any[], streams: any[] }>({ news: [], streams: [] });
@@ -31,24 +28,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [activeAlert, setActiveAlert] = useState<any>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    const callsQuery = query(
-      collection(db, 'calls'),
-      where('receiverId', '==', user.uid),
-      where('status', '==', 'calling')
-    );
-    const unsubscribe = onSnapshot(callsQuery, (snapshot) => {
-      if (!snapshot.empty) {
-        const callData = snapshot.docs[0];
-        setIncomingCall({ id: callData.id, ...callData.data() } as Call);
-      } else {
-        setIncomingCall(null);
-      }
-    });
-    return () => unsubscribe();
-  }, [user]);
 
   useEffect(() => {
     const alertsQuery = query(
@@ -71,16 +50,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
-
-  const handleAcceptCall = (call: Call) => {
-    setIncomingCall(null);
-    navigate(`/chat/${call.callerId}?startCall=true`);
-  };
-
-  const handleDeclineCall = async (call: Call) => {
-    setIncomingCall(null);
-    await updateDoc(doc(db, 'calls', call.id), { status: 'ended' });
-  };
 
   const colors = [
     { name: 'Naranja', value: '#ff4e00' },
@@ -176,7 +145,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: '/news', label: 'Noticias', icon: Newspaper },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
-      { path: '/contacts', label: 'Contactos', icon: Users },
+      { path: '/friends', label: 'Amigos', icon: Users },
+      { path: '/notifications', label: 'Notificaciones', icon: Bell },
+      { path: '/chat', label: 'Mensajes', icon: MessageSquare },
       { path: '/gallery', label: 'Mis Archivos', icon: Folder },
       { path: '/studio', label: 'Transmitir', icon: Video },
       ...(user.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
@@ -467,7 +438,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
-      {incomingCall && <CallNotificationModal call={incomingCall} onAccept={handleAcceptCall} onDecline={handleDeclineCall} />}
       
       <Toast 
         message={`¡Bienvenido, ${user?.displayName || 'Usuario'}!`}

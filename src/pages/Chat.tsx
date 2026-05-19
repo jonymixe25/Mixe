@@ -39,7 +39,6 @@ const Chat: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
-  const pendingCandidates = useRef<any[]>([]);
   const signalingUnsubscribes = useRef<(() => void)[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
@@ -178,15 +177,6 @@ const Chat: React.FC = () => {
     };
   }, [user, contactId]);
 
-  useEffect(() => {
-    if (callStatus === 'connected' && localStream) {
-      localStream.getVideoTracks().forEach(track => {
-        track.enabled = true;
-      });
-      setIsVideoOff(false);
-    }
-  }, [callStatus, localStream]);
-
   const startCall = async () => {
     if (!user || !contactId) return;
     setIsCalling(true);
@@ -223,9 +213,7 @@ const Chat: React.FC = () => {
       };
 
       const offer = await pc.createOffer();
-      if (pc.signalingState !== 'closed') {
-        await pc.setLocalDescription(offer);
-      }
+      await pc.setLocalDescription(offer);
 
       await setDoc(doc(db, 'calls', chatId), {
         callerId: user.uid,
@@ -241,15 +229,9 @@ const Chat: React.FC = () => {
       // Listen for answer
       const unsubAnswer = onSnapshot(doc(db, 'calls', chatId), async (snapshot) => {
         const data = snapshot.data();
-        if (data?.answer && !pc.currentRemoteDescription && pc.signalingState !== 'closed') {
+        if (data?.answer && !pc.currentRemoteDescription) {
           const answerDescription = new RTCSessionDescription(data.answer);
           await pc.setRemoteDescription(answerDescription);
-          while (pendingCandidates.current.length > 0) {
-            const candidateData = pendingCandidates.current.shift();
-            if (candidateData && (pc.signalingState as string) !== 'closed') {
-              await pc.addIceCandidate(new RTCIceCandidate(candidateData));
-            }
-          }
         }
       }, (error) => {
         console.error('Answer signaling error:', error);
@@ -258,14 +240,10 @@ const Chat: React.FC = () => {
 
       // Listen for receiver candidates
       const unsubIce = onSnapshot(collection(db, 'calls', chatId, 'receiverCandidates'), (snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
+        snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
-            const candidateData = change.doc.data();
-            if (pc.signalingState !== 'closed' && pc.remoteDescription && pc.remoteDescription.type) {
-              await pc.addIceCandidate(new RTCIceCandidate(candidateData));
-            } else if (pc.signalingState !== 'closed') {
-              pendingCandidates.current.push(candidateData);
-            }
+            const candidate = new RTCIceCandidate(change.doc.data());
+            pc.addIceCandidate(candidate);
           }
         });
       }, (error) => {
@@ -315,18 +293,10 @@ const Chat: React.FC = () => {
       const callDoc = await getDoc(doc(db, 'calls', chatId));
       const callData = callDoc.data();
 
-       if (callData?.offer && pc.signalingState !== 'closed') {
+      if (callData?.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-        while (pendingCandidates.current.length > 0) {
-          const candidateData = pendingCandidates.current.shift();
-          if (candidateData && (pc.signalingState as string) !== 'closed') {
-            await pc.addIceCandidate(new RTCIceCandidate(candidateData));
-          }
-        }
         const answer = await pc.createAnswer();
-        if ((pc.signalingState as string) !== 'closed') {
-          await pc.setLocalDescription(answer);
-        }
+        await pc.setLocalDescription(answer);
 
         await updateDoc(doc(db, 'calls', chatId), {
           answer: {
@@ -339,14 +309,10 @@ const Chat: React.FC = () => {
 
       // Listen for caller candidates
       const unsubIce = onSnapshot(collection(db, 'calls', chatId, 'callerCandidates'), (snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
+        snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
-            const candidateData = change.doc.data();
-            if (pc.signalingState !== 'closed' && pc.remoteDescription && pc.remoteDescription.type) {
-              await pc.addIceCandidate(new RTCIceCandidate(candidateData));
-            } else if (pc.signalingState !== 'closed') {
-              pendingCandidates.current.push(candidateData);
-            }
+            const candidate = new RTCIceCandidate(change.doc.data());
+            pc.addIceCandidate(candidate);
           }
         });
       }, (error) => {

@@ -54,9 +54,19 @@ import { useLiveKitToken } from "../hooks/useLiveKitToken";
 
 import Toast from "../components/Toast";
 import Modal from "../components/Modal";
+import { StreamPlayerCard } from "../components/StreamPlayerCard";
 
 const StreamView = () => {
   const { id } = useParams<{ id: string }>();
+  const [activeVideoTracks, setActiveVideoTracks] = useState<{
+    id: string;
+    track: any;
+    name: string;
+    role: "host" | "guest" | "me";
+  }[]>([]);
+  const [layoutStyle, setLayoutStyle] = useState<"split" | "pip">("split");
+  const [pipFocusId, setPipFocusId] = useState<string | null>(null);
+  const [fitMode, setFitMode] = useState<"cover" | "contain">("cover");
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stream, setStream] = useState<StreamSession | null>(null);
@@ -357,45 +367,50 @@ const StreamView = () => {
       room.on(
         RoomEvent.TrackSubscribed,
         (track: Track, publication: any, participant: any) => {
-          if (
-            track.kind === Track.Kind.Video ||
-            track.kind === Track.Kind.Audio
-          ) {
+          if (isMounted) setConnectionStatus("connected");
+
+          if (track.kind === Track.Kind.Video) {
+            if (isMounted) {
+              setHasVideo(true);
+              setActiveVideoTracks((prev) => {
+                if (prev.some((t) => t.id === track.sid)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: track.sid || Math.random().toString(),
+                    track,
+                    name: participant.name || participant.identity || "Anfitrión",
+                    role: participant.identity === stream?.userId ? "host" : "guest",
+                  },
+                ];
+              });
+            }
+          } else if (track.kind === Track.Kind.Audio) {
+            // Keep the standard audio attachment to play sound
             const element = track.attach();
-
-            // Ensure video elements have necessary attributes for autoplay
-            if (element instanceof HTMLVideoElement) {
-              element.playsInline = true;
-              element.muted = true; // Often required for autoplay
-              element.autoplay = true;
-              videoElementRef.current = element;
-              if (isMounted) setHasVideo(true);
-            }
-
-            if (videoRef.current) {
-              // Check if element is already a child to avoid duplicates
-              if (!videoRef.current.contains(element)) {
-                videoRef.current.appendChild(element);
-              }
-            }
-            if (isMounted) setConnectionStatus("connected");
+            element.setAttribute("data-track-sid", track.sid || "");
+            document.body.appendChild(element);
           }
         },
       );
 
       room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
-        track.detach().forEach((element) => {
-          try {
-            if (element.parentNode) {
-              element.parentNode.removeChild(element);
-            }
-          } catch (e) {
-            console.warn("Error removing track element:", e);
-          }
-        });
         if (track.kind === Track.Kind.Video) {
-          if (isMounted) setHasVideo(false);
-          videoElementRef.current = null;
+          if (isMounted) {
+            setActiveVideoTracks((prev) => prev.filter((t) => t.track !== track));
+          }
+        } else if (track.kind === Track.Kind.Audio) {
+          const els = document.querySelectorAll(`[data-track-sid="${track.sid}"]`);
+          els.forEach((el) => el.remove());
+          track.detach().forEach((element) => {
+            try {
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (e) {
+              console.warn("Error removing track element:", e);
+            }
+          });
         }
       });
 
@@ -427,12 +442,13 @@ const StreamView = () => {
       unsubscribeChat();
       unsubscribeJoinRequest();
       updateViewerCount(-1);
+      setActiveVideoTracks([]);
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
     };
-  }, [id, navigate, token, liveKitUrl, user]);
+  }, [id, navigate, token, liveKitUrl, user, stream?.userId]);
 
   useEffect(() => {
     if (joinStatus === "accepted" && roomRef.current) {
@@ -463,17 +479,20 @@ const StreamView = () => {
           if (videoTrack) {
             const pub =
               await roomRef.current!.localParticipant.publishTrack(videoTrack);
-            // Attach local video so the guest can see themselves
-            const element = pub.track?.attach();
-            if (
-              element &&
-              element instanceof HTMLVideoElement &&
-              videoRef.current
-            ) {
-              element.playsInline = true;
-              element.muted = true;
-              element.autoplay = true;
-              videoRef.current.appendChild(element);
+            const trackInstance = pub.track;
+            if (trackInstance) {
+              setActiveVideoTracks((prev) => {
+                if (prev.some((t) => t.id === trackInstance.sid)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: trackInstance.sid || "local-video",
+                    track: trackInstance,
+                    name: user?.displayName || "Tú (Invitado)",
+                    role: "me",
+                  },
+                ];
+              });
             }
           }
           if (audioTrack) {
@@ -846,8 +865,134 @@ const StreamView = () => {
             {/* LiveKit Video Container */}
             <div
               ref={videoRef}
-              className="w-full h-full flex flex-col md:flex-row items-stretch justify-center bg-black gap-0 [&:has(>video:nth-child(2))]:gap-4 [&:has(>video:nth-child(2))]:p-4 [&>video]:flex-1 [&>video]:min-w-0 [&>video]:min-h-0 [&>video]:object-contain [&:has(>video:nth-child(2))>video]:rounded-2xl [&:has(>video:nth-child(2))>video]:shadow-2xl [&:has(>video:nth-child(2))>video]:border [&:has(>video:nth-child(2))>video]:border-white/10"
-            />
+              className="w-full h-full p-2 md:p-4 flex flex-col items-center justify-center bg-zinc-950 relative overflow-hidden"
+            >
+              {activeVideoTracks.length === 0 ? (
+                /* No tracks yet -> show fallback ambient greeting */
+                <div className="flex flex-col items-center justify-center text-center p-6 bg-black/40 rounded-3xl border border-white/5 backdrop-blur-md max-w-sm">
+                  <div className="w-12 h-12 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#ff4e00]/20 text-brand">
+                    <Video className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <h3 className="text-xs font-bold tracking-tight text-white mb-1">
+                    Conectando con la Transmisión
+                  </h3>
+                  <p className="text-white/40 text-[10px] leading-relaxed">
+                    Estableciendo una señal segura de video y audio en tiempo real...
+                  </p>
+                </div>
+              ) : activeVideoTracks.length === 1 ? (
+                /* Solo Player mode */
+                <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
+                  <StreamPlayerCard
+                    id={activeVideoTracks[0].id}
+                    name={activeVideoTracks[0].name}
+                    role={activeVideoTracks[0].role}
+                    track={activeVideoTracks[0].track}
+                    fitMode={fitMode}
+                    isTalking={false}
+                  />
+                </div>
+              ) : (
+                /* Duo Player mode - Premium Split Stream Stage! */
+                <div className="w-full h-full flex flex-col gap-3 relative">
+                  
+                  {/* Floating Custom Display Toolbar inside the Video Container */}
+                  <div className="absolute top-4 right-4 z-40 flex items-center gap-1.5 bg-black/70 backdrop-blur-xl p-1 rounded-full border border-white/10 shadow-lg pointer-events-auto select-none">
+                    <button
+                      onClick={() => setLayoutStyle(layoutStyle === "split" ? "pip" : "split")}
+                      className={`text-[8px] font-bold px-3 py-1.5 rounded-full transition-all duration-200 ${
+                        layoutStyle === "pip" ? "bg-[#ff4e00] text-white" : "text-white/70 hover:text-white hover:bg-white/5"
+                      }`}
+                      title="Alternar vista Split / Esquina"
+                    >
+                      {layoutStyle === "pip" ? "Vista Dividida" : "Vista PIP"}
+                    </button>
+                    <div className="w-px h-3 bg-white/10" />
+                    <button
+                      onClick={() => setFitMode(fitMode === "cover" ? "contain" : "cover")}
+                      className="text-[8px] font-bold px-3 py-1.5 text-white/70 hover:text-white rounded-full hover:bg-white/5 transition-colors"
+                      title="Ajustar Video (Llenar / Centrar)"
+                    >
+                      {fitMode === "cover" ? "Ajustar" : "Llenar"}
+                    </button>
+                  </div>
+
+                  {layoutStyle === "split" ? (
+                    <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch justify-center">
+                      {activeVideoTracks.map((item) => (
+                        <StreamPlayerCard
+                          key={item.id}
+                          id={item.id}
+                          name={item.name}
+                          role={item.role ?? "guest"}
+                          track={item.track}
+                          fitMode={fitMode}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    /* PIP Layout (One main, one floating) */
+                    (() => {
+                      const focusId =
+                        pipFocusId ||
+                        activeVideoTracks.find((t) => t.role === "host")?.id ||
+                        activeVideoTracks[0].id;
+                      const focusTrack =
+                        activeVideoTracks.find((t) => t.id === focusId) ||
+                        activeVideoTracks[0];
+                      const pipTrack =
+                        activeVideoTracks.find((t) => t.id !== focusTrack.id) ||
+                        activeVideoTracks[1];
+
+                      return (
+                        <div className="w-full h-full relative flex items-center justify-center">
+                          {/* Main Screen Stream */}
+                          <div className="w-full h-full relative rounded-2xl overflow-hidden">
+                            <StreamPlayerCard
+                              id={focusTrack.id}
+                              name={focusTrack.name}
+                              role={focusTrack.role ?? "host"}
+                              track={focusTrack.track}
+                              fitMode={fitMode}
+                            />
+                          </div>
+
+                          {/* Floating Screen Stream */}
+                          {pipTrack && (
+                            <div
+                              onClick={() => {
+                                setPipFocusId(pipTrack.id);
+                                setToast({
+                                  message: `Enfocando a ${pipTrack.name}`,
+                                  type: "success",
+                                  isVisible: true,
+                                });
+                              }}
+                              className="absolute bottom-4 right-4 w-28 sm:w-48 aspect-[4/3] bg-zinc-900 border-2 border-white/20 hover:border-brand shadow-2xl rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer group/pip text-left z-40"
+                              title="Haz clic para intercambiar"
+                            >
+                              <div className="relative w-full h-full pointer-events-none">
+                                <StreamPlayerCard
+                                  id={pipTrack.id}
+                                  name={pipTrack.name}
+                                  role={pipTrack.role ?? "guest"}
+                                  track={pipTrack.track}
+                                  fitMode="cover"
+                                />
+                                <div className="absolute inset-0 bg-black/20 group-hover/pip:bg-black/0 transition-colors" />
+                                <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded text-[7px] border border-white/5 text-white/90">
+                                  Intercambiar ⇄
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Reactions (Hearts) Overlay */}
             <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">

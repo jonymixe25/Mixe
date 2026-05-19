@@ -22,6 +22,8 @@ const StreamView = lazy(() => import('./pages/StreamView'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const News = lazy(() => import('./pages/News'));
 const Chat = lazy(() => import('./pages/Chat'));
+const Friends = lazy(() => import('./pages/Friends'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 const Gallery = lazy(() => import('./pages/Gallery'));
 const Register = lazy(() => import('./pages/Register'));
 const FileStorage = lazy(() => import('./pages/FileStorage'));
@@ -44,6 +46,9 @@ export default function App() {
                       <Route path="/news" element={<News />} />
                       <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
                       <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
+                      <Route path="/friends" element={<AuthGuard><Friends /></AuthGuard>} />
+                      <Route path="/notifications" element={<AuthGuard><Notifications /></AuthGuard>} />
+                      <Route path="/chat" element={<AuthGuard><Chat /></AuthGuard>} />
                       <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
                       <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
                       <Route path="/studio" element={<AuthGuard><AdminStream /></AuthGuard>} />

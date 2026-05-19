@@ -93,7 +93,6 @@ const Contacts: React.FC = () => {
         return;
       }
 
-      // Add to my contacts
       const contactData: Contact = {
         userId: user.uid,
         contactId: targetUser.uid,
@@ -102,22 +101,11 @@ const Contacts: React.FC = () => {
         addedAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'users', user.uid, 'contacts'), contactData);
-
-      // Add me to their contacts (Mutual)
-      const myDataAsContact: Contact = {
-        userId: targetUser.uid,
-        contactId: user.uid,
-        contactName: user.displayName,
-        contactPhoto: user.photoURL,
-        addedAt: serverTimestamp(),
-      };
-      await addDoc(collection(db, 'users', targetUser.uid, 'contacts'), myDataAsContact);
-
       setToast({ message: 'Contacto añadido con éxito.', type: 'success', isVisible: true });
       setSearchResults([]);
       setSearchQuery('');
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/contacts -> ${targetUser.uid}/contacts`);
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/contacts`);
     }
   };
 
