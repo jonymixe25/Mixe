@@ -69,7 +69,7 @@ const FileStorage: React.FC = () => {
   if (!user) return <div className="text-center p-10">Debes iniciar sesión.</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-[#0a0502] border border-white/10 rounded-3xl mt-10">
+    <div className="max-w-4xl mx-auto p-8 bg-[#f5f5f0] border border-black/[0.06] rounded-3xl mt-10">
       <h2 className="text-3xl font-bold mb-6">Mis Archivos</h2>
       <div className="mb-6">
         <label className="cursor-pointer bg-brand p-3 rounded-xl font-bold flex items-center gap-2 w-fit">
@@ -80,12 +80,12 @@ const FileStorage: React.FC = () => {
       </div>
       <div className="space-y-4">
         {files.map((file, index) => (
-          <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+          <div key={index} className="flex items-center justify-between p-4 bg-black/[0.03] rounded-xl border border-black/[0.06]">
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6 text-brand" />
               <span>{file.name}</span>
             </div>
-            <a href={file.url} download className="p-2 bg-white/10 rounded-lg hover:bg-white/20">
+            <a href={file.url} download className="p-2 bg-black/[0.06] rounded-lg hover:bg-black/20">
               <Download className="w-5 h-5" />
             </a>
           </div>

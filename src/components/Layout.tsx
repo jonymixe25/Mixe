@@ -147,8 +147,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { path: '/profile', label: 'Perfil', icon: User },
       { path: '/contacts', label: 'Contactos', icon: Users },
       { path: '/gallery', label: 'Mis Archivos', icon: Folder },
-      { path: '/admin', label: 'Transmitir', icon: Video },
-      ...(user.role === 'admin' ? [{ path: '/dashboard', label: 'Admin', icon: Shield }] : []),
+      { path: '/studio', label: 'Transmitir', icon: Video },
+      ...(user.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
     ] : []),
   ];
 
@@ -157,7 +157,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div translate="no" className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-brand selection:text-white overflow-x-hidden">
+    <div translate="no" className="min-h-screen bg-[#f5f5f0] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />
@@ -166,22 +166,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Navigation */}
       <nav className={`fixed ${isMobile ? 'top-2' : 'top-6'} left-0 right-0 z-[100] px-4 md:px-6`}>
-        <div className={`max-w-7xl mx-auto glass ${isMobile ? 'rounded-2xl px-4' : 'rounded-[2.5rem] px-6 sm:px-10'} border-white/10 shadow-2xl shadow-black/50 backdrop-blur-2xl`}>
+        <div className={`max-w-7xl mx-auto glass ${isMobile ? 'rounded-xl px-4' : 'rounded-3xl px-6 sm:px-10'} border-black/[0.06] shadow-lg shadow-black/[0.03] shadow-black/[0.02] backdrop-blur-2xl`}>
           <div className={`flex items-center justify-between ${isMobile ? 'h-16' : 'h-20 md:h-24'}`}>
             <div className="flex items-center gap-2">
               <Link to="/" className="flex items-center gap-4 group">
-                <div className="w-12 h-12 bg-brand rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-brand/30 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Video className="w-6 h-6 text-white relative z-10" />
+                <div className="w-12 h-12 bg-brand rounded-xl flex items-center justify-center group-hover:rotate-12 transition-all duration-700 shadow-lg shadow-black/[0.03] shadow-brand/30 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Video className="w-6 h-6 text-black relative z-10" />
                   {isAnyStreamLive && (
                     <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_#ef4444]" />
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-2xl md:text-3xl font-display font-black tracking-tighter uppercase italic leading-none">
+                  <span className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black/90 leading-none">
                     {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
                   </span>
-                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-1">
+                  <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-black/30 mt-1">
                     {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
                   </span>
                 </div>
@@ -191,13 +191,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-2">
               <div className="relative group mr-4">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-brand transition-colors" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/50 group-focus-within:text-brand transition-colors" />
                 <input 
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar..." 
-                  className="bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-xs font-medium focus:border-brand focus:bg-white/10 outline-none transition-all w-48 focus:w-64"
+                  className="bg-black/[0.03] border border-black/[0.06] rounded-xl py-3 pl-12 pr-4 text-xs font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all w-48 focus:w-64"
                 />
                 
                 {/* Search Results Overlay */}
@@ -207,32 +207,32 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-full mt-4 left-0 w-[400px] glass rounded-[2rem] border-white/10 shadow-2xl overflow-hidden z-[200]"
+                      className="absolute top-full mt-4 left-0 w-[400px] glass rounded-3xl border-black/[0.06] shadow-lg shadow-black/[0.03] shadow-black/[0.04] overflow-hidden z-[200]"
                     >
                       <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar">
                         {isSearching ? (
-                          <div className="py-8 text-center text-white/40 text-xs font-black uppercase tracking-widest animate-pulse">Buscando...</div>
+                          <div className="py-8 text-center text-black/50 text-xs font-semibold uppercase tracking-wider animate-pulse">Buscando...</div>
                         ) : (searchResults.news.length === 0 && searchResults.streams.length === 0) ? (
-                          <div className="py-8 text-center text-white/40 text-xs font-black uppercase tracking-widest">No hay resultados</div>
+                          <div className="py-8 text-center text-black/50 text-xs font-semibold uppercase tracking-wider">No hay resultados</div>
                         ) : (
                           <>
                             {searchResults.streams.length > 0 && (
                               <div className="space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-brand">En Vivo</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-brand">En Vivo</p>
                                 {searchResults.streams.map(stream => (
                                   <Link 
                                     key={stream.id} 
                                     to={`/stream/${stream.id}`}
                                     onClick={() => setSearchQuery('')}
-                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/[0.03] transition-colors group"
                                   >
-                                    <div className="w-12 h-12 rounded-lg bg-red-600/20 flex items-center justify-center relative">
+                                    <div className="w-12 h-12 rounded-lg bg-rose-500/20 flex items-center justify-center relative">
                                       <Play className="w-4 h-4 text-red-600 fill-current" />
-                                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-bold truncate group-hover:text-brand transition-colors">{stream.title}</p>
-                                      <p className="text-[10px] text-white/40 uppercase tracking-widest">{stream.userName}</p>
+                                      <p className="text-[10px] text-black/50 uppercase tracking-widest">{stream.userName}</p>
                                     </div>
                                   </Link>
                                 ))}
@@ -241,20 +241,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             
                             {searchResults.news.length > 0 && (
                               <div className="space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-brand">Noticias</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-brand">Noticias</p>
                                 {searchResults.news.map(article => (
                                   <Link 
                                     key={article.id} 
                                     to="/news"
                                     onClick={() => setSearchQuery('')}
-                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-black/[0.03] transition-colors group"
                                   >
                                     <div className="w-12 h-12 rounded-lg overflow-hidden">
                                       <img src={article.imageUrl || `https://picsum.photos/seed/${article.id}/100/100`} className="w-full h-full object-cover" alt="" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-bold truncate group-hover:text-brand transition-colors">{article.title}</p>
-                                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Artículo</p>
+                                      <p className="text-[10px] text-black/50 uppercase tracking-widest">Artículo</p>
                                     </div>
                                   </Link>
                                 ))}
@@ -271,10 +271,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative group ${
+                  className={`flex items-center gap-3 px-5 py-3 rounded-xl text-[10px] font-semibold uppercase tracking-wider transition-all duration-500 relative group ${
                     location.pathname === item.path 
-                      ? 'text-brand bg-white/5 shadow-inner' 
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'text-brand bg-black/[0.03] shadow-inner' 
+                      : 'text-black/50 hover:text-black hover:bg-black/[0.03]'
                   }`}
                 >
                   <item.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${location.pathname === item.path ? 'text-brand' : ''}`} />
@@ -285,12 +285,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </Link>
               ))}
               
-              <div className="w-px h-8 bg-white/10 mx-4" />
+              <div className="w-px h-8 bg-black/[0.06] mx-4" />
 
               <div className="relative">
                 <button
                   onClick={() => setShowColorPicker(!showColorPicker)}
-                  className="p-3 glass hover:bg-white/10 text-white/40 hover:text-brand rounded-xl transition-all duration-500 border-white/10 group"
+                  className="p-3 glass hover:bg-black/[0.06] text-black/50 hover:text-brand rounded-xl transition-all duration-500 border-black/[0.06] group"
                   title="Cambiar Color"
                 >
                   <Palette className="w-5 h-5 group-hover:rotate-12 transition-transform" />
@@ -302,9 +302,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-full right-0 mt-4 glass p-6 rounded-[2rem] border-white/10 shadow-2xl z-[201] w-64"
+                      className="absolute top-full right-0 mt-4 glass p-6 rounded-3xl border-black/[0.06] shadow-lg shadow-black/[0.03] shadow-black/[0.04] z-[201] w-64"
                     >
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-6 flex items-center gap-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/40 mb-6 flex items-center gap-2">
                         <Palette className="w-3 h-3" />
                         <span>Personalizar Tema</span>
                       </p>
@@ -322,12 +322,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             style={{ backgroundColor: color.value }}
                             title={color.name}
                           >
-                            <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                           </button>
                         ))}
                       </div>
-                      <div className="mt-8 pt-6 border-t border-white/5">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-white/20 italic">
+                      <div className="mt-8 pt-6 border-t border-black/5">
+                        <p className="text-[8px] font-semibold uppercase tracking-wider text-black/30 italic">
                           Cualquier usuario puede modificar el color de la aplicación.
                         </p>
                       </div>
@@ -336,26 +336,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </AnimatePresence>
               </div>
               
-              <div className="w-px h-8 bg-white/10 mx-4" />
+              <div className="w-px h-8 bg-black/[0.06] mx-4" />
               
               {user ? (
                 <div className="flex items-center gap-4">
                   <div className="hidden xl:flex flex-col items-end mr-2">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Bienvenido</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-brand italic">{user.displayName}</span>
+                    <span className="text-[8px] font-semibold uppercase tracking-wider text-black/30">Bienvenido</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-brand italic">{user.displayName}</span>
                   </div>
                   <Link to="/profile" className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 p-0.5 border border-white/10 group-hover:border-brand/50 transition-all duration-500">
+                    <div className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06] group-hover:border-brand/50 transition-all duration-500">
                       <img 
                         src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
-                        className="w-full h-full rounded-[0.5rem] bg-[#0a0502] object-cover" 
+                        className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0] object-cover" 
                         alt="avatar" 
                       />
                     </div>
                   </Link>
                   <button
                     onClick={() => { logout(); navigate('/'); }}
-                    className="p-3 glass hover:bg-red-500/10 text-white/20 hover:text-red-500 rounded-xl transition-all duration-500 border-white/10 group"
+                    className="p-3 glass hover:bg-red-500/10 text-black/30 hover:text-red-500 rounded-xl transition-all duration-500 border-black/[0.06] group"
                     title="Cerrar Sesión"
                   >
                     <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -364,7 +364,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               ) : (
                 <button
                   onClick={handleLoginClick}
-                  className="bg-brand px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand/90 hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-brand/30 flex items-center gap-3 group"
+                  className="bg-brand px-8 py-4 rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:bg-brand/90 hover:scale-105 active:scale-95 transition-all duration-500 shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-brand/30 flex items-center gap-3 group"
                 >
                   <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   <span>Ingresar</span>
@@ -376,7 +376,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <div className="lg:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-4 glass rounded-2xl text-white/40 hover:text-white border-white/10 transition-all duration-500 active:scale-90"
+                className="p-4 glass rounded-xl text-black/50 hover:text-black border-black/[0.06] transition-all duration-500 active:scale-90"
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -391,7 +391,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               initial={{ opacity: 0, height: 0, y: -20 }}
               animate={{ opacity: 1, height: 'auto', y: 0 }}
               exit={{ opacity: 0, height: 0, y: -20 }}
-              className="lg:hidden mt-4 glass rounded-[2.5rem] border-white/10 overflow-hidden shadow-2xl backdrop-blur-3xl"
+              className="lg:hidden mt-4 glass rounded-3xl border-black/[0.06] overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] backdrop-blur-3xl"
             >
               <div className="p-8 space-y-4">
                 {navItems.map((item) => (
@@ -399,33 +399,33 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     key={item.path}
                     to={item.path}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`flex items-center gap-4 p-5 rounded-2xl transition-all duration-500 ${
+                    className={`flex items-center gap-4 p-5 rounded-xl transition-all duration-500 ${
                       location.pathname === item.path 
                         ? 'bg-brand/10 text-brand border border-brand/20' 
-                        : 'text-white/40 hover:bg-white/5 border border-transparent'
+                        : 'text-black/50 hover:bg-black/[0.03] border border-transparent'
                     }`}
                   >
                     <item.icon className="w-6 h-6" />
-                    <span className="font-black uppercase tracking-widest text-xs">{item.label}</span>
+                    <span className="font-semibold uppercase tracking-wider text-xs">{item.label}</span>
                   </Link>
                 ))}
                 
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-black/[0.06]">
                   {user ? (
                     <button
                       onClick={() => { logout(); navigate('/'); setIsMenuOpen(false); }}
-                      className="w-full flex items-center gap-4 p-5 rounded-2xl text-red-500 bg-red-500/5 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all duration-500"
+                      className="w-full flex items-center gap-4 p-5 rounded-xl text-red-500 bg-red-500/5 border border-red-500/10 hover:bg-red-500 hover:text-black transition-all duration-500"
                     >
                       <LogOut className="w-6 h-6" />
-                      <span className="font-black uppercase tracking-widest text-xs">Cerrar Sesión</span>
+                      <span className="font-semibold uppercase tracking-wider text-xs">Cerrar Sesión</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => { handleLoginClick(); setIsMenuOpen(false); }}
-                      className="w-full flex items-center gap-4 p-5 rounded-2xl bg-brand text-white shadow-xl shadow-brand/20 transition-all duration-500"
+                      className="w-full flex items-center gap-4 p-5 rounded-xl bg-brand text-black shadow-lg shadow-black/[0.03] shadow-brand/20 transition-all duration-500"
                     >
                       <LogIn className="w-6 h-6" />
-                      <span className="font-black uppercase tracking-widest text-xs">Ingresar</span>
+                      <span className="font-semibold uppercase tracking-wider text-xs">Ingresar</span>
                     </button>
                   )}
                 </div>
@@ -453,29 +453,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               exit={{ opacity: 0, y: -50, scale: 0.95 }}
               className="fixed top-32 left-1/2 -translate-x-1/2 z-[150] w-full max-w-2xl px-6"
             >
-              <div className={`glass p-6 rounded-[2rem] border-brand/30 shadow-2xl relative overflow-hidden group`}>
+              <div className={`glass p-6 rounded-3xl border-brand/20 shadow-lg shadow-black/[0.03] shadow-black/[0.04] relative overflow-hidden group`}>
                 <div className="absolute inset-0 bg-brand/5 animate-pulse pointer-events-none" />
                 <div className="flex items-start gap-5 relative z-10">
-                  <div className="w-12 h-12 rounded-2xl bg-brand/20 flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center shrink-0">
                     <Bell className="w-6 h-6 text-brand animate-bounce" />
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand">Alerta Global</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">Alerta Global</p>
                       <button 
                         onClick={() => setActiveAlert(null)}
-                        className="text-white/20 hover:text-white transition-colors"
+                        className="text-black/30 hover:text-black transition-colors"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <h4 className="font-display font-black text-xl italic uppercase leading-none tracking-tighter">{activeAlert.title}</h4>
-                    <p className="text-sm text-white/60 italic leading-relaxed">{activeAlert.message}</p>
+                    <h4 className="font-display font-bold text-xl italic uppercase leading-none tracking-tighter">{activeAlert.title}</h4>
+                    <p className="text-sm text-black/60 italic leading-relaxed">{activeAlert.message}</p>
                     {activeAlert.link && (
                       <Link 
                         to={activeAlert.link}
                         onClick={() => setActiveAlert(null)}
-                        className="inline-flex items-center gap-2 text-brand text-[10px] font-black uppercase tracking-widest mt-4 hover:translate-x-2 transition-transform"
+                        className="inline-flex items-center gap-2 text-brand text-[10px] font-semibold uppercase tracking-wider mt-4 hover:translate-x-2 transition-transform"
                       >
                         <span>Más información</span>
                         <ArrowRight className="w-4 h-4" />
@@ -503,18 +503,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 py-16 px-6">
+      <footer className="relative z-10 border-t border-black/5 py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex flex-col items-center md:items-start gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center border border-white/10">
+              <div className="w-8 h-8 bg-black/[0.03] rounded-lg flex items-center justify-center border border-black/[0.06]">
                 <Video className="w-4 h-4 text-[var(--primary-color,#ff4e00)]" />
               </div>
-              <span className="font-display font-black tracking-tighter uppercase italic text-xl">
+              <span className="font-display font-bold tracking-tight text-black/90 text-xl">
                 {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
               </span>
             </div>
-            <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.3em] italic">
+            <p className="text-black/30 text-[10px] font-semibold uppercase tracking-[0.15em] italic">
               {globalSettings?.footerText?.includes('Voz') ? 'La región de los jamás conquistados.' : (globalSettings?.footerText || 'La región de los jamás conquistados.')}
             </p>
           </div>
@@ -522,31 +522,31 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-8">
               {['Privacidad', 'Términos', 'Contacto'].map(item => (
-                <a key={item} href="#" className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
+                <a key={item} href="#" className="text-[10px] font-semibold uppercase tracking-wider text-black/30 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
                   {item}
                 </a>
               ))}
-              <a href="https://vidamixe.mx" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-[#ff4e00] hover:underline decoration-brand/30 underline-offset-4 transition-all">
+              <a href="https://vidamixe.mx" target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold uppercase tracking-wider text-brand hover:underline decoration-brand/30 underline-offset-4 transition-all">
                 Sitio Oficial
               </a>
-              <a href="https://vidamixe.mx/gallery" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
+              <a href="https://vidamixe.mx/gallery" target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold uppercase tracking-wider text-black/50 hover:text-black transition-all">
                 Galería Socio
               </a>
             </div>
             {globalSettings?.socialLinks && (
               <div className="flex items-center gap-4">
                 {globalSettings.socialLinks.facebook && (
-                  <a href={globalSettings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-white/20 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
+                  <a href={globalSettings.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-black/30 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   </a>
                 )}
                 {globalSettings.socialLinks.twitter && (
-                  <a href={globalSettings.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-white/20 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
+                  <a href={globalSettings.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-black/30 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.84 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
                   </a>
                 )}
                 {globalSettings.socialLinks.instagram && (
-                  <a href={globalSettings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-white/20 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
+                  <a href={globalSettings.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-black/30 hover:text-[var(--primary-color,#ff4e00)] transition-colors">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                   </a>
                 )}
@@ -554,7 +554,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             )}
           </div>
 
-          <div className="text-white/10 text-[10px] font-black uppercase tracking-widest text-center md:text-right">
+          <div className="text-black/10 text-[10px] font-semibold uppercase tracking-wider text-center md:text-right">
             ©Jonatan García Diaz 2026 {globalSettings?.appName && `| ${globalSettings.appName}`}
           </div>
         </div>

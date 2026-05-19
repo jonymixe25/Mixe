@@ -9,15 +9,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [primaryColor, setPrimaryColor] = useState(() => {
-    return localStorage.getItem('theme-primary-color') || '#ff4e00';
+    return localStorage.getItem('theme-primary-color') || '#5a5a40';
   });
 
   useEffect(() => {
     document.documentElement.style.setProperty('--primary-color', primaryColor);
     // Approximate a glow effect color based on the primary color
     const glowColor = primaryColor.startsWith('#') 
-      ? hexToRgba(primaryColor, 0.3) 
-      : 'rgba(255, 78, 0, 0.3)';
+      ? hexToRgba(primaryColor, 0.15) 
+      : 'rgba(90, 90, 64, 0.15)';
     document.documentElement.style.setProperty('--primary-color-glow', glowColor);
     localStorage.setItem('theme-primary-color', primaryColor);
   }, [primaryColor]);

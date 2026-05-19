@@ -28,7 +28,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', isVisible, onC
           exit={{ opacity: 0, y: 20, scale: 0.9 }}
           className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] min-w-[300px]"
         >
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4">
+          <div className="bg-[#1a1a1a] border border-black/[0.06] rounded-xl p-4 shadow-lg shadow-black/[0.03] shadow-black/[0.04] flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${type === 'success' ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
               {type === 'success' ? (
                 <CheckCircle className="w-5 h-5 text-emerald-500" />
@@ -37,9 +37,9 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', isVisible, onC
               )}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-white italic">{message}</p>
+              <p className="text-sm font-bold text-black italic">{message}</p>
             </div>
-            <button onClick={onClose} className="text-white/20 hover:text-white transition-colors">
+            <button onClick={onClose} className="text-black/30 hover:text-black transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>

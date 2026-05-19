@@ -113,56 +113,56 @@ export default function PrivateConference() {
     <div className="min-h-screen bg-[#0a0a0c] flex flex-col relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#ff4e00]/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#ff4e00]/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand/5 rounded-full blur-[120px]" />
       </div>
 
       {/* Header */}
       <header className="p-6 flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-[#ff4e00]/10 border border-[#ff4e00]/20 rounded-xl flex items-center justify-center">
-            <Shield className="w-5 h-5 text-[#ff4e00]" />
+          <div className="w-10 h-10 bg-brand/10 border border-brand/20 rounded-xl flex items-center justify-center">
+            <Shield className="w-5 h-5 text-brand" />
           </div>
           <div>
-            <h1 className="text-lg font-display font-black uppercase tracking-tighter text-white italic">Conferencia Privada</h1>
-            <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest flex items-center gap-2">
+            <h1 className="text-lg font-display font-bold uppercase tracking-tighter text-black italic">Conferencia Privada</h1>
+            <p className="text-[10px] font-mono text-black/50 uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Conexión Encriptada de Punto a Punto
             </p>
           </div>
         </div>
         
-        <div className="hidden sm:flex items-center gap-3 bg-white/5 border border-white/5 px-4 py-2 rounded-2xl">
-          <Users className="w-4 h-4 text-white/40" />
-          <span className="text-xs font-mono text-white/60 tracking-wider">Sala: {roomId?.substring(0, 8)}...</span>
+        <div className="hidden sm:flex items-center gap-3 bg-black/[0.03] border border-black/5 px-4 py-2 rounded-xl">
+          <Users className="w-4 h-4 text-black/50" />
+          <span className="text-xs font-mono text-black/60 tracking-wider">Sala: {roomId?.substring(0, 8)}...</span>
         </div>
       </header>
 
       {/* Video Grid */}
       <main className="flex-1 p-6 flex flex-col md:flex-row gap-6 z-10">
-        <div className="flex-1 relative bg-[#111114] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl group">
+        <div className="flex-1 relative bg-[#111114] rounded-3xl overflow-hidden border border-black/5 shadow-lg shadow-black/[0.03] shadow-black/[0.04] group">
           <div ref={remoteVideoRef} className="w-full h-full flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 opacity-40">
-              <Loader2 className="w-10 h-10 animate-spin text-[#ff4e00]" />
+              <Loader2 className="w-10 h-10 animate-spin text-brand" />
               <p className="text-[10px] font-mono uppercase tracking-[0.3em]">Esperando al otro participante...</p>
             </div>
           </div>
-          <div className="absolute bottom-6 left-6 bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
+          <div className="absolute bottom-6 left-6 bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-black/[0.06] flex items-center gap-3">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white">Invitado</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black">Invitado</span>
           </div>
         </div>
 
-        <div className="w-full md:w-[320px] aspect-video md:aspect-[3/4] relative bg-[#111114] rounded-[2.5rem] overflow-hidden border border-white/5 shadow-xl">
+        <div className="w-full md:w-[320px] aspect-video md:aspect-[3/4] relative bg-[#111114] rounded-3xl overflow-hidden border border-black/5 shadow-lg shadow-black/[0.03]">
           <div ref={localVideoRef} className="w-full h-full flex items-center justify-center" />
           {!isCamEnabled && (
             <div className="absolute inset-0 flex items-center justify-center bg-[#1a1b1e]">
-              <VideoOff className="w-10 h-10 text-white/10" />
+              <VideoOff className="w-10 h-10 text-black/10" />
             </div>
           )}
-          <div className="absolute bottom-6 left-6 bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
-            <div className="w-2 h-2 bg-[#ff4e00] rounded-full" />
-            <span className="text-[10px] font-mono uppercase tracking-widest text-white">Tú</span>
+          <div className="absolute bottom-6 left-6 bg-black/40 backdrop-blur-md px-4 py-2 rounded-xl border border-black/[0.06] flex items-center gap-3">
+            <div className="w-2 h-2 bg-brand rounded-full" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-black">Tú</span>
           </div>
         </div>
       </main>
@@ -171,10 +171,10 @@ export default function PrivateConference() {
       <footer className="p-8 flex items-center justify-center gap-6 z-10">
         <button
           onClick={toggleMic}
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all border ${
+          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all border ${
             isMicEnabled 
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' 
-            : 'bg-red-500 border-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+            ? 'bg-black/[0.03] border-black/[0.06] text-black hover:bg-black/[0.06]' 
+            : 'bg-red-500 border-red-600 text-black shadow-[0_0_20px_rgba(239,68,68,0.3)]'
           }`}
         >
           {isMicEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
@@ -182,17 +182,17 @@ export default function PrivateConference() {
 
         <button
           onClick={handleLeave}
-          className="w-20 h-14 bg-red-500 hover:bg-red-600 text-white rounded-2xl flex items-center justify-center transition-all shadow-[0_0_30px_rgba(239,68,68,0.4)] group active:scale-95"
+          className="w-20 h-14 bg-red-500 hover:bg-rose-500 text-black rounded-xl flex items-center justify-center transition-all shadow-[0_0_30px_rgba(239,68,68,0.4)] group active:scale-95"
         >
           <PhoneOff className="w-7 h-7 group-hover:rotate-[135deg] transition-transform duration-300" />
         </button>
 
         <button
           onClick={toggleCam}
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all border ${
+          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all border ${
             isCamEnabled 
-            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' 
-            : 'bg-red-500 border-red-600 text-white shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+            ? 'bg-black/[0.03] border-black/[0.06] text-black hover:bg-black/[0.06]' 
+            : 'bg-red-500 border-red-600 text-black shadow-[0_0_20px_rgba(239,68,68,0.3)]'
           }`}
         >
           {isCamEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}

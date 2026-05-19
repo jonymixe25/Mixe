@@ -70,9 +70,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#0a0502] border border-white/10 p-8 rounded-3xl w-full max-w-md relative shadow-2xl">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors">
+    <div className="fixed inset-0 bg-black/[0.03]0 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#f5f5f0] border border-black/[0.06] p-8 rounded-3xl w-full max-w-md relative shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
+        <button onClick={onClose} className="absolute top-4 right-4 text-black/50 hover:text-black transition-colors">
           <X className="w-6 h-6" />
         </button>
         <h2 className="text-2xl font-bold mb-6 text-center">Acceder</h2>
@@ -82,7 +82,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             placeholder="Correo electrónico"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-colors"
+            className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-colors"
           />
           <div className="relative">
             <input
@@ -90,35 +90,35 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-4 rounded-xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-colors"
+              className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-colors"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-4 text-white/50 hover:text-white transition-colors"
+              className="absolute right-4 top-4 text-black/50 hover:text-black transition-colors"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           <button 
             type="submit" 
-            className="w-full bg-[#ff4e00] p-4 rounded-xl font-bold hover:bg-[#ff4e00]/90 transition-all active:scale-[0.98]"
+            className="w-full bg-brand p-4 rounded-xl font-bold hover:bg-brand/90 transition-all active:scale-[0.98]"
           >
             Acceder
           </button>
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
+              <div className="w-full border-t border-black/[0.06]"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase tracking-widest">
-              <span className="px-4 bg-[#0a0502] text-white/30">O continuar con</span>
+              <span className="px-4 bg-[#f5f5f0] text-black/40">O continuar con</span>
             </div>
           </div>
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={isGoogleLoading}
-            className="w-full bg-white text-black p-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-gray-100 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-black text-white p-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-gray-100 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGoogleLoading ? (
               <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
@@ -147,11 +147,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           <button
             type="button"
             onClick={handleAnonymousLogin}
-            className="w-full bg-white/5 text-white/50 p-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-white/10 transition-all active:scale-[0.98]"
+            className="w-full bg-black/[0.03] text-black/50 p-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-black/[0.06] transition-all active:scale-[0.98]"
           >
             Continuar como Invitado
           </button>
-          <div className="text-center text-white/50 text-sm">
+          <div className="text-center text-black/50 text-sm">
             ¿No tienes cuenta?{' '}
             <button
               type="button"
@@ -159,7 +159,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 onClose();
                 navigate('/register');
               }}
-              className="text-[#ff4e00] font-bold hover:underline"
+              className="text-brand font-bold hover:underline"
             >
               Regístrate aquí
             </button>

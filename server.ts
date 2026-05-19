@@ -126,6 +126,11 @@ async function startServer() {
     res.status(404).json({ error: `Route not found: ${req.originalUrl}`, version: "1.0.2" });
   });
 
+  // Serve a fallback image for legacy /v-uploads image paths
+  app.get("/v-uploads/*", (req, res) => {
+    res.redirect("https://picsum.photos/seed/mixe-culture/800/600?blur=1");
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");

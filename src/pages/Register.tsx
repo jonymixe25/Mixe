@@ -93,7 +93,7 @@ const Register: React.FC = () => {
   if (checkingSettings) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff4e00]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand"></div>
       </div>
     );
   }
@@ -104,19 +104,19 @@ const Register: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass p-12 rounded-[3rem] text-center space-y-8 border-yellow-500/20 shadow-2xl"
+          className="glass p-12 rounded-3xl text-center space-y-8 border-yellow-500/20 shadow-lg shadow-black/[0.03] shadow-black/[0.04]"
         >
-          <div className="w-20 h-20 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto border border-yellow-500/20">
+          <div className="w-20 h-20 bg-yellow-500/10 rounded-xl flex items-center justify-center mx-auto border border-yellow-500/20">
             <ShieldAlert className="w-10 h-10 text-yellow-500" />
           </div>
           <div className="space-y-4">
-            <h2 className="text-4xl font-display font-black tracking-tighter uppercase italic">Registros <span className="text-yellow-500">Cerrados</span></h2>
-            <p className="text-white/40 text-lg italic">
+            <h2 className="text-4xl font-display font-bold tracking-tight text-black/90">Registros <span className="text-yellow-500">Cerrados</span></h2>
+            <p className="text-black/50 text-lg italic">
               Lo sentimos, el registro de nuevos usuarios está deshabilitado temporalmente por el administrador.
             </p>
           </div>
-          <div className="pt-8 border-t border-white/5">
-            <Link to="/" className="text-[#ff4e00] font-black uppercase tracking-widest text-xs hover:underline">
+          <div className="pt-8 border-t border-black/5">
+            <Link to="/" className="text-brand font-semibold uppercase tracking-wider text-xs hover:underline">
               Volver al Inicio
             </Link>
           </div>
@@ -130,14 +130,14 @@ const Register: React.FC = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass p-8 md:p-12 rounded-[3rem] shadow-2xl border-white/10"
+        className="glass p-8 md:p-12 rounded-3xl shadow-lg shadow-black/[0.03] shadow-black/[0.04] border-black/[0.06]"
       >
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-[#ff4e00]/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-[#ff4e00]/20">
-            <UserPlus className="w-8 h-8 text-[#ff4e00]" />
+          <div className="w-16 h-16 bg-brand/10 rounded-xl flex items-center justify-center mx-auto mb-6 border border-brand/20">
+            <UserPlus className="w-8 h-8 text-brand" />
           </div>
-          <h2 className="text-4xl font-display font-black tracking-tighter uppercase italic mb-4">Crear Cuenta</h2>
-          <p className="text-white/40 text-sm font-medium tracking-widest uppercase italic">Únete a la comunidad Vida Mixe</p>
+          <h2 className="text-4xl font-display font-bold tracking-tight text-black/90 mb-4">Crear Cuenta</h2>
+          <p className="text-black/50 text-sm font-medium tracking-widest uppercase italic">Únete a la comunidad Vida Mixe</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -146,7 +146,7 @@ const Register: React.FC = () => {
               type="button"
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
-              className="w-full bg-white text-black p-4 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-gray-100 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="w-full bg-black text-white p-4 rounded-xl font-semibold uppercase tracking-wider flex items-center justify-center gap-3 hover:bg-gray-100 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {isGoogleLoading ? (
                 <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
@@ -163,75 +163,75 @@ const Register: React.FC = () => {
 
             <div className="relative py-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10"></div>
+                <div className="w-full border-t border-black/[0.06]"></div>
               </div>
-              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-[0.3em]">
-                <span className="px-4 bg-[#0a0502] text-white/20">O usa tu correo</span>
+              <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-[0.15em]">
+                <span className="px-4 bg-[#f5f5f0] text-black/30">O usa tu correo</span>
               </div>
             </div>
 
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Nombre de Usuario</label>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-black/40 ml-2">Nombre de Usuario</label>
                 <input 
                   type="text" 
                   required
                   placeholder="Ej. MixeDigital" 
                   onChange={(e) => setFormData({...formData, username: e.target.value})} 
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-all" 
+                  className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-all" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Correo Electrónico</label>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-black/40 ml-2">Correo Electrónico</label>
                 <input 
                   type="email" 
                   required
                   placeholder="usuario@ejemplo.com" 
                   onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-all" 
+                  className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-all" 
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Contraseña</label>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-black/40 ml-2">Contraseña</label>
                 <div className="relative">
                   <input 
                     type={showPassword ? 'text' : 'password'} 
                     required
                     placeholder="••••••••" 
                     onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                    className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-all" 
+                    className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-all" 
                   />
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)} 
-                    className="absolute right-4 top-4 text-white/30 hover:text-white transition-colors"
+                    className="absolute right-4 top-4 text-black/40 hover:text-black transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-2">Repetir Contraseña</label>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-black/40 ml-2">Repetir Contraseña</label>
                 <input 
                   type="password" 
                   required
                   placeholder="••••••••" 
                   onChange={(e) => setFormData({...formData, repeatPassword: e.target.value})} 
-                  className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:border-[#ff4e00] outline-none transition-all" 
+                  className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-all" 
                 />
               </div>
               <button 
                 type="submit" 
-                className="w-full bg-[#ff4e00] p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff8c00] transition-all transform active:scale-95 shadow-xl shadow-[#ff4e00]/20 mt-4"
+                className="w-full bg-brand p-5 rounded-xl font-semibold uppercase tracking-wider hover:bg-[#ff8c00] transition-all transform active:scale-95 shadow-lg shadow-black/[0.03] shadow-[#ff4e00]/20 mt-4"
               >
                 Crear Cuenta
               </button>
             </form>
           </div>
 
-          <div className="hidden md:flex flex-col justify-center space-y-8 border-l border-white/5 pl-12">
+          <div className="hidden md:flex flex-col justify-center space-y-8 border-l border-black/5 pl-12">
             <div className="space-y-4">
-              <h4 className="text-xl font-display font-bold text-[#ff4e00] italic">¿Por qué unirse?</h4>
+              <h4 className="text-xl font-display font-bold text-brand italic">¿Por qué unirse?</h4>
               <ul className="space-y-4">
                 {[
                   'Acceso a transmisiones exclusivas',
@@ -239,25 +239,25 @@ const Register: React.FC = () => {
                   'Comparte tus propios archivos y medios',
                   'Mantente al día con las noticias locales'
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-white/50 italic">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#ff4e00] mt-1.5 shrink-0" />
+                  <li key={i} className="flex items-start gap-3 text-sm text-black/50 italic">
+                    <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
             
-            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10">
-              <p className="text-xs text-white/40 italic leading-relaxed">
+            <div className="p-6 bg-black/[0.03] rounded-3xl border border-black/[0.06]">
+              <p className="text-xs text-black/50 italic leading-relaxed">
                 Al registrarte, aceptas nuestros términos de servicio y política de privacidad. Tu información está segura con nosotros.
               </p>
             </div>
 
             <div className="text-center pt-4">
-              <p className="text-xs text-white/40 font-black uppercase tracking-widest mb-4">¿Ya tienes cuenta?</p>
+              <p className="text-xs text-black/50 font-semibold uppercase tracking-wider mb-4">¿Ya tienes cuenta?</p>
               <Link 
                 to="/" 
-                className="inline-flex items-center gap-2 text-[#ff4e00] font-black uppercase tracking-widest text-xs hover:gap-4 transition-all"
+                className="inline-flex items-center gap-2 text-brand font-semibold uppercase tracking-wider text-xs hover:gap-4 transition-all"
               >
                 <span>Iniciar Sesión</span>
                 <LogIn className="w-4 h-4" />

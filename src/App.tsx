@@ -46,8 +46,8 @@ export default function App() {
                       <Route path="/contacts" element={<AuthGuard><Contacts /></AuthGuard>} />
                       <Route path="/chat/:contactId" element={<AuthGuard><Chat /></AuthGuard>} />
                       <Route path="/gallery" element={<AuthGuard><Gallery /></AuthGuard>} />
-                      <Route path="/admin" element={<AuthGuard><AdminStream /></AuthGuard>} />
-                      <Route path="/dashboard" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
+                      <Route path="/studio" element={<AuthGuard><AdminStream /></AuthGuard>} />
+                      <Route path="/admin" element={<AuthGuard requireAdmin><AdminDashboard /></AuthGuard>} />
                       <Route path="/settings" element={<AuthGuard requireAdmin><GlobalSettings /></AuthGuard>} />
                       <Route path="/stream/:id" element={<StreamView />} />
                       <Route path="/register" element={<Register />} />

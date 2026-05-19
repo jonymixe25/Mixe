@@ -82,22 +82,22 @@ const Profile: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-12 relative">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3 text-[#ff4e00]">
+          <div className="flex items-center gap-3 text-brand">
             <User className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Perfil de Usuario</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.15em]">Perfil de Usuario</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Mi Espacio</span></h1>
-          <p className="text-white/40 text-sm font-medium italic max-w-md">
+          <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-black/90"><span>Mi Espacio</span></h1>
+          <p className="text-black/50 text-sm font-medium italic max-w-md">
             <span>Personaliza tu identidad y gestiona tu información en la plataforma.</span>
           </p>
         </div>
         
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-3 shadow-xl ${
+          className={`px-8 py-3 rounded-xl text-[10px] font-semibold uppercase tracking-wider transition-all duration-500 flex items-center gap-3 shadow-lg shadow-black/[0.03] ${
             isEditing 
-              ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white' 
-              : 'glass text-[#ff4e00] border-white/10 hover:bg-[#ff4e00] hover:text-white'
+              ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-black' 
+              : 'glass text-brand border-black/[0.06] hover:bg-brand hover:text-black'
           }`}
         >
           {isEditing ? (
@@ -114,18 +114,18 @@ const Profile: React.FC = () => {
         </button>
       </div>
 
-      <div className="glass rounded-[3rem] overflow-hidden shadow-2xl border-white/10 relative">
+      <div className="glass rounded-3xl overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] border-black/[0.06] relative">
         {/* Header/Cover Placeholder */}
         <div className="h-48 bg-gradient-to-br from-[#ff4e00]/30 via-[#ff4e00]/10 to-transparent relative overflow-hidden">
           <div className="absolute inset-0 opacity-20 mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-[#ff4e00]/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-brand/20 rounded-full blur-3xl" />
         </div>
         
         <div className="px-10 lg:px-16 pb-16">
           <div className="relative -mt-24 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="relative group">
-              <div className="w-44 h-44 rounded-[3rem] bg-[#0a0502] p-1.5 shadow-2xl ring-1 ring-white/10">
-                <div className="w-full h-full rounded-[2.7rem] overflow-hidden border-2 border-white/10 relative group-hover:border-[#ff4e00]/50 transition-colors duration-500">
+              <div className="w-44 h-44 rounded-3xl bg-[#f5f5f0] p-1.5 shadow-lg shadow-black/[0.03] shadow-black/[0.04] ring-1 ring-white/10">
+                <div className="w-full h-full rounded-[2.7rem] overflow-hidden border-2 border-black/[0.06] relative group-hover:border-brand/50 transition-colors duration-500">
                   <img 
                     src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
                     alt="profile" 
@@ -133,8 +133,8 @@ const Profile: React.FC = () => {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
-                    <Camera className="w-8 h-8 text-white animate-bounce" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/60">Actualizar Foto</span>
+                    <Camera className="w-8 h-8 text-black animate-bounce" />
+                    <span className="text-[8px] font-semibold uppercase tracking-wider text-black/60">Actualizar Foto</span>
                   </div>
                 </div>
               </div>
@@ -150,12 +150,12 @@ const Profile: React.FC = () => {
 
             {!isEditing && (
               <div className="flex flex-col gap-2 md:mb-4">
-                <h2 className="text-4xl lg:text-5xl font-display font-black tracking-tighter uppercase italic leading-none">
+                <h2 className="text-4xl lg:text-5xl font-display font-bold tracking-tight text-black/90 leading-none">
                   {user.displayName}
                 </h2>
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-[#ff4e00] rounded-full animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Miembro Activo</span>
+                  <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">Miembro Activo</span>
                 </div>
               </div>
             )}
@@ -172,28 +172,28 @@ const Profile: React.FC = () => {
               >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Nombre de Usuario</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Nombre de Usuario</label>
                     <input 
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all placeholder:text-white/20"
+                      className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all placeholder:text-black/30"
                       placeholder="Tu nombre público..."
                     />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Biografía</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Biografía</label>
                     <div className="react-quill-container">
                       <ReactQuill 
                         theme="snow" 
                         value={bio} 
                         onChange={setBio}
-                        className="bg-white/5 border border-white/10 rounded-2xl text-sm font-medium focus:border-[#ff4e00] outline-none transition-all"
+                        className="bg-black/[0.03] border border-black/[0.06] rounded-xl text-sm font-medium focus:border-brand outline-none transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Redes Sociales</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Redes Sociales</label>
                     <div className="space-y-2">
                       {socialLinks.map((link, index) => (
                         <div key={index} className="flex gap-2">
@@ -202,38 +202,38 @@ const Profile: React.FC = () => {
                             value={link.platform} 
                             onChange={(e) => updateSocialLink(index, 'platform', e.target.value)} 
                             placeholder="Plataforma (ej. Twitter)"
-                            className="w-1/3 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-sm"
+                            className="w-1/3 bg-black/[0.03] border border-black/[0.06] rounded-xl py-2 px-4 text-sm"
                           />
                           <input 
                             type="text" 
                             value={link.url} 
                             onChange={(e) => updateSocialLink(index, 'url', e.target.value)} 
                             placeholder="URL"
-                            className="w-2/3 bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-sm"
+                            className="w-2/3 bg-black/[0.03] border border-black/[0.06] rounded-xl py-2 px-4 text-sm"
                           />
                           <button onClick={() => removeSocialLink(index)} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       ))}
-                      <button onClick={addSocialLink} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00] mt-2">
+                      <button onClick={addSocialLink} className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-brand mt-2">
                         <Plus className="w-4 h-4" /> Añadir Red Social
                       </button>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Ciudad</label>
-                    <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Ciudad</label>
+                    <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all" />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Colonia</label>
-                    <input type="text" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Colonia</label>
+                    <input type="text" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all" />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Calle y número</label>
-                    <input type="text" value={streetAndNumber} onChange={(e) => setStreetAndNumber(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Calle y número</label>
+                    <input type="text" value={streetAndNumber} onChange={(e) => setStreetAndNumber(e.target.value)} className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all" />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-2">Fecha de nacimiento</label>
-                    <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all" />
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">Fecha de nacimiento</label>
+                    <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all" />
                   </div>
                 </div>
                 
@@ -241,10 +241,10 @@ const Profile: React.FC = () => {
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="w-full lg:w-auto bg-[#ff4e00] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-4 hover:bg-[#ff4e00]/90 transition-all duration-500 shadow-2xl shadow-[#ff4e00]/20 disabled:opacity-50 active:scale-95"
+                    className="w-full lg:w-auto bg-brand text-black px-12 py-5 rounded-xl font-semibold uppercase tracking-wider flex items-center justify-center gap-4 hover:bg-brand/90 transition-all duration-500 shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/20 disabled:opacity-50 active:scale-95"
                   >
                     {loading ? (
-                      <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-3 border-black/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
                         <Save className="w-6 h-6" />
@@ -263,19 +263,19 @@ const Profile: React.FC = () => {
                 className="space-y-12"
               >
                 <div className="space-y-4 max-w-2xl">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Biografía</h3>
+                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">Biografía</h3>
                   <div 
-                    className="text-xl text-white/60 italic leading-relaxed font-medium"
+                    className="text-xl text-black/60 italic leading-relaxed font-medium"
                     dangerouslySetInnerHTML={{ __html: bio || 'Este usuario aún no ha escrito su biografía. ¡Anímate a compartir algo sobre ti!' }}
                   />
                 </div>
 
                 {socialLinks.length > 0 && (
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Redes Sociales</h3>
+                    <h3 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">Redes Sociales</h3>
                     <div className="flex flex-wrap gap-4">
                       {socialLinks.map((link, index) => (
-                        <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white/5 rounded-xl text-sm font-medium hover:bg-[#ff4e00]/20 transition-colors">
+                        <a key={index} href={link.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-black/[0.03] rounded-xl text-sm font-medium hover:bg-brand/20 transition-colors">
                           {link.platform}
                         </a>
                       ))}
@@ -283,10 +283,10 @@ const Profile: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-white/10">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-black/[0.06]">
                   {[
                     { icon: Mail, label: 'Correo Electrónico', value: user.email, color: 'text-blue-500' },
-                    { icon: Shield, label: 'Rol en la Plataforma', value: user.role, color: 'text-[#ff4e00]', capitalize: true },
+                    { icon: Shield, label: 'Rol en la Plataforma', value: user.role, color: 'text-brand', capitalize: true },
                     { icon: Calendar, label: 'Miembro Desde', value: user.createdAt ? format(user.createdAt.toDate(), "d 'de' MMMM, yyyy", { locale: es }) : 'Reciente', color: 'text-purple-500' },
                     { icon: User, label: 'Ciudad', value: user.city || 'No especificada', color: 'text-green-500' },
                     { icon: User, label: 'Colonia', value: user.neighborhood || 'No especificada', color: 'text-yellow-500' },
@@ -294,11 +294,11 @@ const Profile: React.FC = () => {
                     { icon: Calendar, label: 'Fecha de nacimiento', value: user.dateOfBirth || 'No especificada', color: 'text-pink-500' }
                   ].map((item, i) => (
                     <div key={item.label} className="space-y-4 group">
-                      <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#ff4e00]/30 transition-all duration-500`}>
+                      <div className={`w-12 h-12 rounded-xl bg-black/[0.03] flex items-center justify-center border border-black/[0.06] group-hover:border-brand/20 transition-all duration-500`}>
                         <item.icon className={`w-6 h-6 ${item.color} opacity-40 group-hover:opacity-100 transition-opacity`} />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{item.label}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">{item.label}</p>
                         <p className={`text-lg font-display font-bold ${item.capitalize ? 'capitalize' : ''}`}>{item.value}</p>
                       </div>
                     </div>

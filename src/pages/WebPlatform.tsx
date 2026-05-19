@@ -15,8 +15,8 @@ const WebPlatform: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-20">
       {/* Hero */}
-      <section className="relative h-[60vh] rounded-[3rem] overflow-hidden flex items-center justify-center group shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0502]/60 to-[#0a0502] z-10" />
+      <section className="relative h-[60vh] rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f5f0]/60 to-[#f5f5f0] z-10" />
         <img 
           src="https://picsum.photos/seed/digital-mixe/1920/1080" 
           alt="Digital Mixe" 
@@ -27,15 +27,15 @@ const WebPlatform: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-24 h-24 bg-[#ff4e00] rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-[#ff4e00]/30"
+            className="w-24 h-24 bg-brand rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/30"
           >
-            <Globe className="w-12 h-12 text-white" />
+            <Globe className="w-12 h-12 text-black" />
           </motion.div>
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter uppercase italic">
-              Vida Mixe <span className="text-[#ff4e00]">Web</span>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-black/90">
+              Vida Mixe <span className="text-brand">Web</span>
             </h1>
-            <p className="text-xl text-white/40 italic max-w-2xl mx-auto">
+            <p className="text-xl text-black/50 italic max-w-2xl mx-auto">
               La extensión digital de nuestra cultura. Accede a herramientas exclusivas y recursos comunitarios.
             </p>
           </div>
@@ -51,37 +51,37 @@ const WebPlatform: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.1 }}
-            className="glass p-10 rounded-[2.5rem] border-white/10 space-y-6 hover:border-[#ff4e00]/30 transition-colors group"
+            className="glass p-10 rounded-3xl border-black/[0.06] space-y-6 hover:border-brand/20 transition-colors group"
           >
-            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center group-hover:bg-[#ff4e00]/10 transition-colors">
-              <f.icon className="w-7 h-7 text-[#ff4e00]" />
+            <div className="w-14 h-14 bg-black/[0.03] rounded-xl flex items-center justify-center group-hover:bg-brand/10 transition-colors">
+              <f.icon className="w-7 h-7 text-brand" />
             </div>
             <div className="space-y-3">
               <h3 className="text-xl font-bold uppercase italic">{f.title}</h3>
-              <p className="text-white/40 text-sm leading-relaxed italic">{f.desc}</p>
+              <p className="text-black/50 text-sm leading-relaxed italic">{f.desc}</p>
             </div>
           </motion.div>
         ))}
       </section>
 
       {/* Action */}
-      <section className="glass p-12 md:p-20 rounded-[3rem] border-white/10 text-center space-y-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#ff4e00]/5 blur-[120px] rounded-full" />
+      <section className="glass p-12 md:p-20 rounded-3xl border-black/[0.06] text-center space-y-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 blur-[120px] rounded-full" />
         <div className="space-y-4 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-display font-black tracking-tighter uppercase italic">¿Listo para explorar?</h2>
-          <p className="text-white/40 text-lg italic max-w-xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight text-black/90">¿Listo para explorar?</h2>
+          <p className="text-black/50 text-lg italic max-w-xl mx-auto">
             Esta plataforma está en fase beta. Pronto podrás gestionar tus propios proyectos comunitarios aquí.
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-6 relative z-10">
           <button 
             onClick={() => navigate('/')}
-            className="bg-white text-black px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 hover:bg-[#ff4e00] hover:text-white transition-all transform hover:-translate-y-1"
+            className="bg-black text-white px-10 py-5 rounded-xl font-semibold uppercase tracking-wider flex items-center gap-3 hover:bg-brand hover:text-black transition-all transform hover:-translate-y-1"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Volver al Inicio</span>
           </button>
-          <button className="glass px-10 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center gap-3 border-white/10 hover:bg-white/5 transition-all transform hover:-translate-y-1">
+          <button className="glass px-10 py-5 rounded-xl font-semibold uppercase tracking-wider flex items-center gap-3 border-black/[0.06] hover:bg-black/[0.03] transition-all transform hover:-translate-y-1">
             <span>Saber Más</span>
             <ExternalLink className="w-5 h-5" />
           </button>

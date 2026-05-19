@@ -906,7 +906,7 @@ export default function AdminStream() {
   }, [activeStream]);
 
   return (
-    <div className="min-h-screen bg-[#070504] text-white selection:bg-[#ff4e00]/30 -mx-4 md:-mx-8 lg:-mx-12 -mt-8">
+    <div className="min-h-screen bg-[#070504] text-white selection:bg-brand/30 -mx-4 md:-mx-8 lg:-mx-12 -mt-8">
       {/* Immersive Background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-radial from-[#ff4e00]/10 to-transparent blur-[120px] opacity-20 animate-pulse" />
@@ -921,17 +921,17 @@ export default function AdminStream() {
             <div className="flex items-center gap-4">
               <div 
                 onClick={() => navigate('/')}
-                className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all cursor-pointer group"
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all cursor-pointer group"
               >
                 <ChevronLeft className="w-5 h-5 text-white/70 group-hover:-translate-x-1 transition-transform" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ff4e00]">Panel de Control</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">Panel de Control</span>
                   {activeStream && (
                     <div className="flex items-center gap-2 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20">
                       <div className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-red-500">En Vivo</span>
+                      <span className="text-[8px] font-semibold uppercase tracking-wider text-red-500">En Vivo</span>
                     </div>
                   )}
                 </div>
@@ -943,12 +943,12 @@ export default function AdminStream() {
               {activeStream && (
                 <div className="hidden md:flex items-center gap-6">
                   <div className="flex flex-col items-end">
-                    <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">Duración</span>
-                    <span className="text-sm font-mono font-bold text-[#ff4e00]">{elapsedTime}</span>
+                    <span className="text-[9px] font-mono text-white/50 uppercase tracking-widest">Duración</span>
+                    <span className="text-sm font-mono font-bold text-brand">{elapsedTime}</span>
                   </div>
                   <div className="h-8 w-px bg-white/10" />
                   <div className="flex flex-col items-end">
-                    <span className="text-[9px] font-mono text-white/40 uppercase tracking-widest">Audiencia</span>
+                    <span className="text-[9px] font-mono text-white/50 uppercase tracking-widest">Audiencia</span>
                     <span className="text-sm font-mono font-bold">{activeStream.viewerCount}</span>
                   </div>
                 </div>
@@ -956,7 +956,7 @@ export default function AdminStream() {
               <button 
                 onClick={() => setIsModalOpen(true)}
                 disabled={!activeStream}
-                className="px-6 py-2 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-20 disabled:grayscale transition-all text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20"
+                className="px-6 py-2 rounded-xl bg-red-500 hover:bg-rose-500 disabled:opacity-20 disabled:grayscale transition-all text-[10px] font-semibold uppercase tracking-wider shadow-lg shadow-red-500/20"
               >
                 Finalizar
               </button>
@@ -966,7 +966,7 @@ export default function AdminStream() {
           {/* Dashboard Main Area */}
           <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scrollbar-hide">
             {/* Video Preview Stage */}
-            <section className="relative aspect-video bg-black rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden border border-white/5 shadow-2xl group/player ring-1 ring-white/5">
+            <section className="relative aspect-video bg-black rounded-3xl md:rounded-[3.5rem] overflow-hidden border border-white/5 shadow-lg shadow-black/[0.03] shadow-black/[0.04] group/player ring-1 ring-white/5">
               {(activeStream || isPreviewing) ? (
                 <>
                   <div className="w-full h-full flex items-center justify-center bg-black [&>video]:max-w-full [&>video]:max-h-full [&>video]:w-full [&>video]:h-full [&>video]:object-contain" ref={remoteVideoContainerRef}>
@@ -986,57 +986,57 @@ export default function AdminStream() {
 
                   {/* Status Badges */}
                   <div className="absolute top-6 left-6 right-6 flex items-start justify-between z-30 pointer-events-none">
-                    <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-4 pointer-events-auto">
+                    <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/10 flex items-center gap-4 pointer-events-auto">
                       <div className="flex items-center gap-2">
                         <Activity className={`w-3.5 h-3.5 ${streamStats.packetLoss < 0.1 ? 'text-emerald-400' : 'text-yellow-400'}`} />
-                        <span className="text-[10px] font-mono font-black text-white/90 uppercase tracking-widest">{streamStats.bitrate} kbps</span>
+                        <span className="text-[10px] font-mono font-bold text-white/90 uppercase tracking-widest">{streamStats.bitrate} kbps</span>
                       </div>
                       <div className="w-px h-3 bg-white/10" />
                       <div className="flex items-center gap-2">
-                        <Gauge className="w-3.5 h-3.5 text-[#ff4e00]" />
-                        <span className="text-[10px] font-mono font-black text-white/90 uppercase tracking-widest">{streamStats.packetLoss.toFixed(2)}% loss</span>
+                        <Gauge className="w-3.5 h-3.5 text-brand" />
+                        <span className="text-[10px] font-mono font-bold text-white/90 uppercase tracking-widest">{streamStats.packetLoss.toFixed(2)}% loss</span>
                       </div>
                     </div>
 
                     {activeStream && (
                       <div className="bg-red-500 px-4 py-1.5 rounded-full flex items-center gap-2 animate-pulse shadow-[0_0_25px_rgba(239,68,68,0.5)] pointer-events-auto">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">LIVE</span>
+                        <div className="w-1.5 h-1.5 bg-black rounded-full" />
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white">LIVE</span>
                       </div>
                     )}
                   </div>
 
                   {/* Floating Action Menu */}
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 transition-all duration-300 pointer-events-auto px-6 py-4 bg-black/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl">
+                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 transition-all duration-300 pointer-events-auto px-6 py-4 bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
                     <button 
                       onClick={toggleCamera}
-                      className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-[#ff4e00] hover:border-[#ff4e00]/50 transition-all shadow-xl active:scale-90"
+                      className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-brand hover:border-brand/50 transition-all shadow-lg shadow-black/[0.03] active:scale-90"
                       title="Loop Camera"
                     >
                       <Sparkles className="w-5 h-5" />
                     </button>
                     <button 
                       onClick={isRecording ? stopRecording : startRecording}
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all shadow-xl active:scale-90 ${isRecording ? 'bg-red-500 border-red-400 animate-pulse' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all shadow-lg shadow-black/[0.03] active:scale-90 ${isRecording ? 'bg-red-500 border-red-400 animate-pulse' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
                     >
                       <Video className="w-5 h-5" />
                     </button>
                     <button 
                       onClick={toggleScreenShare}
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all shadow-xl active:scale-90 ${isScreenSharing ? 'bg-[#ff4e00] border-[#ff4e00]/50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all shadow-lg shadow-black/[0.03] active:scale-90 ${isScreenSharing ? 'bg-brand border-brand/50' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
                     <div className="w-px h-6 bg-white/10" />
                     <button 
                       onClick={() => setShowOverlay(!showOverlay)}
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all shadow-xl active:scale-90 ${showOverlay ? 'bg-[#ff4e00] border-[#ff4e00]/50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all shadow-lg shadow-black/[0.03] active:scale-90 ${showOverlay ? 'bg-brand border-brand/50' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
                     >
                       <Layout className="w-5 h-5" />
                     </button>
                     <button 
                       onClick={() => videoRef.current?.parentElement?.requestFullscreen()}
-                      className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shadow-xl active:scale-90"
+                      className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shadow-lg shadow-black/[0.03] active:scale-90"
                     >
                       <Maximize className="w-5 h-5" />
                     </button>
@@ -1048,9 +1048,9 @@ export default function AdminStream() {
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="bg-[#ff4e00]/90 text-white px-12 py-8 rounded-[3rem] shadow-2xl backdrop-blur-md border border-white/20 text-center"
+                        className="bg-brand/90 text-black px-12 py-8 rounded-3xl shadow-lg shadow-black/[0.03] shadow-black/[0.04] backdrop-blur-md border border-black/20 text-center"
                       >
-                        <p className="text-3xl md:text-5xl font-display font-black uppercase italic tracking-tighter leading-none">
+                        <p className="text-3xl md:text-5xl font-display font-bold uppercase italic tracking-tighter leading-none">
                           {overlayText}
                         </p>
                       </motion.div>
@@ -1061,12 +1061,12 @@ export default function AdminStream() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070504]">
                   <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mb-8 border border-white/5 relative group-hover/player:scale-110 transition-transform duration-700">
                     <Video className="w-10 h-10 text-white/10" />
-                    <div className="absolute inset-0 border border-[#ff4e00]/20 rounded-full animate-ping opacity-20" />
+                    <div className="absolute inset-0 border border-brand/20 rounded-full animate-ping opacity-20" />
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-white/20 mb-8 italic">Ready to Capture</h3>
+                  <h3 className="text-xl font-bold uppercase tracking-[0.3em] text-white/30 mb-8 italic">Ready to Capture</h3>
                   <button 
                     onClick={() => setIsPreviewing(true)}
-                    className="bg-[#ff4e00] text-white px-12 py-5 rounded-[2rem] font-black uppercase tracking-widest hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 active:scale-95"
+                    className="bg-brand text-black px-12 py-5 rounded-3xl font-semibold uppercase tracking-wider hover:bg-brand/90 transition-all shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/20 active:scale-95"
                   >
                     Activate Stage
                   </button>
@@ -1076,27 +1076,27 @@ export default function AdminStream() {
 
             {/* Content & Quick Stats */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
-              <div className="bg-white/5 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-white/5 space-y-6">
+              <div className="bg-white/5 backdrop-blur-2xl p-8 rounded-3xl border border-white/5 space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-[#ff4e00]">
+                  <div className="flex items-center gap-3 text-brand">
                     <Activity className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Session Metadata</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.15em]">Session Metadata</span>
                   </div>
-                  <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest italic">{activeStream?.status || 'Pre-Flight'}</span>
+                  <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest italic">{activeStream?.status || 'Pre-Flight'}</span>
                 </div>
                 <div>
-                  <h2 className="text-3xl font-display font-black tracking-tighter mb-4 italic uppercase">
+                  <h2 className="text-3xl font-display font-bold tracking-tighter mb-4 italic uppercase">
                     {activeStream?.title || 'Standalone Broadcast'}
                   </h2>
-                  <p className="text-white/40 text-sm leading-relaxed italic">
+                  <p className="text-white/50 text-sm leading-relaxed italic">
                     {activeStream?.description || 'Broadcast details will be established upon session synchronization.'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/60">
+                  <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-[10px] font-semibold uppercase tracking-wider text-white/60">
                     {activeStream?.category || 'Cultura'}
                   </div>
-                  <div className="px-4 py-2 rounded-xl bg-[#ff4e00]/5 border border-[#ff4e00]/10 text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">
+                  <div className="px-4 py-2 rounded-xl bg-brand/5 border border-brand/10 text-[10px] font-semibold uppercase tracking-wider text-brand">
                     {activeStream?.privacy || 'Public'}
                   </div>
                 </div>
@@ -1107,12 +1107,12 @@ export default function AdminStream() {
                   { label: 'Likes', value: activeStream?.likes || '0', icon: Heart, color: 'text-red-500' },
                   { label: 'Chat messages', value: chatMessages.length, icon: MessageSquare, color: 'text-emerald-400' },
                   { label: 'Incoming Duos', value: joinRequests.filter(r => r.status === 'pending').length, icon: UserPlus, color: 'text-yellow-400' },
-                  { label: 'Session Tier', value: 'PRO', icon: Sparkles, color: 'text-[#ff4e00]' }
+                  { label: 'Session Tier', value: 'PRO', icon: Sparkles, color: 'text-brand' }
                 ].map((stat, idx) => (
-                  <div key={idx} className="bg-white/5 backdrop-blur-2xl p-6 rounded-[2rem] border border-white/5 flex flex-col items-center justify-center gap-2 group hover:bg-white/[0.07] transition-all">
+                  <div key={idx} className="bg-white/5 backdrop-blur-2xl p-6 rounded-3xl border border-white/5 flex flex-col items-center justify-center gap-2 group hover:bg-black/[0.07] transition-all">
                     <stat.icon className={`w-5 h-5 ${stat.color} opacity-60 group-hover:scale-110 transition-transform`} />
-                    <span className="text-2xl font-black italic tracking-tighter">{stat.value}</span>
-                    <span className="text-[8px] font-black uppercase tracking-widest text-white/20 text-center">{stat.label}</span>
+                    <span className="text-2xl font-bold italic tracking-tighter">{stat.value}</span>
+                    <span className="text-[8px] font-semibold uppercase tracking-wider text-white/30 text-center">{stat.label}</span>
                   </div>
                 ))}
               </div>
@@ -1126,13 +1126,13 @@ export default function AdminStream() {
           <div className="flex items-center border-b border-white/5 bg-black/20 shrink-0">
              <button 
                 onClick={() => setActiveTab('chat')}
-                className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'chat' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+                className={`flex-1 py-5 text-[10px] font-semibold uppercase tracking-[0.15em] border-b-2 transition-all ${activeTab === 'chat' ? 'border-brand text-white' : 'border-transparent text-white/40 hover:text-white/60'}`}
               >
                 Chat
              </button>
              <button 
                 onClick={() => setActiveTab('participants')}
-                className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'participants' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+                className={`flex-1 py-5 text-[10px] font-semibold uppercase tracking-[0.15em] border-b-2 transition-all ${activeTab === 'participants' ? 'border-brand text-white' : 'border-transparent text-white/40 hover:text-white/60'}`}
               >
                 Audencia
                 {joinRequests.filter(r => r.status === 'pending').length > 0 && (
@@ -1142,7 +1142,7 @@ export default function AdminStream() {
              {!activeStream && (
                <button 
                   onClick={() => setActiveTab('config')}
-                  className={`flex-1 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 transition-all ${activeTab === 'config' ? 'border-[#ff4e00] text-white' : 'border-transparent text-white/30 hover:text-white/60'}`}
+                  className={`flex-1 py-5 text-[10px] font-semibold uppercase tracking-[0.15em] border-b-2 transition-all ${activeTab === 'config' ? 'border-brand text-white' : 'border-transparent text-white/40 hover:text-white/60'}`}
                 >
                   Config
                </button>
@@ -1160,10 +1160,10 @@ export default function AdminStream() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-[#ff4e00]/10 border border-[#ff4e00]/20 p-4 rounded-2xl relative group"
+                        className="bg-brand/10 border border-brand/20 p-4 rounded-xl relative group"
                       >
-                        <Pin className="absolute top-2 right-2 w-3 h-3 text-[#ff4e00]/40" />
-                        <span className="text-[8px] font-black uppercase text-[#ff4e00] tracking-[0.25em] mb-1 block">Mensaje Fijado</span>
+                        <Pin className="absolute top-2 right-2 w-3 h-3 text-brand/40" />
+                        <span className="text-[8px] font-bold uppercase text-brand tracking-[0.25em] mb-1 block">Mensaje Fijado</span>
                         <p className="text-xs text-white/90 italic font-medium leading-relaxed">"{pinnedMessage.text}"</p>
                       </motion.div>
                     )}
@@ -1177,24 +1177,24 @@ export default function AdminStream() {
                         className="group/msg"
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-[#ff4e00]'}`}>
+                          <span className={`text-[10px] font-semibold uppercase tracking-wider ${msg.userId === user?.uid ? 'text-emerald-400' : 'text-brand'}`}>
                             {msg.userName}
                           </span>
                           <div className="flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-all">
-                             <button onClick={() => handlePinMessage(msg)} className="p-1 px-2 rounded-md hover:bg-white/5 text-white/20 hover:text-white transition-all">
+                             <button onClick={() => handlePinMessage(msg)} className="p-1 px-2 rounded-md hover:bg-white/5 text-white/30 hover:text-white transition-all">
                                 <Pin className="w-3 h-3" />
                              </button>
-                             <button onClick={() => deleteMessage(msg.id)} className="p-1 px-2 rounded-md hover:bg-red-500/20 text-white/20 hover:text-red-500 transition-all">
+                             <button onClick={() => deleteMessage(msg.id)} className="p-1 px-2 rounded-md hover:bg-red-500/20 text-white/30 hover:text-red-500 transition-all">
                                 <Trash2 className="w-3 h-3" />
                              </button>
                           </div>
                         </div>
                         {msg.imageUrl ? (
-                          <div className="rounded-2xl overflow-hidden border border-white/5 bg-black/40 p-1">
+                          <div className="rounded-xl overflow-hidden border border-white/5 bg-black/40 p-1">
                             <img src={msg.imageUrl} className="w-full h-48 object-cover rounded-xl" alt="upload" />
                           </div>
                         ) : (
-                          <div className="bg-white/5 border border-white/5 px-4 py-2.5 rounded-2xl rounded-tl-none inline-block max-w-full">
+                          <div className="bg-white/5 border border-white/5 px-4 py-2.5 rounded-xl rounded-tl-none inline-block max-w-full">
                             <p className="text-[13px] text-white/80 leading-relaxed font-mono">{msg.text}</p>
                           </div>
                         )}
@@ -1209,7 +1209,7 @@ export default function AdminStream() {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => setAutoModerate(!autoModerate)}
-                      className={`px-3 py-1.5 rounded-xl border transition-all text-[8px] font-black uppercase tracking-widest flex items-center gap-2 ${autoModerate ? 'bg-[#ff4e00]/10 border-[#ff4e00]/30 text-[#ff4e00]' : 'bg-white/5 border-white/10 text-white/30'}`}
+                      className={`px-3 py-1.5 rounded-xl border transition-all text-[8px] font-semibold uppercase tracking-wider flex items-center gap-2 ${autoModerate ? 'bg-brand/10 border-brand/20 text-brand' : 'bg-white/5 border border-white/10 text-white/40'}`}
                     >
                       <Shield className="w-3 h-3" />
                       AUTO-GUARD {autoModerate ? 'ON' : 'OFF'}
@@ -1219,7 +1219,7 @@ export default function AdminStream() {
                      <button 
                       type="button"
                       onClick={() => chatImageInputRef.current?.click()}
-                      className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-white/20 hover:bg-white/10 transition-all active:scale-90 shrink-0"
+                      className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-white/30 hover:bg-white/10 transition-all active:scale-90 shrink-0"
                     >
                       {isUploadingChatImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />}
                     </button>
@@ -1228,9 +1228,9 @@ export default function AdminStream() {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Input session data..."
-                      className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-4 py-2 text-sm outline-none focus:border-[#ff4e00]/30 transition-all placeholder:text-white/10 font-mono italic"
+                      className="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:border-brand/20 transition-all placeholder:text-white/10 font-mono italic"
                     />
-                    <button type="submit" className="w-12 h-12 rounded-2xl bg-[#ff4e00] text-white flex items-center justify-center shadow-lg shadow-[#ff4e00]/20 active:scale-95 transition-all shrink-0">
+                    <button type="submit" className="w-12 h-12 rounded-xl bg-brand text-black flex items-center justify-center shadow-lg shadow-[#ff4e00]/20 active:scale-95 transition-all shrink-0">
                       <Send className="w-4 h-4" />
                     </button>
                   </form>
@@ -1242,12 +1242,12 @@ export default function AdminStream() {
               <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
                 {/* Join Requests */}
                 <div className="space-y-4">
-                   <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
-                      <UserPlus className="w-3 h-3 text-[#ff4e00]" />
+                   <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40 flex items-center gap-2">
+                      <UserPlus className="w-3 h-3 text-brand" />
                       Solicitudes de Dúo
                    </h4>
                    {joinRequests.filter(r => r.status === 'pending').length === 0 ? (
-                      <p className="text-[11px] text-white/20 italic p-4 glass border-white/5 rounded-2xl text-center">No hay solicitudes pendientes</p>
+                      <p className="text-[11px] text-white/30 italic p-4 bg-[#0a0a0a] border-white/10 border-white/5 rounded-xl text-center">No hay solicitudes pendientes</p>
                    ) : (
                      <div className="space-y-3">
                         {joinRequests.filter(r => r.status === 'pending').map((req) => (
@@ -1255,15 +1255,15 @@ export default function AdminStream() {
                               key={req.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="glass border-white/10 p-4 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all"
+                              className="bg-[#0a0a0a] border-white/10 border-white/10 p-4 rounded-xl flex items-center justify-between group hover:bg-white/5 transition-all"
                            >
                               <div className="flex items-center gap-3">
-                                 <div className="w-10 h-10 rounded-xl bg-[#ff4e00]/10 flex items-center justify-center text-[#ff4e00] font-black">
+                                 <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold">
                                     {req.userName?.[0]}
                                  </div>
                                  <div>
                                     <p className="text-xs font-bold text-white/90">{req.userName}</p>
-                                    <p className="text-[9px] font-mono text-white/30">Solicitó hace poco</p>
+                                    <p className="text-[9px] font-mono text-white/40">Solicitó hace poco</p>
                                  </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -1288,20 +1288,20 @@ export default function AdminStream() {
 
                 {/* Audience Insight */}
                 <div className="space-y-4">
-                   <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-white/30 flex items-center gap-2">
-                      <Users className="w-3 h-3 text-[#ff4e00]" />
+                   <h4 className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/40 flex items-center gap-2">
+                      <Users className="w-3 h-3 text-brand" />
                       Usuarios Activos
                    </h4>
-                   <div className="bg-white/5 border border-white/5 p-6 rounded-2xl space-y-4">
+                   <div className="bg-white/5 border border-white/5 p-6 rounded-xl space-y-4">
                       <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
-                        <span className="text-[11px] text-white/40">Total</span>
-                        <span className="text-xs font-mono font-black text-emerald-400">{activeStream.viewerCount}</span>
+                        <span className="text-[11px] text-white/50">Total</span>
+                        <span className="text-xs font-mono font-bold text-emerald-400">{activeStream.viewerCount}</span>
                       </div>
                       
                       <div className="space-y-2">
-                         <p className="text-[9px] uppercase tracking-widest text-white/30 mb-2">Conectados al flujo (En sala)</p>
+                         <p className="text-[9px] uppercase tracking-widest text-white/40 mb-2">Conectados al flujo (En sala)</p>
                          {remoteParticipants.length === 0 ? (
-                           <p className="text-[10px] text-white/20 italic">No hay otros participantes conectados al flujo principal.</p>
+                           <p className="text-[10px] text-white/30 italic">No hay otros participantes conectados al flujo principal.</p>
                          ) : (
                            remoteParticipants.map((p, idx) => (
                              <div key={idx} className="flex items-center gap-2">
@@ -1313,13 +1313,13 @@ export default function AdminStream() {
                       </div>
 
                       <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
-                         <p className="text-[9px] uppercase tracking-widest text-white/30 mb-2">Interactuando en el chat</p>
+                         <p className="text-[9px] uppercase tracking-widest text-white/40 mb-2">Interactuando en el chat</p>
                          {Array.from(new Set(chatMessages.map(m => m.userName))).length === 0 ? (
-                           <p className="text-[10px] text-white/20 italic">Aún no hay mensajes.</p>
+                           <p className="text-[10px] text-white/30 italic">Aún no hay mensajes.</p>
                          ) : (
                            Array.from(new Set(chatMessages.map(m => m.userName))).map((name, idx) => (
                              <div key={idx} className="flex items-center gap-2">
-                               <MessageSquare className="w-3 h-3 text-white/30" />
+                               <MessageSquare className="w-3 h-3 text-white/40" />
                                <span className="text-[11px] font-medium text-white/80">{name}</span>
                              </div>
                            ))
@@ -1336,20 +1336,20 @@ export default function AdminStream() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                         <label className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40">Broadcasting Title</label>
-                         <button onClick={suggestTitle} disabled={suggesting} className="text-[8px] font-black uppercase tracking-widest text-[#ff4e00] hover:underline disabled:opacity-30">Get AI Hint</button>
+                         <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/50">Broadcasting Title</label>
+                         <button onClick={suggestTitle} disabled={suggesting} className="text-[8px] font-semibold uppercase tracking-wider text-brand hover:underline disabled:opacity-30">Get AI Hint</button>
                       </div>
                       <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Ej: Ceremonia del Fuego Nuevo..."
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-sm font-mono placeholder:text-white/10 uppercase italic font-bold tracking-tight"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 focus:border-brand outline-none transition-all text-sm font-mono placeholder:text-white/10 uppercase italic font-bold tracking-tight"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40">Key Visual</label>
+                      <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/50">Key Visual</label>
                       <ImageUpload 
                         onUploadComplete={(url) => setThumbnailUrl(url)}
                         label="Sincronizar Arte de Portada"
@@ -1360,26 +1360,26 @@ export default function AdminStream() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40 flex items-center gap-2">
+                        <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/50 flex items-center gap-2">
                           <Lock className="w-3 h-3" /> Privacy
                         </label>
                         <select
                           value={privacy}
                           onChange={(e) => setPrivacy(e.target.value as any)}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ff4e00] appearance-none cursor-pointer"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-[10px] font-semibold uppercase tracking-wider outline-none focus:border-brand appearance-none cursor-pointer"
                         >
                           <option value="public">Público</option>
                           <option value="private">Privado</option>
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40 flex items-center gap-2">
+                        <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/50 flex items-center gap-2">
                           <Monitor className="w-3 h-3" /> Tier
                         </label>
                         <select
                           value={resolution}
                           onChange={(e) => setResolution(e.target.value as any)}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 text-[10px] font-black uppercase tracking-widest outline-none focus:border-[#ff4e00] appearance-none cursor-pointer"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-[10px] font-semibold uppercase tracking-wider outline-none focus:border-brand appearance-none cursor-pointer"
                         >
                           <option value="720p">720p HD</option>
                           <option value="1080p">1080p Ultra</option>
@@ -1388,12 +1388,12 @@ export default function AdminStream() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.25em] text-white/40 italic">Expresión Narrativa</label>
+                      <label className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/50 italic">Expresión Narrativa</label>
                       <textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Define el flujo de tu transmisión..."
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:border-[#ff4e00] outline-none transition-all text-xs font-mono min-h-[140px] resize-none leading-relaxed placeholder:text-white/10"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 focus:border-brand outline-none transition-all text-xs font-mono min-h-[140px] resize-none leading-relaxed placeholder:text-white/10"
                       />
                     </div>
                   </div>
@@ -1401,7 +1401,7 @@ export default function AdminStream() {
                   <button
                     onClick={handleStartStream}
                     disabled={loading || !title}
-                    className="w-full bg-[#ff4e00] text-white font-black uppercase tracking-[0.2em] py-5 rounded-[2.5rem] flex items-center justify-center gap-4 hover:bg-[#ff4e00]/90 transition-all shadow-2xl shadow-[#ff4e00]/20 disabled:grayscale disabled:opacity-20 active:scale-95"
+                    className="w-full bg-brand text-black font-semibold uppercase tracking-[0.15em] py-5 rounded-3xl flex items-center justify-center gap-4 hover:bg-brand/90 transition-all shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/20 disabled:grayscale disabled:opacity-20 active:scale-95"
                   >
                     {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
                       <>
@@ -1424,7 +1424,7 @@ export default function AdminStream() {
         confirmText="Finalizar Vínculo"
         confirmVariant="danger"
       >
-        <p className="text-white/40 italic text-sm leading-relaxed">
+        <p className="text-white/50 italic text-sm leading-relaxed">
           <span>Esta acción desconectará permanentemente la transmisión actual. ¿Confirmas la finalización de la sesión?</span>
         </p>
       </Modal>

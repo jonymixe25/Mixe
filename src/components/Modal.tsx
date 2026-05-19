@@ -52,11 +52,11 @@ const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className={`relative w-full ${sizeClasses[size]} bg-[#1a1614] border border-white/10 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500`}
+            className={`relative w-full ${sizeClasses[size]} bg-[#1a1614] border border-black/[0.06] rounded-3xl overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] transition-all duration-500`}
           >
-            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+            <div className="p-6 border-b border-black/[0.06] flex items-center justify-between">
               <h3 className="text-lg font-bold uppercase italic tracking-tight">{title}</h3>
-              <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+              <button onClick={onClose} className="text-black/50 hover:text-black transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -67,7 +67,7 @@ const Modal: React.FC<ModalProps> = ({
               <div className="p-6 pt-0 flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 font-bold transition-colors"
+                  className="flex-1 px-6 py-3 rounded-xl bg-black/[0.03] hover:bg-black/[0.06] font-bold transition-colors"
                 >
                   Cancelar
                 </button>
@@ -76,10 +76,10 @@ const Modal: React.FC<ModalProps> = ({
                     onConfirm();
                     onClose();
                   }}
-                  className={`flex-1 px-6 py-3 rounded-2xl font-bold transition-all ${
+                  className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
                     confirmVariant === 'danger' 
-                      ? 'bg-red-500 hover:bg-red-600' 
-                      : 'bg-[#ff4e00] hover:bg-[#ff5e1a]'
+                      ? 'bg-red-500 hover:bg-rose-500' 
+                      : 'bg-brand hover:bg-[#ff5e1a]'
                   }`}
                 >
                   {confirmText}

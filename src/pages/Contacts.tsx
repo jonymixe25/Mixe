@@ -128,23 +128,23 @@ const Contacts: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-12 relative">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3 text-[#ff4e00]">
+          <div className="flex items-center gap-3 text-brand">
             <Users className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Comunidad</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.15em]">Comunidad</span>
           </div>
-          <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter uppercase italic"><span>Mis Contactos</span></h1>
-          <p className="text-white/40 text-sm font-medium italic max-w-md">
+          <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-black/90"><span>Mis Contactos</span></h1>
+          <p className="text-black/50 text-sm font-medium italic max-w-md">
             <span>Conecta con otros miembros, comparte experiencias y mantén el contacto.</span>
           </p>
         </div>
         
-        <div className="glass px-8 py-4 rounded-[2rem] border-white/10 shadow-xl flex items-center gap-4">
-          <div className="w-10 h-10 bg-[#ff4e00]/10 rounded-xl flex items-center justify-center">
-            <Users className="w-5 h-5 text-[#ff4e00]" />
+        <div className="glass px-8 py-4 rounded-3xl border-black/[0.06] shadow-lg shadow-black/[0.03] flex items-center gap-4">
+          <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
+            <Users className="w-5 h-5 text-brand" />
           </div>
           <div className="flex flex-col">
-            <span className="text-2xl font-display font-black tracking-tighter leading-none">{contacts.length}</span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Amigos Conectados</span>
+            <span className="text-2xl font-display font-bold tracking-tighter leading-none">{contacts.length}</span>
+            <span className="text-[8px] font-semibold uppercase tracking-wider text-black/50">Amigos Conectados</span>
           </div>
         </div>
       </div>
@@ -152,24 +152,24 @@ const Contacts: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Search Section */}
         <div className="lg:col-span-1 space-y-8">
-          <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/10 shadow-2xl">
+          <div className="glass rounded-3xl p-8 space-y-8 border-black/[0.06] shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
             <div className="space-y-2">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff4e00]">Encontrar Amigos</h2>
-              <p className="text-white/40 text-xs italic">Busca por nombre o correo electrónico.</p>
+              <h2 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-brand">Encontrar Amigos</h2>
+              <p className="text-black/50 text-xs italic">Busca por nombre o correo electrónico.</p>
             </div>
 
             <form onSubmit={handleSearch} className="relative group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-[#ff4e00] transition-colors" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-black/30 group-focus-within:text-brand transition-colors" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm font-medium focus:border-[#ff4e00] focus:bg-white/10 outline-none transition-all placeholder:text-white/20"
+                className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 pl-14 pr-6 text-sm font-medium focus:border-brand focus:bg-black/[0.06] outline-none transition-all placeholder:text-black/30"
                 placeholder="Ej: Juan Pérez..."
               />
               {searching && (
                 <div className="absolute right-5 top-1/2 -translate-y-1/2">
-                  <div className="w-5 h-5 border-3 border-[#ff4e00]/30 border-t-[#ff4e00] rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-3 border-brand/20 border-t-[#ff4e00] rounded-full animate-spin" />
                 </div>
               )}
             </form>
@@ -180,31 +180,31 @@ const Contacts: React.FC = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="space-y-3 pt-4 border-t border-white/10"
+                  className="space-y-3 pt-4 border-t border-black/[0.06]"
                 >
                   {searchResults.map(result => (
                     <motion.div 
                       key={result.uid} 
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center justify-between p-4 glass rounded-2xl border-white/10 group hover:bg-white/5 transition-all"
+                      className="flex items-center justify-between p-4 glass rounded-xl border-black/[0.06] group hover:bg-black/[0.03] transition-all"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 p-0.5 border border-white/10">
+                        <div className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06]">
                           <img 
                             src={result.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${result.uid}`} 
-                            className="w-full h-full rounded-[0.5rem] bg-[#0a0502]" 
+                            className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0]" 
                             alt="avatar" 
                           />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-white/80 truncate max-w-[120px]">{result.displayName}</span>
-                          <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Usuario</span>
+                          <span className="text-xs font-bold text-black/80 truncate max-w-[120px]">{result.displayName}</span>
+                          <span className="text-[8px] font-semibold uppercase tracking-wider text-black/30">Usuario</span>
                         </div>
                       </div>
                       <button
                         onClick={() => addContact(result)}
-                        className="p-2.5 bg-[#ff4e00] text-white rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg shadow-[#ff4e00]/20"
+                        className="p-2.5 bg-brand text-black rounded-xl hover:scale-110 active:scale-95 transition-all shadow-lg shadow-[#ff4e00]/20"
                       >
                         <UserPlus className="w-4 h-4" />
                       </button>
@@ -215,9 +215,9 @@ const Contacts: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          <div className="glass rounded-[2.5rem] p-8 border-[#ff4e00]/20 shadow-2xl shadow-[#ff4e00]/5 relative overflow-hidden group">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff4e00]/10 rounded-full blur-3xl group-hover:bg-[#ff4e00]/20 transition-all duration-700" />
-            <p className="text-sm text-white/40 italic leading-relaxed relative z-10">
+          <div className="glass rounded-3xl p-8 border-brand/20 shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/5 relative overflow-hidden group">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/10 rounded-full blur-3xl group-hover:bg-brand/20 transition-all duration-700" />
+            <p className="text-sm text-black/50 italic leading-relaxed relative z-10">
               <span>"Conéctate con otros miembros de la comunidad Mixe para compartir experiencias y transmisiones en vivo."</span>
             </p>
           </div>
@@ -228,7 +228,7 @@ const Contacts: React.FC = () => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-28 glass rounded-[2.5rem] animate-pulse border-white/10" />
+                <div key={i} className="h-28 glass rounded-3xl animate-pulse border-black/[0.06]" />
               ))}
             </div>
           ) : contacts.length > 0 ? (
@@ -237,42 +237,42 @@ const Contacts: React.FC = () => {
                 <motion.div
                   layout
                   key={contact.id || contact.contactId}
-                  className="glass border-white/10 rounded-[2.5rem] p-6 flex items-center justify-between group hover:bg-white/5 transition-all duration-500 shadow-xl"
+                  className="glass border-black/[0.06] rounded-3xl p-6 flex items-center justify-between group hover:bg-black/[0.03] transition-all duration-500 shadow-lg shadow-black/[0.03]"
                 >
                   <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 p-1 border border-white/10 group-hover:border-[#ff4e00]/30 transition-all duration-500">
+                    <div className="w-16 h-16 rounded-xl bg-black/[0.03] p-1 border border-black/[0.06] group-hover:border-brand/20 transition-all duration-500">
                       <img 
                         src={contact.contactPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${contact.contactId}`} 
-                        className="w-full h-full rounded-[0.8rem] bg-[#0a0502] object-cover group-hover:scale-110 transition-transform duration-700" 
+                        className="w-full h-full rounded-[0.8rem] bg-[#f5f5f0] object-cover group-hover:scale-110 transition-transform duration-700" 
                         alt="avatar" 
                       />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="font-display font-bold text-lg leading-none group-hover:text-[#ff4e00] transition-colors">{contact.contactName}</h3>
+                      <h3 className="font-display font-bold text-lg leading-none group-hover:text-brand transition-colors">{contact.contactName}</h3>
                       <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] text-white/20 font-black uppercase tracking-widest">Amigo Conectado</p>
+                        <p className="text-[10px] text-black/30 font-semibold uppercase tracking-wider">Amigo Conectado</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
                     <button 
                       onClick={() => navigate(`/chat/${contact.contactId}`)}
-                      className="p-3 bg-white/5 rounded-xl hover:bg-[#ff4e00] text-white/40 hover:text-white transition-all shadow-lg"
+                      className="p-3 bg-black/[0.03] rounded-xl hover:bg-brand text-black/50 hover:text-black transition-all shadow-lg"
                       title="Chat"
                     >
                       <MessageCircle className="w-5 h-5" />
                     </button>
                     <button 
                       onClick={() => navigate(`/chat/${contact.contactId}?startCall=true`)}
-                      className="p-3 bg-white/5 rounded-xl hover:bg-[#ff4e00] text-white/40 hover:text-white transition-all shadow-lg"
+                      className="p-3 bg-black/[0.03] rounded-xl hover:bg-brand text-black/50 hover:text-black transition-all shadow-lg"
                       title="Video Llamada"
                     >
                       <Video className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => removeContact(contact.contactId)}
-                      className="p-3 bg-white/5 rounded-xl hover:bg-red-500 text-white/40 hover:text-white transition-all shadow-lg"
+                      className="p-3 bg-black/[0.03] rounded-xl hover:bg-red-500 text-black/50 hover:text-black transition-all shadow-lg"
                       title="Eliminar"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -282,12 +282,12 @@ const Contacts: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="py-32 text-center glass rounded-[3rem] border-dashed border-white/10 shadow-2xl">
-              <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                <UserIcon className="w-12 h-12 text-white/10" />
+            <div className="py-32 text-center glass rounded-3xl border-dashed border-black/[0.06] shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
+              <div className="w-24 h-24 bg-black/[0.03] rounded-full flex items-center justify-center mx-auto mb-8">
+                <UserIcon className="w-12 h-12 text-black/10" />
               </div>
-              <p className="text-white/40 font-display text-2xl font-black uppercase italic tracking-tighter mb-4"><span>Aún no tienes contactos</span></p>
-              <p className="text-sm text-white/20 italic max-w-xs mx-auto"><span>Busca a tus amigos por su nombre o correo electrónico para empezar a conectar.</span></p>
+              <p className="text-black/50 font-display text-2xl font-bold uppercase italic tracking-tighter mb-4"><span>Aún no tienes contactos</span></p>
+              <p className="text-sm text-black/30 italic max-w-xs mx-auto"><span>Busca a tus amigos por su nombre o correo electrónico para empezar a conectar.</span></p>
             </div>
           )}
         </div>

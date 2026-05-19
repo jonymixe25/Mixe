@@ -143,7 +143,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-bold uppercase tracking-widest text-white/40">{label}</label>
+        <label className="text-xs font-bold uppercase tracking-widest text-black/50">{label}</label>
         {uploading && (
           <span className="text-[10px] font-bold text-brand uppercase tracking-widest animate-pulse">
             Subiendo: {Math.round(progress)}%
@@ -156,12 +156,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         value={tags}
         onChange={(e) => setTags(e.target.value)}
         placeholder="Etiquetas (separadas por comas)..."
-        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-brand outline-none"
+        className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl p-4 text-sm focus:border-brand outline-none"
       />
 
       <div 
         className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
-          preview || selectedFile ? 'border-transparent' : 'border-white/10 hover:border-brand/50 bg-white/5'
+          preview || selectedFile ? 'border-transparent' : 'border-black/[0.06] hover:border-brand/50 bg-black/[0.03]'
         } ${uploading ? 'border-brand/50 bg-brand/5' : ''}`}
       >
         {preview ? (
@@ -172,14 +172,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 <button 
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-3 bg-white/10 backdrop-blur-md rounded-2xl hover:bg-white/20 transition-colors"
+                  className="p-3 bg-black/[0.06] backdrop-blur-md rounded-xl hover:bg-black/20 transition-colors"
                 >
                   <Upload className="w-5 h-5" />
                 </button>
                 <button 
                   type="button"
                   onClick={clearImage}
-                  className="p-3 bg-red-500/20 backdrop-blur-md rounded-2xl hover:bg-red-500/40 transition-colors"
+                  className="p-3 bg-red-500/20 backdrop-blur-md rounded-xl hover:bg-red-500/40 transition-colors"
                 >
                   <X className="w-5 h-5 text-red-500" />
                 </button>
@@ -188,7 +188,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </>
         ) : selectedFile ? (
           <div className="flex flex-col items-center gap-4 p-6 text-center">
-            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-brand">
+            <div className="w-16 h-16 bg-black/[0.03] rounded-xl flex items-center justify-center text-brand">
               {getFileIcon(selectedFile.type)}
             </div>
             <div className="space-y-1">
@@ -210,9 +210,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-4 text-white/20 hover:text-white/40 transition-all group-hover:scale-110"
+            className="flex flex-col items-center gap-4 text-black/30 hover:text-black/50 transition-all group-hover:scale-110"
           >
-            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center">
+            <div className="w-16 h-16 bg-black/[0.03] rounded-xl flex items-center justify-center">
               <Upload className="w-8 h-8" />
             </div>
             <div className="text-center">
@@ -227,7 +227,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             <div className="relative w-24 h-24">
               <svg className="w-full h-full" viewBox="0 0 100 100">
                 <circle
-                  className="text-white/10 stroke-current"
+                  className="text-black/10 stroke-current"
                   strokeWidth="8"
                   cx="50"
                   cy="50"
@@ -263,7 +263,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             exit={{ opacity: 0, height: 0 }}
             className="space-y-2"
           >
-            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-black/[0.03] rounded-full overflow-hidden">
               <motion.div 
                 className="h-full bg-brand"
                 initial={{ width: 0 }}

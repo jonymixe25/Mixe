@@ -71,17 +71,17 @@ const News: React.FC = () => {
     <div className="max-w-7xl mx-auto space-y-16 md:space-y-24">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div className="space-y-4">
-          <div className="flex items-center gap-3 text-[#ff4e00]">
+          <div className="flex items-center gap-3 text-brand">
             <Newspaper className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Actualidad</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.15em]">Actualidad</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-display font-black tracking-tighter uppercase italic"><span>Noticias y Cultura</span></h1>
-          <p className="text-white/40 text-sm font-medium italic max-w-md leading-relaxed">
+          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-black/90"><span>Noticias y Cultura</span></h1>
+          <p className="text-black/50 text-sm font-medium italic max-w-md leading-relaxed">
             <span>Explora las últimas novedades, historias y tradiciones de la región Mixe.</span>
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-4 text-white/20 text-xs font-black uppercase tracking-widest">
-          <div className="w-16 h-px bg-white/10" />
+        <div className="hidden md:flex items-center gap-4 text-black/30 text-xs font-semibold uppercase tracking-wider">
+          <div className="w-16 h-px bg-black/[0.06]" />
           <span>{articles.length} Artículos</span>
         </div>
       </div>
@@ -89,7 +89,7 @@ const News: React.FC = () => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-[500px] glass rounded-[3rem] animate-pulse" />
+            <div key={i} className="h-[500px] glass rounded-3xl animate-pulse" />
           ))}
         </div>
       ) : articles.length > 0 ? (
@@ -101,7 +101,7 @@ const News: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="group glass rounded-[3rem] overflow-hidden glass-hover flex flex-col shadow-2xl shadow-black/50"
+              className="group glass rounded-3xl overflow-hidden glass-hover flex flex-col shadow-lg shadow-black/[0.03] shadow-black/[0.02]"
             >
               <div className="aspect-[16/10] relative overflow-hidden">
                 <img
@@ -110,10 +110,10 @@ const News: React.FC = () => {
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-[#0a0502]/20 to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-[#f5f5f0]/20 to-transparent opacity-60" />
                 
                 <div className="absolute top-8 left-8">
-                  <div className="glass px-4 py-2 rounded-full flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#ff4e00]">
+                  <div className="glass px-4 py-2 rounded-full flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-brand">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>{article.createdAt?.seconds ? format(new Date(article.createdAt.seconds * 1000), 'dd MMM, yyyy', { locale: es }) : 'Reciente'}</span>
                   </div>
@@ -121,33 +121,33 @@ const News: React.FC = () => {
               </div>
               
               <div className="p-10 lg:p-12 flex-1 flex flex-col space-y-6">
-                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-white/40">
+                <div className="flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-black/50">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-white/5 p-0.5 border border-white/10">
+                    <div className="w-6 h-6 rounded-lg bg-black/[0.03] p-0.5 border border-black/[0.06]">
                       <img 
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${article.authorName}`} 
                         alt="author" 
-                        className="w-full h-full rounded-[0.3rem] bg-[#0a0502]"
+                        className="w-full h-full rounded-[0.3rem] bg-[#f5f5f0]"
                       />
                     </div>
                     <span>{article.authorName}</span>
                   </div>
-                  <div className="w-1 h-1 bg-white/20 rounded-full" />
+                  <div className="w-1 h-1 bg-black/20 rounded-full" />
                   <span>Cultura</span>
                 </div>
 
-                <h2 className="text-3xl lg:text-4xl font-display font-black leading-[1.1] tracking-tight group-hover:text-[#ff4e00] transition-colors duration-500">
+                <h2 className="text-3xl lg:text-4xl font-display font-bold leading-[1.1] tracking-tight group-hover:text-brand transition-colors duration-500">
                   {article.title}
                 </h2>
                 
-                <p className="text-white/60 text-sm lg:text-base leading-relaxed line-clamp-3 italic font-medium">
+                <p className="text-black/60 text-sm lg:text-base leading-relaxed line-clamp-3 italic font-medium">
                   {article.content}
                 </p>
 
                 <div className="pt-6 mt-auto">
                   <button 
                     onClick={() => setSelectedArticle(article)}
-                    className="group/btn flex items-center gap-4 text-[#ff4e00] font-black text-xs uppercase tracking-[0.2em] hover:gap-6 transition-all duration-300"
+                    className="group/btn flex items-center gap-4 text-brand font-bold text-xs uppercase tracking-[0.2em] hover:gap-6 transition-all duration-300"
                   >
                     <span>Seguir leyendo</span>
                     <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />
@@ -159,10 +159,10 @@ const News: React.FC = () => {
         </div>
       ) : (
         <div className="py-32 text-center glass rounded-[4rem] border-dashed">
-          <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
-            <Newspaper className="w-12 h-12 text-white/10" />
+          <div className="w-24 h-24 bg-black/[0.03] rounded-full flex items-center justify-center mx-auto mb-8">
+            <Newspaper className="w-12 h-12 text-black/10" />
           </div>
-          <p className="text-white/40 font-display text-2xl italic"><span>No hay noticias publicadas en este momento.</span></p>
+          <p className="text-black/50 font-display text-2xl italic"><span>No hay noticias publicadas en este momento.</span></p>
         </div>
       )}
 
@@ -188,11 +188,11 @@ const News: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-5xl glass border-white/10 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] max-h-[90vh] flex flex-col"
+              className="relative w-full max-w-5xl glass border-black/[0.06] rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] max-h-[90vh] flex flex-col"
             >
               <button 
                 onClick={() => setSelectedArticle(null)}
-                className="absolute top-8 right-8 z-50 p-3 rounded-2xl bg-black/40 text-white hover:bg-[#ff4e00] transition-all duration-300 group"
+                className="absolute top-8 right-8 z-50 p-3 rounded-xl bg-black/40 text-black hover:bg-brand transition-all duration-300 group"
               >
                 <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-500" />
               </button>
@@ -205,60 +205,60 @@ const News: React.FC = () => {
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0502] via-transparent to-transparent opacity-80" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-transparent to-transparent opacity-80" />
                 </div>
 
                 <div className="p-10 sm:p-20 space-y-10">
-                  <div className="flex flex-wrap items-center gap-8 text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
+                  <div className="flex flex-wrap items-center gap-8 text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">
                     <div className="flex items-center gap-3">
-                      <Calendar className="w-4 h-4 text-[#ff4e00]" />
+                      <Calendar className="w-4 h-4 text-brand" />
                       <span>{selectedArticle.createdAt?.seconds ? format(new Date(selectedArticle.createdAt.seconds * 1000), 'dd MMMM, yyyy', { locale: es }) : 'Reciente'}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <User className="w-4 h-4 text-[#ff4e00]" />
+                      <User className="w-4 h-4 text-brand" />
                       <span>{selectedArticle.authorName}</span>
                     </div>
                   </div>
 
-                  <h2 className="text-4xl sm:text-6xl md:text-7xl font-display font-black tracking-tighter uppercase italic leading-[0.95]">
+                  <h2 className="text-4xl sm:text-6xl md:text-7xl font-display font-bold tracking-tight text-black/90 leading-[0.95]">
                     {selectedArticle.title}
                   </h2>
 
                   <div className="w-32 h-1 bg-gradient-to-r from-[#ff4e00] to-transparent rounded-full" />
 
-                  <div className="text-white/80 text-xl md:text-2xl leading-relaxed italic whitespace-pre-wrap font-medium max-w-4xl">
+                  <div className="text-black/80 text-xl md:text-2xl leading-relaxed italic whitespace-pre-wrap font-medium max-w-4xl">
                     {selectedArticle.content}
                   </div>
                   
                   <div className="pt-12 flex items-center gap-6">
                     <button 
                       onClick={() => setSelectedArticle(null)}
-                      className="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff4e00] hover:text-white transition-all duration-500"
+                      className="bg-black text-white px-10 py-4 rounded-xl font-semibold uppercase tracking-wider hover:bg-brand hover:text-black transition-all duration-500"
                     >
                       <span>Cerrar Artículo</span>
                     </button>
                   </div>
                   
-                  <div className="pt-12 border-t border-white/10 space-y-8">
-                    <h3 className="text-2xl font-display font-black uppercase italic">Comentarios</h3>
+                  <div className="pt-12 border-t border-black/[0.06] space-y-8">
+                    <h3 className="text-2xl font-display font-bold uppercase italic">Comentarios</h3>
                     {user ? (
                       <form onSubmit={handlePostComment} className="space-y-4">
                         <textarea
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:border-[#ff4e00] outline-none"
+                          className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl p-4 text-sm focus:border-brand outline-none"
                           placeholder="Escribe un comentario..."
                         />
-                        <button type="submit" className="bg-[#ff4e00] text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs">Publicar</button>
+                        <button type="submit" className="bg-brand text-black px-6 py-3 rounded-xl font-semibold uppercase tracking-wider text-xs">Publicar</button>
                       </form>
                     ) : (
-                      <p className="text-white/40 italic">Inicia sesión para comentar.</p>
+                      <p className="text-black/50 italic">Inicia sesión para comentar.</p>
                     )}
                     <div className="space-y-6">
                       {comments.map(comment => (
-                        <div key={comment.id} className="bg-white/5 p-4 rounded-2xl space-y-2">
-                          <p className="text-[#ff4e00] font-black text-xs uppercase">{comment.userName}</p>
-                          <p className="text-sm text-white/80">{comment.text}</p>
+                        <div key={comment.id} className="bg-black/[0.03] p-4 rounded-xl space-y-2">
+                          <p className="text-brand font-bold text-xs uppercase">{comment.userName}</p>
+                          <p className="text-sm text-black/80">{comment.text}</p>
                         </div>
                       ))}
                     </div>
