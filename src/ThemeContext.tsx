@@ -9,7 +9,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [primaryColor, setPrimaryColor] = useState(() => {
-    return localStorage.getItem('theme-primary-color') || '#5a5a40';
+    const existing = localStorage.getItem('theme-primary-color');
+    if (!existing || existing === '#5a5a40') {
+      return '#ff3e00';
+    }
+    return existing;
   });
 
   useEffect(() => {

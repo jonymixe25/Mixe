@@ -28,6 +28,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [activeAlert, setActiveAlert] = useState<any>(null);
+  const [hoveredColor, setHoveredColor] = useState<{ name: string; value: string; desc: string } | null>(null);
 
   useEffect(() => {
     const alertsQuery = query(
@@ -52,14 +53,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const colors = [
-    { name: 'Naranja', value: '#ff4e00' },
-    { name: 'Rojo', value: '#ef4444' },
-    { name: 'Azul', value: '#3b82f6' },
-    { name: 'Esmeralda', value: '#10b981' },
-    { name: 'Violeta', value: '#8b5cf6' },
-    { name: 'Rosa', value: '#ec4899' },
-    { name: 'Amarillo', value: '#eab308' },
-    { name: 'Cian', value: '#06b6d4' },
+    { name: 'Sol Terracota', value: '#ff3e00', desc: 'Fuego resplandeciente de Tlahuitoltepec' },
+    { name: 'Grana Carmín', value: '#d6013c', desc: 'Rojo cochinilla puro y profundo de Oaxaca' },
+    { name: 'Añil Sagrado', value: '#134cd8', desc: 'Azul ancestral brillante de alta intensidad' },
+    { name: 'Esmeralda Mixe', value: '#059669', desc: 'Verde poderoso de los bosques sagrados del Ayuuk' },
+    { name: 'Bugambilia Eléctrica', value: '#db2777', desc: 'Fucsia de gran contraste y fuerza oaxaqueña' },
+    { name: 'Cempasúchil Dorado', value: '#eab308', desc: 'Intenso fuego solar que guía a los ancestros' },
+    { name: 'Púrpura de Concha', value: '#7c3aed', desc: 'Tinte de gran prestigio en los telares de cintura' },
+    { name: 'Misty Ayuuk', value: '#4b4b32', desc: 'El color de la niebla serrana en una tonalidad más firme' },
   ];
 
   useEffect(() => {
@@ -318,17 +319,48 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                               setPrimaryColor(color.value);
                               setShowColorPicker(false);
                             }}
+                            onMouseEnter={() => setHoveredColor(color)}
+                            onMouseLeave={() => setHoveredColor(null)}
                             className={`w-10 h-10 rounded-xl transition-all duration-300 transform hover:scale-110 active:scale-90 relative group ${
-                              primaryColor === color.value ? 'ring-2 ring-white ring-offset-4 ring-offset-[#0a0502]' : ''
+                              primaryColor === color.value ? 'ring-2 ring-brand ring-offset-2 ring-offset-[#f5f5f0]' : ''
                             }`}
                             style={{ backgroundColor: color.value }}
                             title={color.name}
                           >
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                           </button>
                         ))}
                       </div>
-                      <div className="mt-8 pt-6 border-t border-black/5">
+
+                      {/* Interactive cultural color descriptions */}
+                      <div className="mt-5 p-3 bg-black/[0.03] rounded-2xl border border-black/[0.05] min-h-[58px] flex flex-col justify-center">
+                        {hoveredColor ? (
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-bold text-black/80 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: hoveredColor.value }} />
+                              {hoveredColor.name}
+                            </span>
+                            <p className="text-[9px] text-black/50 leading-relaxed italic">{hoveredColor.desc}</p>
+                          </div>
+                        ) : (
+                          (() => {
+                            const active = colors.find(c => c.value.toLowerCase() === primaryColor.toLowerCase());
+                            return active ? (
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-brand flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: active.value }} />
+                                  {active.name} (Activo)
+                                </span>
+                                <p className="text-[9px] text-black/50 leading-relaxed italic">{active.desc}</p>
+                              </div>
+                            ) : (
+                              <p className="text-[9px] text-black/40 italic font-medium text-center">Explora los matices de la Sierra</p>
+                            );
+                          })()
+                        )}
+                      </div>
+
+                      <div className="mt-5 pt-4 border-t border-black/5">
                         <p className="text-[8px] font-semibold uppercase tracking-wider text-black/30 italic">
                           Cualquier usuario puede modificar el color de la aplicación.
                         </p>

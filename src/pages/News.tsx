@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Comment } from '../types';
 import { useAuth } from '../AuthContext';
+import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
 
 interface NewsArticle {
   id: string;
@@ -57,10 +58,21 @@ const News: React.FC = () => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NewsArticle));
-      setArticles(newsList);
+      if (newsList.length === 0) {
+        setArticles(FALLBACK_NEWS_ARTICLES as any[]);
+      } else {
+        const merged = [...newsList];
+        FALLBACK_NEWS_ARTICLES.forEach(fallback => {
+          if (!merged.some(item => item.title === fallback.title)) {
+            merged.push(fallback as any);
+          }
+        });
+        setArticles(merged);
+      }
       setLoading(false);
     }, (error) => {
       console.error('Error fetching news:', error);
+      setArticles(FALLBACK_NEWS_ARTICLES as any[]);
       setLoading(false);
     });
 

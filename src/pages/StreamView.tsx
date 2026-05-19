@@ -918,17 +918,42 @@ const StreamView = () => {
                   </div>
 
                   {layoutStyle === "split" ? (
-                    <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch justify-center">
-                      {activeVideoTracks.map((item) => (
-                        <StreamPlayerCard
-                          key={item.id}
-                          id={item.id}
-                          name={item.name}
-                          role={item.role ?? "guest"}
-                          track={item.track}
-                          fitMode={fitMode}
-                        />
-                      ))}
+                    <div className="w-full h-full relative flex items-center justify-center">
+                      <div className="w-full h-full grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch justify-center">
+                        {activeVideoTracks.map((item, index) => (
+                          <motion.div
+                            key={item.id}
+                            initial={{ opacity: 0, x: index === 0 ? -40 : 40, scale: 0.95 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: index * 0.15 }}
+                            className="w-full h-full flex-1 min-w-0"
+                          >
+                            <StreamPlayerCard
+                              id={item.id}
+                              name={item.name}
+                              role={item.role ?? "guest"}
+                              track={item.track}
+                              fitMode={fitMode}
+                            />
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {activeVideoTracks.length === 2 && (
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-45 hidden md:block">
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="glass px-5 py-2.5 rounded-full border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.6)] flex items-center gap-2.5 backdrop-blur-md"
+                          >
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff4e00]"></span>
+                            </span>
+                            <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em] leading-none">Ayuuk Dúo</span>
+                          </motion.div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* PIP Layout (One main, one floating) */

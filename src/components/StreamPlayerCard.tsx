@@ -113,7 +113,7 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
     <div
       className={`relative flex-1 min-w-0 min-h-0 w-full h-full bg-zinc-950 rounded-2xl md:rounded-[2rem] overflow-hidden border transition-all duration-300 group/card ${
         isTalking
-          ? "border-[#ff4e00] ring-4 ring-[#ff4e00]/20 shadow-[0_0_30px_rgba(255,78,0,0.25)]"
+          ? "border-[var(--primary-color,#ff4e00)] ring-4 ring-[var(--primary-color,#ff4e00)]/20 shadow-[0_0_30px_var(--primary-color-glow)] animate-pulse"
           : "border-white/10 hover:border-white/20 shadow-2xl"
       }`}
     >
@@ -129,7 +129,7 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
       {!hasVideoSource && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/40 backdrop-blur-sm">
           <div className="relative mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#ff4e00]/15 to-violet-500/15 flex items-center justify-center border border-white/10 animate-pulse">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[var(--primary-color,#ff4e00)]/15 to-violet-500/15 flex items-center justify-center border border-white/10 animate-pulse">
               <span className="text-xl font-bold text-white/70 uppercase">
                 {name ? name.substring(0, 2) : "DU"}
               </span>
@@ -149,7 +149,7 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
 
       {/* Active Speaker Dynamic Edge Highlight */}
       {isTalking && (
-        <div className="absolute inset-0 bg-transparent ring-1 ring-[#ff4e00]/40 rounded-2xl pointer-events-none z-15" />
+        <div className="absolute inset-0 bg-transparent ring-1 ring-[var(--primary-color,#ff4e00)]/40 rounded-2xl pointer-events-none z-15" />
       )}
 
       {/* Overlay details: Name and Badges */}
@@ -161,17 +161,17 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
             <motion.div
               animate={isTalking ? { height: ["4px", "12px", "4px"] } : { height: "4px" }}
               transition={{ repeat: Infinity, duration: 0.6, ease: "easeInOut" }}
-              className="w-[2px] bg-[#ff4e00] rounded-full"
+              className="w-[2px] bg-[var(--primary-color,#ff4e00)] rounded-full"
             />
             <motion.div
               animate={isTalking ? { height: ["6px", "10px", "6px"] } : { height: "6px" }}
               transition={{ repeat: Infinity, duration: 0.7, ease: "easeInOut", delay: 0.1 }}
-              className="w-[2px] bg-[#ff4e00] rounded-full"
+              className="w-[2px] bg-[var(--primary-color,#ff4e00)] rounded-full"
             />
             <motion.div
               animate={isTalking ? { height: ["4px", "12px", "4px"] } : { height: "4px" }}
               transition={{ repeat: Infinity, duration: 0.5, ease: "easeInOut", delay: 0.2 }}
-              className="w-[2px] bg-[#ff4e00] rounded-full"
+              className="w-[2px] bg-[var(--primary-color,#ff4e00)] rounded-full"
             />
           </div>
 
@@ -186,7 +186,7 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
               ANFITRIÓN
             </span>
           ) : role === "guest" ? (
-            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-[#ff4e00]/10 text-brand border border-[#ff4e00]/25">
+            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-[var(--primary-color,#ff4e00)]/10 text-[var(--primary-color,#ff4e00)] border border-[var(--primary-color,#ff4e00)]/25">
               INVITADO
             </span>
           ) : (
@@ -208,7 +208,7 @@ export const StreamPlayerCard: React.FC<StreamPlayerCardProps> = ({
       {/* Mic sound overlay */}
       <div className="absolute top-4 left-4 z-25 text-white bg-black/40 backdrop-blur-md p-1.5 rounded-lg border border-white/5 opacity-0 group-hover/card:opacity-100 transition-opacity pointer-events-none">
         {isTalking ? (
-          <Mic className="w-3.5 h-3.5 text-[#ff4e00]" />
+          <Mic className="w-3.5 h-3.5 text-[var(--primary-color,#ff4e00)]" />
         ) : (
           <Mic className="w-3.5 h-3.5 text-white/50" />
         )}

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useDevice } from '../hooks/useDevice';
+import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -60,10 +61,22 @@ const Home: React.FC = () => {
 
     const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(3));
     const unsubscribeNews = onSnapshot(newsQuery, (snapshot) => {
-      setNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const newsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      if (newsList.length === 0) {
+        setNews(FALLBACK_NEWS_ARTICLES.slice(0, 3));
+      } else {
+        const merged = [...newsList];
+        FALLBACK_NEWS_ARTICLES.forEach(fallback => {
+          if (!merged.some(item => (item as any).title === fallback.title)) {
+            merged.push(fallback as any);
+          }
+        });
+        setNews(merged.slice(0, 3));
+      }
       setLoading(false);
     }, (error) => {
       console.error('Error fetching news:', error);
+      setNews(FALLBACK_NEWS_ARTICLES.slice(0, 3));
       setLoading(false);
     });
 
