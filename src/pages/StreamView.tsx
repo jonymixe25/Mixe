@@ -846,7 +846,7 @@ const StreamView = () => {
             {/* LiveKit Video Container */}
             <div
               ref={videoRef}
-              className="w-full h-full flex items-center justify-center bg-black [&>video]:max-w-full [&>video]:max-h-full [&>video]:w-full [&>video]:h-full [&>video]:object-contain"
+              className="w-full h-full flex flex-col md:flex-row items-stretch justify-center bg-black gap-0 [&:has(>video:nth-child(2))]:gap-4 [&:has(>video:nth-child(2))]:p-4 [&>video]:flex-1 [&>video]:min-w-0 [&>video]:min-h-0 [&>video]:object-contain [&:has(>video:nth-child(2))>video]:rounded-2xl [&:has(>video:nth-child(2))>video]:shadow-2xl [&:has(>video:nth-child(2))>video]:border [&:has(>video:nth-child(2))>video]:border-white/10"
             />
 
             {/* Reactions (Hearts) Overlay */}

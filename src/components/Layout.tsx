@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
@@ -145,7 +145,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { path: '/news', label: 'Noticias', icon: Newspaper },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
-      { path: '/contacts', label: 'Contactos', icon: Users },
+      { path: '/friends', label: 'Amigos', icon: Users },
+      { path: '/notifications', label: 'Notificaciones', icon: Bell },
+      { path: '/chat', label: 'Mensajes', icon: MessageSquare },
       { path: '/gallery', label: 'Mis Archivos', icon: Folder },
       { path: '/studio', label: 'Transmitir', icon: Video },
       ...(user.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),

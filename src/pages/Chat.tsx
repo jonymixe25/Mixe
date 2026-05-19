@@ -52,7 +52,22 @@ const Chat: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!user || !contactId) return;
+    if (!user) return;
+    if (!contactId) {
+      setLoading(false);
+      return;
+    }
+
+    const checkFriendship = async () => {
+        const q = query(collection(db, 'users', user.uid, 'contacts'), where('contactId', '==', contactId));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+             setToast({ message: 'Debes ser amigo de este usuario para chatear.', type: 'error', isVisible: true });
+             navigate('/friends');
+             return;
+        }
+    };
+    checkFriendship();
 
     const fetchContact = async () => {
       try {
@@ -405,6 +420,14 @@ const Chat: React.FC = () => {
     </div>
   );
 
+  if (!contact && !loading) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+      <MessageCircle className="w-16 h-16 text-brand mb-4 opacity-50" />
+      <h2 className="text-2xl font-bold mb-2">Selecciona un amigo</h2>
+      <p className="text-black/50">Elige un contacto de tu lista para iniciar una conversación.</p>
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-10rem)] flex flex-col glass border-black/[0.06] rounded-3xl overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] relative">
       {/* Header */}
@@ -602,17 +625,14 @@ const Chat: React.FC = () => {
                 className={`flex ${msg.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
               >
                 <div className="flex flex-col gap-2 max-w-[75%]">
-                  <div className={`px-6 py-4 rounded-3xl text-sm font-medium shadow-lg shadow-black/[0.03] relative group ${
+                  <div className={`px-5 py-3 rounded-2xl text-[0.95rem] font-medium shadow-sm relative transition-all duration-300 ${
                     msg.senderId === user?.uid 
-                      ? 'bg-brand text-black rounded-tr-none' 
-                      : 'glass text-black/80 rounded-tl-none border-black/[0.06]'
+                      ? 'bg-brand text-black rounded-br-none' 
+                      : 'bg-black/[0.04] text-black/90 rounded-bl-none border border-black/[0.05]'
                   }`}>
-                    <p className="leading-relaxed italic"><span>{msg.text}</span></p>
-                    <div className={`absolute top-0 ${msg.senderId === user?.uid ? '-right-2' : '-left-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                      <div className={`w-4 h-4 rotate-45 ${msg.senderId === user?.uid ? 'bg-brand' : 'bg-black/[0.06]'}`} />
-                    </div>
+                    <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                   </div>
-                  <span className={`text-[8px] font-semibold uppercase tracking-wider text-black/30 ${msg.senderId === user?.uid ? 'text-right' : 'text-left'}`}>
+                  <span className={`text-[10px] font-semibold text-black/30 px-2 ${msg.senderId === user?.uid ? 'text-right' : 'text-left'}`}>
                     {msg.createdAt ? format(msg.createdAt.toDate(), 'HH:mm', { locale: es }) : 'Ahora'}
                   </span>
                 </div>
@@ -624,33 +644,38 @@ const Chat: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-8 border-t border-black/[0.06] bg-black/[0.03] backdrop-blur-xl">
-        <form onSubmit={handleSend} className="flex gap-4 items-center">
+      <div className="p-6 border-t border-black/[0.06] bg-black/[0.02]/50 backdrop-blur-md">
+        <form onSubmit={handleSend} className="flex gap-3 items-end">
           <button 
             type="button"
-            className="p-4 glass rounded-xl hover:bg-black/[0.06] text-black/30 hover:text-brand transition-all duration-500 border-black/[0.06]"
+            className="p-3.5 glass hover:bg-black/[0.06] text-black/40 hover:text-brand transition-all duration-300 border-black/[0.06] rounded-2xl"
           >
-            <ImageIcon className="w-6 h-6" />
+            <ImageIcon className="w-5 h-5" />
           </button>
-          <div className="flex-1 relative group">
-            <input 
-              type="text"
+          <div className="flex-1 relative">
+            <textarea 
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Escribe un mensaje..."
-              className="w-full bg-black/[0.03] border border-black/[0.06] rounded-3xl px-8 py-4 text-sm font-medium outline-none focus:border-brand focus:bg-black/[0.06] transition-all placeholder:text-black/30"
+              rows={1}
+              className="w-full bg-white border border-black/[0.06] rounded-2xl px-5 py-3.5 text-sm font-medium outline-none focus:border-brand/50 transition-all placeholder:text-black/30 resize-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (newMessage.trim()) handleSend(e as any);
+                }
+              }}
             />
-            <div className="absolute inset-0 rounded-3xl bg-brand/5 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
           </div>
           <button 
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="p-5 bg-brand text-black rounded-[1.5rem] hover:bg-brand/90 transition-all duration-500 shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/30 disabled:opacity-50 disabled:scale-95 active:scale-90 group"
+            className="p-4 bg-brand text-black rounded-2xl hover:bg-brand/90 transition-all duration-300 shadow-md shadow-brand/20 disabled:opacity-50 disabled:scale-95 active:scale-90"
           >
             {sending ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <Send className="w-5 h-5" />
             )}
           </button>
         </form>
