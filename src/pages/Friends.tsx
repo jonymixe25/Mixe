@@ -31,6 +31,7 @@ const Friends = () => {
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
+  const [searchUsers, setSearchUsers] = useState('');
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -101,61 +102,91 @@ const Friends = () => {
         </div>
       </header>
       
-      {requests.length > 0 && (
-        <section className="space-y-4">
+      {/* Pending Requests & Suggestions Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {requests.length > 0 && (
+          <section className="space-y-4">
             <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-white/70">Solicitudes pendientes</h2>
-            {requests.map(req => (
+            <div className="space-y-3">
+              {requests.map(req => (
                 <div key={req.id} className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between backdrop-blur-sm">
-                    <span className="text-white font-medium">{req.senderName}</span>
-                    <div className="flex gap-2">
-                        <button onClick={() => acceptRequest(req)} className="p-2 bg-brand text-black rounded-lg hover:bg-brand/90 transition-colors"><Check className="w-5 h-5"/></button>
-                        <button className="p-2 bg-white/5 rounded-lg text-white/70 hover:bg-white/10 transition-colors"><X className="w-5 h-5"/></button>
+                  <span className="text-white font-medium">{req.senderName}</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => acceptRequest(req)} className="p-2 bg-brand text-black rounded-lg hover:bg-brand/90 transition-colors"><Check className="w-5 h-5"/></button>
+                    <button className="p-2 bg-white/5 rounded-lg text-white/70 hover:bg-white/10 transition-colors"><X className="w-5 h-5"/></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-white/70">Sugerencias para ti</h2>
+          <div className="flex flex-col gap-4">
+            {allUsers
+                .filter(u => !friends.some(f => f.contactId === u.id) && !requests.some(r => r.senderId === u.id) && !sentRequests.has(u.id))
+                .slice(0, 3) 
+                .map(u => (
+                <div key={u.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between gap-3 hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}`} alt="User avatar" className="w-10 h-10 rounded-xl bg-white/10" />
+                        <span className="text-white font-medium text-sm truncate">{u.name}</span>
                     </div>
+                    <button onClick={() => sendRequest(u)} className="px-4 py-2 bg-white/5 rounded-lg text-brand text-sm font-semibold hover:bg-white/10 transition-all">Añadir</button>
                 </div>
             ))}
+          </div>
         </section>
-      )}
-      
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-white/70">Buscar Usuarios</h2>
-        <div className="flex items-center gap-2 w-full bg-white/5 rounded-xl p-2 border border-white/10 focus-within:border-brand/50 transition-colors">
+
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-white/70">Explorar usuarios</h2>
+          <div className="flex items-center gap-2 w-full bg-white/5 rounded-xl p-2 border border-white/10 focus-within:border-brand/50 transition-colors">
             <Search className="w-5 h-5 text-white/30 ml-2" />
-            <input type="text" placeholder="Buscar por nombre..." className="bg-transparent w-full p-2 outline-none text-white placeholder:text-white/30" onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-            {allUsers.filter(u => u.name?.toLowerCase().includes(search.toLowerCase())).map(u => (
-                <div key={u.id} className="flex justify-between items-center p-4 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                    <span className="text-white font-medium">{u.name}</span>
-                    <button 
-                        onClick={() => sendRequest(u)} 
-                        disabled={sentRequests.has(u.id)}
-                        className={`p-2 rounded-lg transition-all ${sentRequests.has(u.id) ? 'bg-white/5 text-white/30' : 'bg-white/5 text-brand hover:bg-white/10'}`}
-                    >
-                        {sentRequests.has(u.id) ? <Clock /> : <UserPlus/>}
-                    </button>
+            <input type="text" placeholder="Buscar por nombre..." className="bg-transparent w-full p-2 outline-none text-white placeholder:text-white/30 text-sm" onChange={(e) => setSearchUsers(e.target.value)} />
+          </div>
+          <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+            {allUsers
+                .filter(u => !friends.some(f => f.contactId === u.id) && !requests.some(r => r.senderId === u.id) && !sentRequests.has(u.id) && (u.name || '').toLowerCase().includes(searchUsers.toLowerCase()))
+                .map(u => (
+                <div key={u.id} className="flex justify-between items-center p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                    <span className="text-white font-medium text-sm">{u.name}</span>
+                    <button onClick={() => sendRequest(u)} className="p-2 bg-white/5 rounded-lg text-brand hover:bg-white/10 transition-all"><UserPlus className="w-4 h-4"/></button>
                 </div>
             ))}
+          </div>
+        </section>
+      </div>
+      
+      <section className="space-y-6 pt-6 border-t border-white/5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand to-white/70">Mis Amigos</h2>
+          <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
+              <Search className="w-5 h-5 text-white/30 ml-2" />
+              <input type="text" placeholder="Buscar..." className="bg-transparent p-2 outline-none text-white text-sm placeholder:text-white/30" onChange={(e) => setSearch(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {friends.filter(f => f.contactName.toLowerCase().includes(search.toLowerCase())).map((friend) => (
+            <div key={friend.id} className="bg-white/[0.03] border border-white/5 p-6 rounded-3xl flex items-center justify-between gap-4 hover:bg-white/[0.06] transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
+                  <img src={friend.contactPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.contactId}`} alt="Friend avatar" className="w-full h-full" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white">{friend.contactName}</h3>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                  <button onClick={() => navigate(`/chat/${friend.contactId}`)} className="p-2 bg-white/5 rounded-lg text-brand hover:bg-white/10 transition-colors"><MessageSquare className="w-5 h-5"/></button>
+                  <button onClick={() => removeFriend(friend.id)} className="p-2 bg-white/5 rounded-lg text-red-400 hover:bg-white/10 transition-colors"><Trash2 className="w-5 h-5"/></button>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {friends.map((friend) => (
-          <div key={friend.id} className="bg-white/[0.03] border border-white/5 p-6 rounded-3xl flex items-center justify-between gap-4 hover:bg-white/[0.06] transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
-                <img src={friend.contactPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friend.contactId}`} alt="Friend avatar" className="w-full h-full" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-white">{friend.contactName}</h3>
-              </div>
-            </div>
-            <div className="flex gap-2">
-                <button onClick={() => navigate(`/chat/${friend.contactId}`)} className="p-2 bg-white/5 rounded-lg text-brand hover:bg-white/10 transition-colors"><MessageSquare className="w-5 h-5"/></button>
-                <button onClick={() => removeFriend(friend.id)} className="p-2 bg-white/5 rounded-lg text-red-400 hover:bg-white/10 transition-colors"><Trash2 className="w-5 h-5"/></button>
-            </div>
-          </div>
-        ))}
-      </section>
     </div>
   );
 };

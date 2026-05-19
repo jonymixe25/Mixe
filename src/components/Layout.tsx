@@ -159,7 +159,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div translate="no" className="min-h-screen bg-[#f5f5f0] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
+    <div translate="no" className="min-h-screen bg-[#fcf9f9] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />
