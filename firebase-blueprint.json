@@ -154,9 +154,32 @@
         "contactEmail": { "type": "string" }
       },
       "required": ["appName"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time notification for a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderPhoto": { "type": "string" },
+        "type": { "type": "string", "enum": ["message", "friend", "system", "call", "like", "comment"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "link": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["recipientId", "senderId", "senderName", "type", "title", "description", "read", "createdAt"]
     }
   },
   "firestore": {
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Real-time notifications collection"
+    },
     "/users/{uid}": {
       "schema": "User",
       "description": "User profile documents"

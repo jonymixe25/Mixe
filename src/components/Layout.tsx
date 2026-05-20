@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
 import { useTheme } from '../ThemeContext';
 import { useDevice } from '../hooks/useDevice';
+import { RechargeModal } from './RechargeModal';
+import { listenToUnreadCount } from '../services/notificationService';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
@@ -27,8 +29,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isAnyStreamLive, setIsAnyStreamLive] = useState(false);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const [hoveredColor, setHoveredColor] = useState<{ name: string; value: string; desc: string } | null>(null);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   useEffect(() => {
     const alertsQuery = query(
@@ -133,6 +137,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const timeoutId = setTimeout(performSearch, 500);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadNotificationsCount(0);
+      return;
+    }
+    const unsubscribe = listenToUnreadCount(user.uid, (count) => {
+      setUnreadNotificationsCount(count);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (user && !prevUser) {
@@ -280,7 +295,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       : 'text-black/50 hover:text-black hover:bg-black/[0.03]'
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${location.pathname === item.path ? 'text-brand' : ''}`} />
+                  <div className="relative">
+                    <item.icon className={`w-4 h-4 transition-transform duration-500 group-hover:scale-110 ${location.pathname === item.path ? 'text-brand' : ''}`} />
+                    {item.path === '/notifications' && unreadNotificationsCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[8px] font-black text-black shadow-sm ring-2 ring-[#f5f5f0]">
+                        {unreadNotificationsCount}
+                      </span>
+                    )}
+                  </div>
                   <span>{item.label}</span>
                   {location.pathname === item.path && (
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-brand rounded-full shadow-[0_0_10px_var(--primary-color)]" />
@@ -374,6 +396,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               
               {user ? (
                 <div className="flex items-center gap-4">
+                  {/* Coins Balance Indicator */}
+                  <button
+                    onClick={() => setIsRechargeModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand/5 hover:bg-brand/10 border border-brand/15 hover:border-brand/35 transition-all text-xs font-semibold cursor-pointer text-brand"
+                    title="Recargar Monedas Ayuuk"
+                  >
+                    <Coins className="w-4 h-4 fill-current text-brand animate-pulse shrink-0" />
+                    <span className="font-mono font-bold text-black">{user.coins ?? 0} M.A.</span>
+                    <span className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded bg-brand text-black shrink-0">+ CARGAR</span>
+                  </button>
+
                   <div className="hidden xl:flex flex-col items-end mr-2">
                     <span className="text-[8px] font-semibold uppercase tracking-wider text-black/30">Bienvenido</span>
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-brand italic">{user.displayName}</span>
@@ -408,6 +441,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
             {/* Mobile Actions: Simple Palette Trigger & User Profile / Login on Mobile Topbar */}
             <div className="flex lg:hidden items-center gap-2">
+              {user && (
+                <button
+                  onClick={() => setIsRechargeModalOpen(true)}
+                  className="p-3 glass text-brand rounded-xl border-black/[0.06] flex items-center gap-1 hover:text-brand"
+                  title="Recargar Monedas Ayuuk"
+                >
+                  <Coins className="w-5 h-5 fill-current text-brand" />
+                  <span className="text-[10px] font-bold font-mono text-black">{user.coins ?? 0}</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setShowColorPicker(!showColorPicker);
@@ -417,6 +461,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               >
                 <Palette className="w-5 h-5" />
               </button>
+
+              {user && (
+                <Link
+                  to="/notifications"
+                  className="p-3 glass text-black/50 hover:text-brand rounded-xl border-black/[0.06] transition-all relative"
+                  title="Notificaciones"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[8px] font-extrabold text-black ring-1 ring-[#f5f5f0]">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
+                </Link>
+              )}
               
               {user ? (
                 <Link to="/profile" className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06]">
@@ -610,14 +669,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         key={item.path}
                         to={item.path}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-300 font-semibold uppercase tracking-wider text-[10px] ${
+                        className={`flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 font-semibold uppercase tracking-wider text-[10px] ${
                           isActive 
                             ? 'bg-brand/10 text-brand border border-brand/15' 
                             : 'text-black/60 hover:bg-black/[0.03] border border-transparent'
                         }`}
                       >
-                        <item.icon className={`w-4 h-4 ${isActive ? 'text-brand' : 'text-black/40'}`} />
-                        <span>{item.label}</span>
+                        <div className="flex items-center gap-3.5">
+                          <item.icon className={`w-4 h-4 ${isActive ? 'text-brand' : 'text-black/40'}`} />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.path === '/notifications' && unreadNotificationsCount > 0 && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[9px] font-extrabold text-black ring-1 ring-[#f5f5f0]">
+                            {unreadNotificationsCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -719,12 +785,34 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 handleLoginClick();
               }
             }}
-            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all ${
-              (location.pathname === '/chat' || location.pathname === '/friends') ? 'text-brand' : 'text-black/45 hover:text-black'
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl flex-1 transition-all duration-300 relative group ${
+              (location.pathname === '/chat' || location.pathname === '/friends') 
+                ? 'text-brand scale-110 font-bold' 
+                : 'text-black/45 hover:text-brand hover:scale-105'
             }`}
           >
-            {user ? <MessageSquare className="w-5 h-5" /> : <Users className="w-5 h-5" />}
-            <span className="text-[8px] font-bold uppercase tracking-wider">{user ? 'Chat' : 'Amigos'}</span>
+            <div className="relative">
+              {user ? (
+                <MessageSquare className={`w-5 h-5 transition-all duration-300 ${
+                  (location.pathname === '/chat') ? 'text-brand rotate-[10deg] scale-110' : 'group-hover:scale-115 group-hover:-rotate-6'
+                }`} />
+              ) : (
+                <Users className={`w-5 h-5 transition-all duration-300 ${
+                  (location.pathname === '/friends') ? 'text-brand scale-110' : 'group-hover:scale-115'
+                }`} />
+              )}
+              {/* Actively highlights with a glowing ping dot if this is the dynamic view */}
+              {(location.pathname === '/chat' || location.pathname === '/friends') && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-80"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand"></span>
+                </span>
+              )}
+            </div>
+            <span className="text-[8px] font-black uppercase tracking-widest mt-0.5">{user ? 'Mensajes' : 'Socio Ayuuk'}</span>
+            <div className={`absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-brand transition-all duration-500 ${
+              (location.pathname === '/chat' || location.pathname === '/friends') ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
+            }`} />
           </Link>
 
           {/* Side Drawer Toggle / Menú */}
@@ -741,6 +829,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+      <RechargeModal isOpen={isRechargeModalOpen} onClose={() => setIsRechargeModalOpen(false)} />
       
       <Toast 
         message={`¡Bienvenido, ${user?.displayName || 'Usuario'}!`}
@@ -810,18 +899,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Footer */}
       <footer className="relative z-10 border-t border-black/5 py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col items-center md:items-start gap-4">
+          <div className="flex flex-col items-center md:items-start gap-4 p-5 rounded-3xl bg-black/[0.015] border border-black/[0.05] backdrop-blur-md shadow-sm hover:bg-black/[0.025] hover:border-black/[0.08] hover:shadow-md transition-all duration-500 max-w-sm group">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-black/[0.03] rounded-lg flex items-center justify-center border border-black/[0.06]">
-                <Video className="w-4 h-4 text-[var(--primary-color,#ff4e00)]" />
+              <div className="w-10 h-10 bg-gradient-to-br from-[var(--primary-color,#ff4e00)]/10 to-[var(--primary-color,#ff4e00)]/30 rounded-2xl flex items-center justify-center border border-[var(--primary-color,#ff4e00)]/15 group-hover:scale-105 transition-transform duration-500 shadow-sm">
+                <Video className="w-5 h-5 text-[var(--primary-color,#ff4e00)] animate-pulse" />
               </div>
-              <span className="font-display font-bold tracking-tight text-black/90 text-xl">
+              <span className="font-display font-extrabold tracking-tight text-black/90 text-xl">
                 {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
               </span>
             </div>
-            <p className="text-black/30 text-[10px] font-semibold uppercase tracking-[0.15em] italic">
-              {globalSettings?.footerText?.includes('Voz') ? 'La región de los jamás conquistados.' : (globalSettings?.footerText || 'La región de los jamás conquistados.')}
-            </p>
+            <div className="flex items-center gap-2 border-l-2 border-[var(--primary-color,#ff4e00)]/40 pl-3">
+              <p className="text-black/60 text-[11px] font-medium tracking-wide leading-relaxed italic">
+                "{globalSettings?.footerText?.includes('Voz') ? 'La región de los jamás conquistados.' : (globalSettings?.footerText || 'La región de los jamás conquistados.')}"
+              </p>
+            </div>
           </div>
           
           <div className="flex flex-col items-center gap-6">

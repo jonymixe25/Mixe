@@ -91,6 +91,11 @@ service cloud.firestore {
         allow read, write: if isSignedIn();
       }
     }
+
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+    }
   }
 }
 

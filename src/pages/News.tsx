@@ -7,12 +7,14 @@ import { es } from 'date-fns/locale';
 import { Comment } from '../types';
 import { useAuth } from '../AuthContext';
 import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
+import { sendNotification } from '../services/notificationService';
 
 interface NewsArticle {
   id: string;
   title: string;
   content: string;
   authorName: string;
+  authorId?: string;
   imageUrl?: string;
   createdAt: any;
 }
@@ -48,6 +50,19 @@ const News: React.FC = () => {
         text: newComment,
         createdAt: serverTimestamp(),
       });
+
+      // Send real-time notification to the news article author
+      if (selectedArticle.authorId && selectedArticle.authorId !== user.uid) {
+        await sendNotification(
+          selectedArticle.authorId,
+          { id: user.uid, name: user.displayName || 'Un socio', photo: user.photoURL || undefined },
+          'comment',
+          'Nuevo comentario en tu noticia',
+          `${user.displayName} comentó: "${newComment.length > 40 ? newComment.substring(0, 37) + '...' : newComment}"`,
+          `/news`
+        );
+      }
+
       setNewComment('');
     } catch (error) {
       console.error('Error posting comment:', error);

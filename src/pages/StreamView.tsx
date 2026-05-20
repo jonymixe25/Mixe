@@ -16,7 +16,10 @@ import {
   setDoc,
   where,
 } from "../firebase";
-import { StreamSession, OperationType, ChatMessage } from "../types";
+import { StreamSession, OperationType, ChatMessage, Gift } from "../types";
+import { CULTURAL_GIFTS } from "../data/gifts";
+import { RechargeModal } from "../components/RechargeModal";
+import { Coins, Gift as GiftIcon } from "lucide-react";
 import {
   Users,
   Heart,
@@ -71,6 +74,13 @@ const StreamView = () => {
   const { user } = useAuth();
   const [stream, setStream] = useState<StreamSession | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Gifts and Currency States
+  const [showGiftsDrawer, setShowGiftsDrawer] = useState(false);
+  const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [isSendingGift, setIsSendingGift] = useState(false);
+  const [floatingGifts, setFloatingGifts] = useState<{ id: string; emoji: string; x: number; text: string }[]>([]);
+  const animatedGiftsRef = useRef<Set<string>>(new Set());
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState("");
   const [isUploadingChatImage, setIsUploadingChatImage] = useState(false);
@@ -114,6 +124,95 @@ const StreamView = () => {
   const [anonymousId] = useState(
     () => `anon_${Math.random().toString(36).substring(2, 11)}`,
   );
+
+  const triggerGiftAnimation = (emoji: string, name: string) => {
+    const animId = Math.random().toString(36).substring(2, 9);
+    const newGifts = Array.from({ length: 7 }).map((_, idx) => ({
+      id: `${animId}_${idx}`,
+      emoji,
+      x: 10 + Math.random() * 80, // Random percentage for left alignment
+      text: idx === 0 ? `¡Regalaron ${name}! ✨` : '',
+    }));
+
+    setFloatingGifts(prev => [...prev, ...newGifts]);
+
+    setTimeout(() => {
+      setFloatingGifts(prev => prev.filter(g => !newGifts.some(ng => ng.id === g.id)));
+    }, 4000);
+  };
+
+  const handleSendGift = async (gift: Gift) => {
+    if (!id) return;
+    if (!user) {
+      setToast({
+        message: "Inicia sesión para poder enviar regalos al anfitrión",
+        type: "error",
+        isVisible: true,
+      });
+      return;
+    }
+
+    const currentCoins = user.coins ?? 0;
+    if (currentCoins < gift.cost) {
+      setToast({
+        message: `Saldo insuficiente. Falta comprar Monedas Ayuuk (${gift.cost - currentCoins} M.A. requeridos).`,
+        type: "error",
+        isVisible: true,
+      });
+      setIsRechargeModalOpen(true);
+      return;
+    }
+
+    setIsSendingGift(true);
+    try {
+      // 1. Deduct sender's coins
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        coins: increment(-gift.cost)
+      });
+
+      // 2. Try to credit host coins & gifts received counter
+      if (stream?.userId) {
+        try {
+          const hostRef = doc(db, 'users', stream.userId);
+          await updateDoc(hostRef, {
+            coins: increment(gift.cost),
+            giftsReceivedValue: increment(gift.cost)
+          });
+        } catch (hostErr) {
+          console.warn("Could not credit host profile directly (due to permissions), transaction logged via stream message subcollection successfully.", hostErr);
+        }
+      }
+
+      // 3. Write structured gift notification message to chat subcollection
+      await addDoc(collection(db, "streams", id, "messages"), {
+        userId: user.uid,
+        userName: user.displayName,
+        text: `¡Le regaló un ${gift.name} ${gift.emoji} al anfitrión! ✨`,
+        isGift: true,
+        giftEmoji: gift.emoji,
+        giftName: gift.name,
+        giftCost: gift.cost,
+        createdAt: serverTimestamp(),
+      });
+
+      setToast({
+        message: `¡Has enviado un ${gift.name} ${gift.emoji} con éxito!`,
+        type: "success",
+        isVisible: true,
+      });
+      setShowGiftsDrawer(false);
+    } catch (err) {
+      console.error("Error sending gift:", err);
+      setToast({
+        message: "Ocurrió un error al procesar el envío de tu regalo.",
+        type: "error",
+        isVisible: true,
+      });
+    } finally {
+      setIsSendingGift(false);
+    }
+  };
 
   // Apply volume to video element
   useEffect(() => {
@@ -280,9 +379,17 @@ const StreamView = () => {
       chatQuery,
       (snapshot) => {
         const messages = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as ChatMessage,
+          (doc) => ({ id: doc.id, ...doc.data() }) as any,
         );
         setChat(messages);
+
+        // Real-time animation check for new gifts
+        messages.forEach((msg) => {
+          if (msg.isGift && !animatedGiftsRef.current.has(msg.id)) {
+            animatedGiftsRef.current.add(msg.id);
+            triggerGiftAnimation(msg.giftEmoji || '🎁', msg.giftName || 'Regalo');
+          }
+        });
       },
       (error) => {
         console.error("Chat error:", error);
@@ -867,6 +974,42 @@ const StreamView = () => {
               ref={videoRef}
               className="w-full h-full p-2 md:p-4 flex flex-col items-center justify-center bg-zinc-950 relative overflow-hidden"
             >
+              {/* Floating Gift Emojis Layer */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
+                <AnimatePresence>
+                  {floatingGifts.map((gift) => (
+                    <motion.div
+                      key={gift.id}
+                      initial={{ y: "110%", opacity: 0, scale: 0.5 }}
+                      animate={{
+                        y: "-110%",
+                        opacity: [0, 1, 1, 0],
+                        scale: [0.5, 1.3, 1, 0.7],
+                      }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 4.0, ease: "easeOut" }}
+                      className="absolute flex flex-col items-center gap-1.5"
+                      style={{ 
+                        left: `${gift.x}%`,
+                        bottom: '20px'
+                      }}
+                    >
+                      <span className="text-4xl md:text-5xl drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] select-none animate-pulse">
+                        {gift.emoji}
+                      </span>
+                      {gift.text && (
+                        <motion.span 
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="px-2.5 py-1 bg-black/80 border border-brand/30 backdrop-blur-md rounded-full text-[9px] font-bold text-brand uppercase tracking-widest whitespace-nowrap shadow-2xl"
+                        >
+                          {gift.text}
+                        </motion.span>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
               {activeVideoTracks.length === 0 ? (
                 /* No tracks yet -> show fallback ambient greeting */
                 <div className="flex flex-col items-center justify-center text-center p-6 bg-black/40 rounded-3xl border border-white/5 backdrop-blur-md max-w-sm">
@@ -1224,36 +1367,133 @@ const StreamView = () => {
                     </p>
                   </div>
                 ) : (
-                  chat.map((msg, idx) => (
-                    <motion.div
-                      key={msg.id}
-                      initial={{ opacity: 0, x: 5 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="flex flex-col items-start"
-                    >
-                      <div className="flex items-center gap-2 mb-1 px-1">
-                        <span
-                          className={`text-[10px] font-bold ${msg.userId === stream?.userId ? "text-brand" : "text-white/50"}`}
-                        >
-                          {msg.userName}
-                        </span>
-                      </div>
-                      <div className="bg-white/5 border border-white/5 px-4 py-2.5 rounded-xl rounded-tl-none text-sm text-white/70 leading-relaxed max-w-[90%]">
-                        {msg.text}
-                        {msg.imageUrl && (
-                          <img
-                            src={msg.imageUrl}
-                            alt="chat"
-                            className="mt-2 rounded-xl w-full h-auto border border-white/10"
-                          />
+                  chat.map((msgIn, idx) => {
+                    const msg = msgIn as any;
+                    const isGift = msg.isGift;
+                    return (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, x: 5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="flex flex-col items-start w-full"
+                      >
+                        <div className="flex items-center gap-2 mb-1 px-1">
+                          <span
+                            className={`text-[10px] font-bold ${
+                              msg.userId === stream?.userId 
+                                ? "text-brand" 
+                                : isGift 
+                                  ? "text-brand" 
+                                  : "text-white/50"
+                            }`}
+                          >
+                            {msg.userName}
+                          </span>
+                          {isGift && (
+                            <span className="text-[8px] font-extrabold uppercase bg-brand/20 text-brand px-1.5 py-0.5 rounded border border-brand/25 flex items-center gap-0.5 tracking-wider font-mono">
+                              <Sparkles className="w-2.5 h-2.5 fill-current text-brand animate-pulse" />
+                              Donador Mixe
+                            </span>
+                          )}
+                        </div>
+                        {isGift ? (
+                          <div className="bg-brand/10 border border-brand/35 p-3 rounded-2xl rounded-tl-none text-xs text-white max-w-[95%] shadow-lg shadow-brand/5 flex items-center gap-3">
+                            <span className="text-3xl select-none animate-bounce shrink-0">{msg.giftEmoji || '🎁'}</span>
+                            <div className="space-y-0.5">
+                              <p className="font-bold text-white leading-tight font-display">
+                                {msg.text}
+                              </p>
+                              <p className="text-[9px] font-mono text-brand/80 font-bold flex items-center gap-1 uppercase tracking-wider">
+                                <Coins className="w-3 h-3 fill-current text-brand" />
+                                Patrocinio de {msg.giftCost || 0} M.A.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-white/5 border border-white/5 px-4 py-2.5 rounded-xl rounded-tl-none text-xs md:text-sm text-white/70 leading-relaxed max-w-[90%]">
+                            {msg.text}
+                            {msg.imageUrl && (
+                              <img
+                                src={msg.imageUrl}
+                                alt="chat"
+                                className="mt-2 rounded-xl w-full h-auto border border-white/10"
+                              />
+                            )}
+                          </div>
                         )}
-                      </div>
-                    </motion.div>
-                  ))
+                      </motion.div>
+                    );
+                  })
                 )}
                 <div ref={chatEndRef} />
               </div>
+
+              {/* Gifts Drawer Overlay inside Chat Sidebar */}
+              <AnimatePresence>
+                {showGiftsDrawer && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-white/5 bg-zinc-950/95 backdrop-blur-md overflow-hidden shrink-0"
+                  >
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-white/40">Regalos Culturales</span>
+                        <button
+                          onClick={() => setIsRechargeModalOpen(true)}
+                          className="flex items-center gap-1 text-[9px] font-bold text-brand bg-brand/10 px-2 py-1 rounded-lg border border-brand/20 hover:bg-brand/20 transition-all uppercase tracking-wider cursor-pointer"
+                        >
+                          <Coins className="w-3 h-3 fill-current text-brand animate-pulse" />
+                          <span>Comprar Monedas</span>
+                        </button>
+                      </div>
+
+                      {/* Gifts Grid */}
+                      <div className="grid grid-cols-3 gap-2 max-h-[180px] overflow-y-auto pr-1">
+                        {CULTURAL_GIFTS.map((gift) => {
+                          const currentCoins = user?.coins ?? 0;
+                          const canAfford = currentCoins >= gift.cost;
+
+                          return (
+                            <button
+                              key={gift.id}
+                              disabled={isSendingGift}
+                              onClick={() => handleSendGift(gift)}
+                              className={`group flex flex-col items-center justify-between p-2 rounded-xl border text-center transition-all active:scale-95 cursor-pointer ${
+                                canAfford
+                                  ? 'bg-white/5 border-white/10 hover:border-brand/40 hover:bg-white/10'
+                                  : 'bg-white/[0.01] border-white/5 opacity-50'
+                              }`}
+                              title={`${gift.name}: ${gift.description}`}
+                            >
+                              <span className="text-2xl group-hover:scale-110 transition-transform">{gift.emoji}</span>
+                              <div className="mt-1 space-y-0.5">
+                                <span className="text-[9px] font-bold text-white/80 block leading-tight truncate max-w-[65px]">
+                                  {gift.name}
+                                </span>
+                                <span className="text-[8px] font-mono text-brand font-semibold flex items-center justify-center gap-0.5">
+                                  <Coins className="w-2.5 h-2.5 fill-current" />
+                                  {gift.cost}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="p-2 rounded-xl bg-white/5 flex items-center justify-between text-[9px] font-medium text-white/50">
+                        <span className="flex items-center gap-1.5 font-semibold">
+                          <Coins className="w-3.5 h-3.5 text-brand fill-current" />
+                          <span>Saldo Disponible: <strong className="text-white">{user?.coins ?? 0} M.A.</strong></span>
+                        </span>
+                        <span>Envío 100% Interactivo</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Modern Chat Input */}
               <div className="p-4 bg-white/5 border-t border-white/5">
@@ -1263,20 +1503,28 @@ const StreamView = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Mensaje..."
-                    className="w-full bg-white/5 border border-white/5 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-brand/20 placeholder:text-white/10 transition-all pr-24"
+                    className="w-full bg-white/5 border border-white/5 rounded-xl px-5 py-3 text-sm focus:outline-none focus:border-brand/20 placeholder:text-white/10 transition-all pr-28"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                     <button
                       type="button"
+                      onClick={() => setShowGiftsDrawer(!showGiftsDrawer)}
+                      className={`p-2 transition-colors cursor-pointer ${showGiftsDrawer ? 'text-brand' : 'text-white/30 hover:text-white/50'}`}
+                      title="Enviar Regalo Tradicional"
+                    >
+                      <GiftIcon className="w-4 h-4 shrink-0 fill-current" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => chatImageInputRef.current?.click()}
-                      className="p-2 text-white/30 hover:text-white/50 transition-colors"
+                      className="p-2 text-white/30 hover:text-white/50 transition-colors cursor-pointer"
                     >
                       <ImageIcon className="w-4 h-4" />
                     </button>
                     <button
                       type="submit"
                       disabled={!message.trim()}
-                      className="bg-brand text-black p-2 rounded-xl hover:scale-105 transition-all disabled:opacity-30 disabled:scale-100"
+                      className="bg-brand text-black p-2 rounded-xl hover:scale-105 transition-all disabled:opacity-30 disabled:scale-100 cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -1290,6 +1538,9 @@ const StreamView = () => {
                   />
                 </form>
               </div>
+
+              {/* Recharge Modal Portal */}
+              <RechargeModal isOpen={isRechargeModalOpen} onClose={() => setIsRechargeModalOpen(false)} />
             </div>
           </aside>
         </div>

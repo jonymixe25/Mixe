@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, query, where, handleFirestoreError, orderBy, limit, deleteDoc, getDocs } from '../firebase';
 import { StreamSession, OperationType, ChatMessage } from '../types';
-import { Video, StopCircle, Play, Sparkles, MessageSquare, Users, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize, ChevronLeft } from 'lucide-react';
+import { Video, Camera, StopCircle, Play, Sparkles, MessageSquare, Users, Image as ImageIcon, Wand2, Send, Loader2, Heart, Clock, Trash2, Shield, Settings, Lock, Globe, Zap, Monitor, UserPlus, Check, X, Gauge, Activity, Pin, Layout, Share2, Maximize, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import Modal from '../components/Modal';
@@ -128,6 +128,7 @@ export default function AdminStream() {
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   
   const [isRecording, setIsRecording] = useState(false);
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
@@ -602,6 +603,80 @@ export default function AdminStream() {
     } catch (err) {
       console.error('Error saving recording:', err);
       setToast({ message: 'Error al salvar la grabación', type: 'error', isVisible: true });
+    }
+  };
+
+  const takeSnapshot = () => {
+    if (!videoRef.current || !user) {
+      setToast({ message: 'No hay cámara activa para tomar la foto', type: 'error', isVisible: true });
+      return;
+    }
+
+    try {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Draw current video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          setToast({ message: 'Error al procesar la imagen', type: 'error', isVisible: true });
+          return;
+        }
+        await saveSnapshot(blob);
+      }, 'image/jpeg', 0.95);
+    } catch (err) {
+      console.error('Error capturing snapshot:', err);
+      setToast({ message: 'Error de cámara al tomar la captura', type: 'error', isVisible: true });
+    }
+  };
+
+  const saveSnapshot = async (blob: Blob) => {
+    try {
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const fileName = `foto_${Date.now()}.jpg`;
+      const folder = `snapshots/${user.uid}`;
+      const storageRef = ref(storage, `${folder}/${fileName}`);
+
+      setIsCapturingPhoto(true);
+      setToast({ message: 'Guardando foto en galería...', type: 'success', isVisible: true });
+
+      const uploadTask = uploadBytesResumable(storageRef, blob);
+
+      uploadTask.on('state_changed',
+        () => {},
+        (error) => {
+          console.error("Error uploading snapshot:", error);
+          setToast({ message: 'Error al subir la captura', type: 'error', isVisible: true });
+          setIsCapturingPhoto(false);
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          const snapshotData = {
+            userId: user.uid,
+            url: downloadUrl,
+            fileName,
+            fileSize: blob.size,
+            fileType: 'image/jpeg',
+            folder: 'Fotos Guardadas',
+            isPublic: false,
+            createdAt: serverTimestamp()
+          };
+
+          await addDoc(collection(db, 'media'), snapshotData);
+          setToast({ message: '¡Foto guardada con éxito en tu galería!', type: 'success', isVisible: true });
+          setIsCapturingPhoto(false);
+        }
+      );
+    } catch (error) {
+      console.error('Error in saveSnapshot:', error);
+      setToast({ message: 'Error al iniciar guardado de foto', type: 'error', isVisible: true });
+      setIsCapturingPhoto(false);
     }
   };
 
@@ -1203,8 +1278,21 @@ export default function AdminStream() {
                     <button 
                       onClick={isRecording ? stopRecording : startRecording}
                       className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all shadow-lg shadow-black/[0.03] active:scale-90 ${isRecording ? 'bg-red-500 border-red-400 animate-pulse' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}
+                      title={isRecording ? 'Detener Grabación' : 'Grabar video'}
                     >
                       <Video className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={takeSnapshot}
+                      disabled={isCapturingPhoto}
+                      className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-brand hover:border-brand/50 hover:text-black text-white transition-all shadow-lg shadow-black/[0.03] active:scale-90 disabled:opacity-50"
+                      title="Tomar Foto (Captura)"
+                    >
+                      {isCapturingPhoto ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Camera className="w-5 h-5" />
+                      )}
                     </button>
                     <button 
                       onClick={toggleScreenShare}

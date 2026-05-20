@@ -13,6 +13,16 @@ export interface UserProfile {
   streetAndNumber?: string;
   dateOfBirth?: string;
   socialLinks?: { platform: string; url: string }[];
+  coins?: number;
+  giftsReceivedValue?: number;
+}
+
+export interface Gift {
+  id: string;
+  name: string;
+  emoji: string;
+  cost: number;
+  description: string;
 }
 
 export interface StreamSession {

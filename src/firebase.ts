@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, serverTimestamp, getDocs, deleteDoc, increment, orderBy, limit, getDocFromServer, startAfter, endBefore, limitToLast } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, serverTimestamp, getDocs, deleteDoc, increment, orderBy, limit, getDocFromServer, startAfter, endBefore, limitToLast, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, uploadBytesResumable, getDownloadURL, listAll, getMetadata, deleteObject } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 import { OperationType, FirestoreErrorInfo } from './types';
@@ -8,6 +8,7 @@ import { OperationType, FirestoreErrorInfo } from './types';
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export { writeBatch };
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });

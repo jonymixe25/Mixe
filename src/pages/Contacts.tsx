@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import Toast from '../components/Toast';
 
 import { useNavigate } from 'react-router-dom';
+import { sendNotification } from '../services/notificationService';
 
 const Contacts: React.FC = () => {
   const { user } = useAuth();
@@ -101,6 +102,17 @@ const Contacts: React.FC = () => {
         addedAt: serverTimestamp(),
       };
       await addDoc(collection(db, 'users', user.uid, 'contacts'), contactData);
+      
+      // Send real-time notification
+      await sendNotification(
+        targetUser.uid,
+        { id: user.uid, name: user.displayName || 'Socio', photo: user.photoURL || undefined },
+        'friend',
+        '¡Nuevo contacto!',
+        `${user.displayName} te ha añadido a sus contactos de Ayuuk.`,
+        '/friends'
+      );
+
       setToast({ message: 'Contacto añadido con éxito.', type: 'success', isVisible: true });
       setSearchResults([]);
       setSearchQuery('');

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
-import { db, doc, updateDoc, handleFirestoreError } from '../firebase';
+import { db, doc, updateDoc, handleFirestoreError, storage, ref, uploadBytesResumable, getDownloadURL, collection, addDoc, serverTimestamp } from '../firebase';
 import { OperationType } from '../types';
-import { User, Mail, Shield, Calendar, Edit3, Save, X, Camera, Plus, Trash2 } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Edit3, Save, X, Camera, Plus, Trash2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,6 +13,9 @@ import 'react-quill-new/dist/quill.snow.css';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(user?.bio || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -68,13 +71,67 @@ const Profile: React.FC = () => {
     setSocialLinks(socialLinks.filter((_, i) => i !== index));
   };
 
-  const handlePhotoUpdate = async (url: string) => {
+  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingPhoto(true);
+    setUploadProgress(0);
+    setToast({ message: 'Subiendo e instalando nueva foto de perfil...', type: 'success', isVisible: true });
+
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { photoURL: url });
-      setToast({ message: 'Foto de perfil actualizada.', type: 'success', isVisible: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filename = `profile_${user.uid}_${Date.now()}.${fileExt}`;
+      const storageRef = ref(storage, `profiles/${user.uid}/${filename}`);
+
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error('Error uploading profile image:', error);
+          setToast({ message: 'Error al subir foto: ' + error.message, type: 'error', isVisible: true });
+          setUploadingPhoto(false);
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, { photoURL: url });
+
+            // Auto-sync upload to user's media list so they have it saved in their personal file gallery
+            try {
+              await addDoc(collection(db, 'media'), {
+                userId: user.uid,
+                url,
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                folder: 'Fotos de Perfil',
+                isPublic: false,
+                createdAt: serverTimestamp()
+              });
+            } catch (mediaErr) {
+              console.error('Error adding avatar metadata to media gallery:', mediaErr);
+            }
+
+            setToast({ message: '¡Foto de perfil actualizada con éxito!', type: 'success', isVisible: true });
+          } catch (updateErr: any) {
+            console.error('Error updating user photoURL in database:', updateErr);
+            setToast({ message: 'Error al actualizar base de datos.' + updateErr.message, type: 'error', isVisible: true });
+          } finally {
+            setUploadingPhoto(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+        }
+      );
+    } catch (err: any) {
+      console.error('Error starting profile photo upload:', err);
+      setToast({ message: 'Error de red al inicializar la subida', type: 'error', isVisible: true });
+      setUploadingPhoto(false);
     }
   };
 
@@ -124,7 +181,20 @@ const Profile: React.FC = () => {
         <div className="px-10 lg:px-16 pb-16">
           <div className="relative -mt-24 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="relative group">
-              <div className="w-44 h-44 rounded-3xl bg-[#f5f5f0] p-1.5 shadow-lg shadow-black/[0.03] shadow-black/[0.04] ring-1 ring-white/10">
+              <input 
+                type="file"
+                ref={fileInputRef}
+                onChange={handleProfilePhotoChange}
+                accept="image/*"
+                className="hidden"
+                disabled={uploadingPhoto}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="w-44 h-44 rounded-3xl bg-[#f5f5f0] p-1.5 shadow-lg shadow-black/[0.03] shadow-black/[0.04] ring-1 ring-white/10 text-left outline-none block cursor-pointer group/btn"
+              >
                 <div className="w-full h-full rounded-[2.7rem] overflow-hidden border-2 border-black/[0.06] relative group-hover:border-brand/50 transition-colors duration-500">
                   <img 
                     src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
@@ -132,20 +202,32 @@ const Profile: React.FC = () => {
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
-                    <Camera className="w-8 h-8 text-black animate-bounce" />
-                    <span className="text-[8px] font-semibold uppercase tracking-wider text-black/60">Actualizar Foto</span>
-                  </div>
+                  {uploadingPhoto ? (
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-2 backdrop-blur-sm text-white">
+                      <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-brand">{Math.round(uploadProgress)}%</span>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col items-center justify-center gap-2 backdrop-blur-sm text-white">
+                      <Camera className="w-8 h-8 text-brand animate-bounce" />
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-brand">Actualizar Foto</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="absolute -bottom-2 -right-2 scale-125">
-                <ImageUpload 
-                  onUploadComplete={handlePhotoUpdate}
-                  currentImageUrl=""
-                  label=""
-                  folder="profiles"
-                />
-              </div>
+              </button>
+              <button 
+                type="button"
+                disabled={uploadingPhoto}
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-11 h-11 rounded-2xl bg-brand hover:bg-brand/90 hover:scale-105 active:scale-95 transition-all text-black flex items-center justify-center shadow-xl cursor-pointer border border-[#ff4e00]/20"
+                title="Actualizar Foto de Perfil"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
+              </button>
             </div>
 
             {!isEditing && (

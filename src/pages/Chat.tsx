@@ -3,11 +3,12 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, setDoc, deleteDoc, handleFirestoreError } from '../firebase';
 import { UserProfile, OperationType } from '../types';
-import { Send, ArrowLeft, Loader2, User as UserIcon, Image as ImageIcon, Video, Phone, X, Camera, Mic, MicOff, VideoOff, Maximize2, MessageCircle } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, User as UserIcon, Image as ImageIcon, Video, Phone, X, Camera, Mic, MicOff, VideoOff, Maximize2, MessageCircle, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import Toast from '../components/Toast';
+import { sendNotification } from '../services/notificationService';
 
 interface PrivateMessage {
   id: string;
@@ -15,6 +16,7 @@ interface PrivateMessage {
   senderName: string;
   text: string;
   imageUrl?: string;
+  fileType?: string;
   createdAt: any;
   isSystem?: boolean;
 }
@@ -40,11 +42,86 @@ const Chat: React.FC = () => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const signalingUnsubscribes = useRef<(() => void)[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
     isVisible: false
   });
+
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !contactId) return;
+
+    setUploadingFile(true);
+    setToast({ message: 'Subiendo y guardando archivo...', type: 'success', isVisible: true });
+
+    try {
+      const { ref, uploadBytesResumable, getDownloadURL, storage } = await import('../firebase');
+      const chatId = getChatId(user.uid, contactId);
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const storageRef = ref(storage, `chats/${chatId}/media/${filename}`);
+      
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on('state_changed',
+        () => {},
+        (error) => {
+          console.error('Error uploading file in chat:', error);
+          setToast({ message: 'Error al subir: ' + error.message, type: 'error', isVisible: true });
+          setUploadingFile(false);
+        },
+        async () => {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          await addDoc(collection(db, 'chats', chatId, 'messages'), {
+            senderId: user.uid,
+            senderName: user.displayName,
+            text: file.type.startsWith('video/') ? '🎥 [Video enviado]' : '📸 [Foto enviada]',
+            imageUrl: downloadUrl,
+            fileType: file.type,
+            createdAt: serverTimestamp()
+          });
+
+          // Send real-time notification
+          await sendNotification(
+            contactId,
+            { id: user.uid, name: user.displayName || 'Socio', photo: user.photoURL || undefined },
+            'message',
+            'Nuevo archivo multimedia',
+            file.type.startsWith('video/') ? '🎥 Te envió un video' : '📸 Te envió una imagen',
+            `/chat/${user.uid}`
+          );
+
+          // Duplicate to user's gallery media collection to satisfy both saving requirements
+          try {
+            await addDoc(collection(db, 'media'), {
+              userId: user.uid,
+              url: downloadUrl,
+              folder: file.type.startsWith('video/') ? 'Videos Enviados' : 'Fotos Enviadas',
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+              isPublic: false,
+              createdAt: serverTimestamp()
+            });
+          } catch (mediaErr) {
+            console.error('Error auto-syncing chat attachment to personal media gallery:', mediaErr);
+          }
+
+          setToast({ message: 'Archivo enviado con éxito', type: 'success', isVisible: true });
+          setUploadingFile(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      );
+    } catch (error: any) {
+      console.error('Error uploading chat file:', error);
+      setToast({ message: 'Error de red al inicializar la subida', type: 'error', isVisible: true });
+      setUploadingFile(false);
+    }
+  };
 
   // Generate a consistent chatId for two users
   const getChatId = (uid1: string, uid2: string) => {
@@ -52,7 +129,20 @@ const Chat: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!user || !contactId) return;
+    if (!user) return;
+
+    if (!contactId) {
+      const q = query(collection(db, 'users', user.uid, 'contacts'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const contactList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setContacts(contactList);
+        setLoading(false);
+      }, (error) => {
+        console.error('Error fetching contacts in chat list:', error);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    }
 
     const fetchContact = async () => {
       try {
@@ -226,6 +316,16 @@ const Chat: React.FC = () => {
         createdAt: serverTimestamp(),
       });
 
+      // Send real-time call notification
+      await sendNotification(
+        contactId,
+        { id: user.uid, name: user.displayName || 'Socio', photo: user.photoURL || undefined },
+        'call',
+        'Llamada de voz/video entrante',
+        `Te está llamando por video/audio de Ayuuk en este momento.`,
+        `/chat/${user.uid}?startCall=true`
+      );
+
       // Listen for answer
       const unsubAnswer = onSnapshot(doc(db, 'calls', chatId), async (snapshot) => {
         const data = snapshot.data();
@@ -392,6 +492,16 @@ const Chat: React.FC = () => {
         text,
         createdAt: serverTimestamp(),
       });
+
+      // Send real-time chat notification
+      await sendNotification(
+        contactId,
+        { id: user.uid, name: user.displayName || 'Socio', photo: user.photoURL || undefined },
+        'message',
+        'Nuevo mensaje de chat',
+        text.length > 50 ? `${text.substring(0, 47)}...` : text,
+        `/chat/${user.uid}`
+      );
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `chats/${getChatId(user.uid, contactId)}/messages`);
     } finally {
@@ -404,6 +514,82 @@ const Chat: React.FC = () => {
       <Loader2 className="w-8 h-8 text-brand animate-spin" />
     </div>
   );
+
+  if (!contactId) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-12 relative animate-fade-in">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-brand">
+              <MessageCircle className="w-5 h-5 animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-[0.15em]">Mensajes Privados</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight text-black/90">
+              <span>Mis Conversaciones</span>
+            </h1>
+            <p className="text-black/50 text-sm font-medium italic max-w-md">
+              <span>Selecciona un contacto para iniciar un chat privado o videollamada.</span>
+            </p>
+          </div>
+          
+          <button
+            onClick={() => navigate('/contacts')}
+            className="px-8 py-4 bg-brand text-black rounded-xl text-[10px] font-semibold uppercase tracking-wider flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#ff4e00]/20"
+          >
+            <Users className="w-4 h-4" />
+            <span>Ver Directorio</span>
+          </button>
+        </div>
+
+        {contacts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {contacts.map((c: any) => (
+              <motion.div
+                key={c.id || c.contactId}
+                onClick={() => navigate(`/chat/${c.contactId}`)}
+                className="glass border-black/[0.06] rounded-3xl p-6 flex items-center justify-between group hover:bg-black/[0.03] transition-all duration-500 shadow-lg shadow-black/[0.03] cursor-pointer hover:border-brand/35"
+              >
+                <div className="flex items-center gap-5">
+                  <div className="w-16 h-16 rounded-xl bg-black/[0.03] p-1 border border-black/[0.06] group-hover:border-brand/20 transition-all duration-500">
+                    <img 
+                      src={c.contactPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.contactId}`} 
+                      className="w-full h-full rounded-[0.8rem] bg-[#f5f5f0] object-cover group-hover:scale-110 transition-transform duration-700" 
+                      alt="avatar" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-display font-bold text-lg leading-none group-hover:text-brand transition-colors">{c.contactName}</h3>
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      <p className="text-[10px] text-black/40 font-semibold uppercase tracking-wider">Chat Disponible</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-brand px-3 py-1.5 rounded-lg bg-brand/5 border border-brand/10 group-hover:bg-brand group-hover:text-black transition-colors">
+                    Chatear →
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-24 text-center glass rounded-3xl border-dashed border-black/[0.06] shadow-lg shadow-black/[0.03]">
+            <div className="w-20 h-20 bg-black/[0.03] rounded-full flex items-center justify-center mx-auto mb-6">
+              <MessageCircle className="w-10 h-10 text-black/10" />
+            </div>
+            <p className="text-black/50 font-display text-xl italic mb-8"><span>Aún no tienes contactos agregados.</span></p>
+            <button 
+              onClick={() => navigate('/contacts')}
+              className="bg-brand px-8 py-4 rounded-xl text-[10px] font-semibold uppercase tracking-wider hover:scale-105 transition-all shadow-lg shadow-brand/20 animate-bounce"
+            >
+              <span>Buscar Amigos</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-10rem)] flex flex-col glass border-black/[0.06] rounded-3xl overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] relative">
@@ -608,6 +794,15 @@ const Chat: React.FC = () => {
                       : 'glass text-black/80 rounded-tl-none border-black/[0.06]'
                   }`}>
                     <p className="leading-relaxed italic"><span>{msg.text}</span></p>
+                    {msg.imageUrl && (
+                      <div className="mt-3 rounded-2xl overflow-hidden max-w-sm border border-black/10">
+                        {msg.fileType?.startsWith('video/') || msg.text?.includes('[Video') ? (
+                          <video src={msg.imageUrl} controls className="w-full h-auto max-h-60 object-cover" />
+                        ) : (
+                          <img src={msg.imageUrl} alt="Adjunto" className="w-full h-auto max-h-60 object-cover" referrerPolicy="no-referrer" />
+                        )}
+                      </div>
+                    )}
                     <div className={`absolute top-0 ${msg.senderId === user?.uid ? '-right-2' : '-left-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
                       <div className={`w-4 h-4 rotate-45 ${msg.senderId === user?.uid ? 'bg-brand' : 'bg-black/[0.06]'}`} />
                     </div>
@@ -626,11 +821,25 @@ const Chat: React.FC = () => {
       {/* Input Area */}
       <div className="p-8 border-t border-black/[0.06] bg-black/[0.03] backdrop-blur-xl">
         <form onSubmit={handleSend} className="flex gap-4 items-center">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleAttachFile} 
+            className="hidden" 
+            accept="image/*,video/*" 
+          />
           <button 
             type="button"
-            className="p-4 glass rounded-xl hover:bg-black/[0.06] text-black/30 hover:text-brand transition-all duration-500 border-black/[0.06]"
+            disabled={uploadingFile}
+            onClick={() => fileInputRef.current?.click()}
+            className="p-4 glass rounded-xl hover:bg-black/[0.06] text-black/30 hover:text-brand transition-all duration-500 border-black/[0.06] disabled:opacity-50"
+            title="Enviar Foto o Video"
           >
-            <ImageIcon className="w-6 h-6" />
+            {uploadingFile ? (
+              <Loader2 className="w-6 h-6 animate-spin text-brand" />
+            ) : (
+              <ImageIcon className="w-6 h-6" />
+            )}
           </button>
           <div className="flex-1 relative group">
             <input 
@@ -644,7 +853,7 @@ const Chat: React.FC = () => {
           </div>
           <button 
             type="submit"
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || uploadingFile}
             className="p-5 bg-brand text-black rounded-[1.5rem] hover:bg-brand/90 transition-all duration-500 shadow-lg shadow-black/[0.03] shadow-black/[0.04] shadow-[#ff4e00]/30 disabled:opacity-50 disabled:scale-95 active:scale-90 group"
           >
             {sending ? (
