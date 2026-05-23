@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useDevice } from '../hooks/useDevice';
 import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
+import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -140,21 +141,7 @@ const Home: React.FC = () => {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <section className={`relative ${isMobile ? 'h-[75vh]' : 'h-[85vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg shadow-black/[0.03] shadow-black/[0.02]`}>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f5f0]/40 to-[#f5f5f0] z-10" />
-        <motion.img
-          initial={{ scale: 1.15 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-          src={globalSettings?.heroImageUrl || "https://picsum.photos/seed/mixe-culture/1920/1080?blur=1"}
-          alt="Vida Mixe Hero"
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-          onError={(e) => {
-            // If local image fails, use fallback
-            (e.target as HTMLImageElement).src = "https://picsum.photos/seed/mixe-culture/1920/1080?blur=1";
-          }}
-          referrerPolicy="no-referrer"
-        />
+      <section className={`relative ${isMobile ? 'py-16 min-h-[55vh]' : 'py-24 min-h-[75vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg shadow-black/[0.02] border border-black/[0.04] bg-white/[0.2]`}>
         <div className="relative z-20 text-center max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -268,9 +255,10 @@ const Home: React.FC = () => {
               >
                 <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-brand/20 group-hover:border-brand transition-colors">
                   <img 
-                    src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                    src={user.photoURL || defaultAvatar} 
                     alt={user.displayName}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
                 <div className="text-left">
@@ -369,6 +357,7 @@ const Home: React.FC = () => {
                           src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`} 
                           alt="avatar" 
                           className="w-full h-full rounded-[0.6rem] bg-[#f5f5f0]"
+                          loading="lazy"
                         />
                       </div>
                       <span className="tracking-widest uppercase">{stream.userName}</span>
@@ -422,8 +411,9 @@ const Home: React.FC = () => {
                 <img
                   src={article.imageUrl || `https://picsum.photos/seed/${article.id}/800/600`}
                   alt={article.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out will-change-transform"
                   referrerPolicy="no-referrer"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-transparent to-transparent opacity-60" />
               </div>

@@ -22,6 +22,7 @@ async function updateSettings() {
       appName: 'Vida Mixe',
       heroTitle: 'Vida Mixe',
       heroSubtitle: '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.',
+      heroImageUrl: '/hero_background.png',
       footerText: 'La región de los jamás conquistados.',
       themeColor: '#ff4e00',
       enableMixe: true,

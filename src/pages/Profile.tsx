@@ -10,6 +10,7 @@ import ImageUpload from '../components/ImageUpload';
 import Toast from '../components/Toast';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -197,7 +198,7 @@ const Profile: React.FC = () => {
               >
                 <div className="w-full h-full rounded-[2.7rem] overflow-hidden border-2 border-black/[0.06] relative group-hover:border-brand/50 transition-colors duration-500">
                   <img 
-                    src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                    src={user.photoURL || defaultAvatar} 
                     alt="profile" 
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"

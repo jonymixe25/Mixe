@@ -11,6 +11,7 @@ import { useTheme } from '../ThemeContext';
 import { useDevice } from '../hooks/useDevice';
 import { RechargeModal } from './RechargeModal';
 import { listenToUnreadCount } from '../services/notificationService';
+import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
@@ -414,7 +415,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Link to="/profile" className="flex items-center gap-3 group">
                     <div className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06] group-hover:border-brand/50 transition-all duration-500">
                       <img 
-                        src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                        src={user.photoURL || defaultAvatar} 
                         className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0] object-cover" 
                         alt="avatar" 
                       />
@@ -480,7 +481,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {user ? (
                 <Link to="/profile" className="w-10 h-10 rounded-xl bg-black/[0.03] p-0.5 border border-black/[0.06]">
                   <img 
-                    src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                    src={user.photoURL || defaultAvatar} 
                     className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0] object-cover" 
                     alt="avatar" 
                   />
@@ -695,7 +696,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 px-2 py-1">
                         <img 
-                          src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
+                          src={user.photoURL || defaultAvatar} 
                           className="w-8 h-8 rounded-lg bg-white object-cover border border-black/[0.05]" 
                           alt="avatar" 
                         />

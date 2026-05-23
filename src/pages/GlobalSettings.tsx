@@ -38,7 +38,7 @@ const GlobalSettings = () => {
           setAppName(data.appName || 'Vida Mixe');
           setHeroTitle(data.heroTitle || 'Vida Mixe');
           setHeroSubtitle(data.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
-          setHeroImageUrl(data.heroImageUrl || '');
+          setHeroImageUrl(data.heroImageUrl || '/hero_background.png');
           setFooterText(data.footerText || 'La región de los jamás conquistados.');
           setThemeColor(data.themeColor || '#ff4e00');
           setContactEmail(data.contactEmail || 'contacto@vidamixe.mx');
@@ -71,7 +71,7 @@ const GlobalSettings = () => {
       setAppName('Vida Mixe');
       setHeroTitle('Vida Mixe');
       setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
-      setHeroImageUrl('');
+      setHeroImageUrl('/hero_background.png');
       setFooterText('La región de los jamás conquistados.');
       setThemeColor('#ff4e00');
       setContactEmail('contacto@vidamixe.mx');
@@ -241,7 +241,7 @@ const GlobalSettings = () => {
                         onClick={() => setHeroImageUrl('')}
                         className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <X className="w-8 h-8 text-black" />
+                        <X className="w-8 h-8 text-white" />
                       </button>
                     </div>
                   ) : (
@@ -277,6 +277,17 @@ const GlobalSettings = () => {
                       )}
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50 ml-2">O pegar URL directa de la imagen de fondo</label>
+                  <input 
+                    type="text"
+                    placeholder="https://ejemplo.com/mi-fondo-pantalla.jpg"
+                    value={heroImageUrl}
+                    onChange={(e) => setHeroImageUrl(e.target.value)}
+                    className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl py-4 px-6 text-sm font-medium focus:border-brand outline-none transition-all placeholder:text-black/20"
+                  />
                 </div>
               </div>
               <div className="space-y-3">

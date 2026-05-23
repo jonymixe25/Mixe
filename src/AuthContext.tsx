@@ -45,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               emailLowercase: (firebaseUser.email || '').toLowerCase(),
               photoURL: firebaseUser.photoURL || '',
               role: firebaseUser.email === 'jonyoax95@gmail.com' ? 'admin' : 'user',
+              coins: 1000,
               createdAt: serverTimestamp(),
             };
             try {
@@ -85,6 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updates.emailLowercase = currentData.email.toLowerCase();
             }
 
+            // Ensure coin field exists for existing users
+            if (currentData.coins === undefined) {
+              updates.coins = 1000;
+            }
+ 
             if (Object.keys(updates).length > 0) {
               try {
                 await updateDoc(userDocRef, updates);

@@ -16,6 +16,7 @@ import {
   handleFirestoreError,
   limit,
   startAfter,
+  increment,
 } from "../firebase";
 import { StreamSession, UserProfile, OperationType } from "../types";
 import {
@@ -35,6 +36,8 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  Coins,
+  Gift,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import Modal from "../components/Modal";
@@ -95,6 +98,19 @@ const AdminDashboard = () => {
   const [alertMessage, setAlertMessage] = useState("");
   const [alertLink, setAlertLink] = useState("");
   const [savingAlert, setSavingAlert] = useState(false);
+
+  // Coin gifting state
+  const [selectedUserForGifting, setSelectedUserForGifting] = useState<UserProfile | null>(null);
+  const [giftCoinsAmount, setGiftCoinsAmount] = useState<string>("100");
+  const [giftingCoinsLoading, setGiftingCoinsLoading] = useState(false);
+
+  const [testingLiveKit, setTestingLiveKit] = useState(false);
+  const [liveKitStatus, setLiveKitStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+    debug?: any;
+    hint?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== "admin") return;
@@ -337,6 +353,61 @@ const AdminDashboard = () => {
     });
   };
 
+  const handleGiftCoins = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForGifting) return;
+    const amount = parseInt(giftCoinsAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setToast({
+        message: "Por favor, ingresa una cantidad válida de monedas.",
+        type: "error",
+        isVisible: true,
+      });
+      return;
+    }
+
+    setGiftingCoinsLoading(true);
+    try {
+      await updateDoc(doc(db, "users", selectedUserForGifting.uid), {
+        coins: increment(amount),
+      });
+
+      // Send them a system notification inside Ayuuk to celebrate!
+      try {
+        await addDoc(collection(db, "notifications"), {
+          recipientId: selectedUserForGifting.uid,
+          senderId: "system",
+          senderName: "Sistema Ayuuk",
+          senderPhoto: `https://api.dicebear.com/7.x/identicon/svg?seed=system`,
+          type: "system",
+          title: "¡Has recibido Monedas!",
+          description: `El administrador te ha regalado ${amount} Monedas Ayuuk (M.A.). ¡Disfrútalas!`,
+          link: "",
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      } catch (notifErr) {
+        console.error("Could not send system notification for gifted coins:", notifErr);
+      }
+
+      setToast({
+        message: `¡Se han regalado ${amount} monedas a ${selectedUserForGifting.displayName} con éxito!`,
+        type: "success",
+        isVisible: true,
+      });
+      setSelectedUserForGifting(null);
+    } catch (error) {
+      console.error("Error gifting coins:", error);
+      setToast({
+        message: "Error al regalar monedas",
+        type: "error",
+        isVisible: true,
+      });
+    } finally {
+      setGiftingCoinsLoading(false);
+    }
+  };
+
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !alertTitle || !alertMessage) return;
@@ -434,14 +505,6 @@ const AdminDashboard = () => {
     return `${seconds}s`;
   };
 
-  const [testingLiveKit, setTestingLiveKit] = useState(false);
-  const [liveKitStatus, setLiveKitStatus] = useState<{
-    type: "success" | "error";
-    message: string;
-    debug?: any;
-    hint?: string;
-  } | null>(null);
-
   const testLiveKit = async () => {
     setTestingLiveKit(true);
     setLiveKitStatus(null);
@@ -523,6 +586,99 @@ const AdminDashboard = () => {
         confirmVariant={modalConfig?.confirmVariant}
       >
         <p className="text-black/60 italic">{modalConfig?.message}</p>
+      </Modal>
+
+      <Modal
+        isOpen={!!selectedUserForGifting}
+        onClose={() => setSelectedUserForGifting(null)}
+        title="Regalar Monedas Ayuuk"
+      >
+        {selectedUserForGifting && (
+          <form onSubmit={handleGiftCoins} className="space-y-6">
+            <div className="flex items-center gap-4 bg-white/[0.03] p-4 rounded-2xl border border-white/[0.05]">
+              <div className="w-14 h-14 rounded-xl bg-black/40 p-0.5 border border-white/10 shrink-0">
+                <img
+                  src={
+                    selectedUserForGifting.photoURL ||
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedUserForGifting.uid}`
+                  }
+                  className="w-full h-full rounded-[0.5rem] bg-[#f5f5f0]"
+                  alt="avatar"
+                />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <p className="font-display font-bold text-lg text-white leading-tight truncate">
+                  {selectedUserForGifting.displayName}
+                </p>
+                <p className="text-xs text-white/50 truncate">
+                  {selectedUserForGifting.email}
+                </p>
+                <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-brand tracking-wider mt-1">
+                  <Coins className="w-3.5 h-3.5 fill-current shrink-0" />
+                  <span>SALDO ACTUAL: {selectedUserForGifting.coins ?? 0} M.A.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/60 ml-1 block">
+                Cantidad a regalar
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Cantidad de monedas"
+                  value={giftCoinsAmount}
+                  onChange={(e) => setGiftCoinsAmount(e.target.value)}
+                  className="w-full bg-white/[0.03] border border-white/10 text-white rounded-xl py-4 pl-12 pr-6 text-sm font-semibold focus:border-brand focus:bg-white/[0.05] transition-all outline-none"
+                  required
+                />
+                <Coins className="w-4 h-4 text-brand fill-current absolute left-4 top-1/2 -locate-y-1/2 -translate-y-1/2" />
+              </div>
+            </div>
+
+            {/* Quick Gifting Packages Shortcut Buttons */}
+            <div className="grid grid-cols-4 gap-3">
+              {["100", "500", "1000", "5000"].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setGiftCoinsAmount(preset)}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold font-mono border transition-all ${
+                    giftCoinsAmount === preset
+                      ? "bg-brand text-white border-brand shadow-sm shadow-brand/40"
+                      : "bg-white/[0.02] text-white/60 border-white/10 hover:bg-white/[0.05] hover:text-white"
+                  }`}
+                >
+                  +{preset}
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-4 flex gap-4">
+              <button
+                type="button"
+                onClick={() => setSelectedUserForGifting(null)}
+                className="flex-1 px-6 py-4 rounded-xl bg-white/[0.05] hover:bg-white/10 text-white font-bold transition-all text-sm uppercase tracking-wider"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={giftingCoinsLoading || !giftCoinsAmount}
+                className="flex-1 bg-brand hover:bg-brand/90 text-white px-6 py-4 rounded-xl font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-brand/20 disabled:opacity-50 active:scale-95"
+              >
+                {giftingCoinsLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Gift className="w-5 h-5 z-10" />
+                )}
+                <span>Regalar</span>
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
 
       <Toast
@@ -1088,6 +1244,9 @@ const AdminDashboard = () => {
                       Email
                     </th>
                     <th className="p-8 text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">
+                      Monedas
+                    </th>
+                    <th className="p-8 text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">
                       Rol
                     </th>
                     <th className="p-8 text-[10px] font-semibold uppercase tracking-[0.15em] text-black/50">
@@ -1122,6 +1281,12 @@ const AdminDashboard = () => {
                         {u.email}
                       </td>
                       <td className="p-8">
+                        <div className="flex items-center gap-2 text-sm font-mono font-bold text-black/60">
+                          <Coins className="w-4 h-4 text-brand fill-current animate-pulse shrink-0" />
+                          <span>{u.coins ?? 0} M.A.</span>
+                        </div>
+                      </td>
+                      <td className="p-8">
                         <div
                           className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
                             u.role === "admin"
@@ -1133,13 +1298,25 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                       <td className="p-8">
-                        <button
-                          onClick={() => toggleUserRole(u)}
-                          className="p-3 bg-black/[0.02] hover:bg-brand text-black/50 hover:text-white rounded-xl transition-all duration-300"
-                          title="Cambiar Rol"
-                        >
-                          <UserCog className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleUserRole(u)}
+                            className="p-3 bg-black/[0.02] hover:bg-brand text-black/50 hover:text-white rounded-xl transition-all duration-300"
+                            title="Cambiar Rol"
+                          >
+                            <UserCog className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedUserForGifting(u);
+                              setGiftCoinsAmount("100");
+                            }}
+                            className="p-3 bg-brand/5 hover:bg-brand text-brand hover:text-white rounded-xl transition-all duration-300 flex items-center justify-center"
+                            title="Regalar Monedas"
+                          >
+                            <Gift className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

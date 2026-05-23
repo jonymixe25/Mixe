@@ -134,8 +134,9 @@ const News: React.FC = () => {
                 <img
                   src={article.imageUrl || `https://picsum.photos/seed/${article.id}/1200/750`}
                   alt={article.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out will-change-transform"
                   referrerPolicy="no-referrer"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-[#f5f5f0]/20 to-transparent opacity-60" />
                 
@@ -155,6 +156,7 @@ const News: React.FC = () => {
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${article.authorName}`} 
                         alt="author" 
                         className="w-full h-full rounded-[0.3rem] bg-[#f5f5f0]"
+                        loading="lazy"
                       />
                     </div>
                     <span>{article.authorName}</span>
@@ -231,6 +233,7 @@ const News: React.FC = () => {
                     alt={selectedArticle.title}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-transparent to-transparent opacity-80" />
                 </div>
