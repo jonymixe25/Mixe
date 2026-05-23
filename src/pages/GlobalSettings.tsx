@@ -4,6 +4,7 @@ import { db, doc, getDoc, setDoc, handleFirestoreError } from '../firebase';
 import { OperationType } from '../types';
 import { Settings as SettingsIcon, Save, AlertTriangle, Languages, ShieldAlert, UserPlus, ShieldCheck, Facebook, Twitter, Instagram, Globe, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react';
 import Toast from '../components/Toast';
+import magueyBg from '../assets/images/maguey_background_1779550128471.png';
 
 const GlobalSettings = () => {
   const { user } = useAuth();
@@ -38,7 +39,7 @@ const GlobalSettings = () => {
           setAppName(data.appName || 'Vida Mixe');
           setHeroTitle(data.heroTitle || 'Vida Mixe');
           setHeroSubtitle(data.heroSubtitle || '"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
-          setHeroImageUrl(data.heroImageUrl || '/hero_background.png');
+          setHeroImageUrl(data.heroImageUrl && data.heroImageUrl !== '/hero_background.png' ? data.heroImageUrl : magueyBg);
           setFooterText(data.footerText || 'La región de los jamás conquistados.');
           setThemeColor(data.themeColor || '#ff4e00');
           setContactEmail(data.contactEmail || 'contacto@vidamixe.mx');
@@ -71,7 +72,7 @@ const GlobalSettings = () => {
       setAppName('Vida Mixe');
       setHeroTitle('Vida Mixe');
       setHeroSubtitle('"La región de los jamás conquistados" — Conectando al pueblo Mixe a través de la tecnología.');
-      setHeroImageUrl('/hero_background.png');
+      setHeroImageUrl(magueyBg);
       setFooterText('La región de los jamás conquistados.');
       setThemeColor('#ff4e00');
       setContactEmail('contacto@vidamixe.mx');

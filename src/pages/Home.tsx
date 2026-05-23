@@ -8,6 +8,7 @@ import { useAuth } from '../AuthContext';
 import { useDevice } from '../hooks/useDevice';
 import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
 import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
+import magueyBg from '../assets/images/maguey_background_1779550128471.png';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -141,7 +142,20 @@ const Home: React.FC = () => {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <section className={`relative ${isMobile ? 'py-16 min-h-[55vh]' : 'py-24 min-h-[75vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg shadow-black/[0.02] border border-black/[0.04] bg-white/[0.2]`}>
+      <section className={`relative ${isMobile ? 'py-16 min-h-[55vh]' : 'py-24 min-h-[75vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg border border-black/[0.04]`}>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f5f0]/50 to-[#f5f5f0] z-10" />
+        <motion.img
+          initial={{ scale: 1.15 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
+          src={globalSettings?.heroImageUrl && globalSettings.heroImageUrl !== '/hero_background.png' ? globalSettings.heroImageUrl : magueyBg}
+          alt="Vida Mixe Hero"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = magueyBg;
+          }}
+          referrerPolicy="no-referrer"
+        />
         <div className="relative z-20 text-center max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
