@@ -52,11 +52,11 @@ const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className={`relative w-full ${sizeClasses[size]} bg-[#1a1614] border border-black/[0.06] rounded-3xl overflow-hidden shadow-lg shadow-black/[0.03] shadow-black/[0.04] transition-all duration-500`}
+            className={`relative w-full ${sizeClasses[size]} bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] rounded-3xl overflow-hidden shadow-lg transition-all duration-500 backdrop-blur-xl`}
           >
-            <div className="p-6 border-b border-black/[0.06] flex items-center justify-between">
+            <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between">
               <h3 className="text-lg font-bold uppercase italic tracking-tight">{title}</h3>
-              <button onClick={onClose} className="text-black/50 hover:text-black transition-colors">
+              <button onClick={onClose} className="text-[var(--text-color)] opacity-50 hover:opacity-100 transition-opacity">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -67,7 +67,7 @@ const Modal: React.FC<ModalProps> = ({
               <div className="p-6 pt-0 flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 px-6 py-3 rounded-xl bg-black/[0.03] hover:bg-black/[0.06] font-bold transition-colors"
+                  className="flex-1 px-6 py-3 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--text-color)] font-bold transition-colors"
                 >
                   Cancelar
                 </button>

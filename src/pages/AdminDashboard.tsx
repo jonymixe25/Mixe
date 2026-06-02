@@ -91,6 +91,7 @@ const AdminDashboard = () => {
   const [newsContent, setNewsContent] = useState("");
   const [newsImage, setNewsImage] = useState("");
   const [savingNews, setSavingNews] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Alerts state
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -1375,25 +1376,28 @@ const AdminDashboard = () => {
                       <div className="bg-black/[0.02] rounded-3xl p-6 border border-dashed border-black/[0.08]">
                         <ImageUpload
                           onUploadComplete={(url) => setNewsImage(url)}
+                          onUploading={(uploading) => setIsUploadingImage(uploading)}
                           label="Selecciona una imagen de impacto"
                           folder="news"
                           currentImageUrl={newsImage}
                         />
                       </div>
                     </div>
-
+ 
                     <div className="pt-4">
                       <button
                         type="submit"
-                        disabled={savingNews}
+                        disabled={savingNews || isUploadingImage}
                         className="w-full bg-brand text-white px-10 py-5 rounded-xl font-semibold uppercase tracking-wider hover:opacity-90 border-transparent shadow-md flex items-center justify-center gap-4 hover:bg-brand/90 transition-all duration-500 shadow-brand/20 disabled:opacity-50 active:scale-95"
                       >
                         {savingNews ? (
                           <div className="w-5 h-5 border-2 border-black/30 border-t-white rounded-full animate-spin" />
+                        ) : isUploadingImage ? (
+                          <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <Save className="w-5 h-5" />
                         )}
-                        <span>Publicar Noticia</span>
+                        <span>{isUploadingImage ? 'Subiendo Imagen...' : 'Publicar Noticia'}</span>
                       </button>
                     </div>
                   </div>

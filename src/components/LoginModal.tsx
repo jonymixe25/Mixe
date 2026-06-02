@@ -70,9 +70,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/[0.03]0 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#f5f5f0] border border-black/[0.06] p-8 rounded-3xl w-full max-w-md relative shadow-lg shadow-black/[0.03] shadow-black/[0.04]">
-        <button onClick={onClose} className="absolute top-4 right-4 text-black/50 hover:text-black transition-colors">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] p-8 rounded-3xl w-full max-w-md relative shadow-2xl backdrop-blur-2xl">
+        <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-color)] opacity-50 hover:opacity-100 transition-opacity">
           <X className="w-6 h-6" />
         </button>
         <h2 className="text-2xl font-bold mb-6 text-center">Acceder</h2>
@@ -82,7 +82,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             placeholder="Correo electrónico"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-colors"
+            className="w-full p-4 rounded-xl bg-black/5 dark:bg-white/5 text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand outline-none transition-colors"
           />
           <div className="relative">
             <input
@@ -90,12 +90,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-4 rounded-xl bg-black/[0.03] border border-black/[0.06] focus:border-brand outline-none transition-colors"
+              className="w-full p-4 rounded-xl bg-black/5 dark:bg-white/5 text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand outline-none transition-colors"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-4 text-black/50 hover:text-black transition-colors"
+              className="absolute right-4 top-4 text-[var(--text-color)] opacity-50 hover:opacity-100 transition-opacity"
             >
               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>

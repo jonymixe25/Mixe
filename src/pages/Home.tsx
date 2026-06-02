@@ -8,7 +8,6 @@ import { useAuth } from '../AuthContext';
 import { useDevice } from '../hooks/useDevice';
 import { FALLBACK_NEWS_ARTICLES } from '../data/fallbackNews';
 import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
-import magueyBg from '../assets/images/maguey_background_1779550128471.png';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -142,20 +141,7 @@ const Home: React.FC = () => {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <section className={`relative ${isMobile ? 'py-16 min-h-[55vh]' : 'py-24 min-h-[75vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg border border-black/[0.04]`}>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f5f0]/50 to-[#f5f5f0] z-10" />
-        <motion.img
-          initial={{ scale: 1.15 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 20, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-          src={globalSettings?.heroImageUrl && globalSettings.heroImageUrl !== '/hero_background.png' ? globalSettings.heroImageUrl : magueyBg}
-          alt="Vida Mixe Hero"
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = magueyBg;
-          }}
-          referrerPolicy="no-referrer"
-        />
+      <section className={`relative ${isMobile ? 'py-16 min-h-[55vh]' : 'py-24 min-h-[75vh]'} rounded-3xl overflow-hidden flex items-center justify-center group shadow-lg border border-[var(--border-color)] bg-[var(--bg-color)]`}>
         <div className="relative z-20 text-center max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -360,7 +346,7 @@ const Home: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-[#f5f5f0] via-[#f5f5f0]/60 to-transparent">
+                <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-[var(--bg-color)] via-[var(--bg-color)]/60 to-transparent">
                   <h3 className="text-xl font-display font-bold truncate group-hover:text-brand transition-colors duration-300">
                     {stream.title}
                   </h3>
@@ -370,7 +356,7 @@ const Home: React.FC = () => {
                         <img 
                           src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.userId}`} 
                           alt="avatar" 
-                          className="w-full h-full rounded-[0.6rem] bg-[#f5f5f0]"
+                          className="w-full h-full rounded-[0.6rem] bg-[var(--bg-color)]"
                           loading="lazy"
                         />
                       </div>
@@ -429,7 +415,7 @@ const Home: React.FC = () => {
                   referrerPolicy="no-referrer"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#f5f5f0] via-transparent to-transparent opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-color)] via-transparent to-transparent opacity-60" />
               </div>
               <div className="p-8 space-y-4">
                 <h3 className={`font-display font-bold leading-tight group-hover:text-brand transition-colors duration-300 ${index === 0 ? 'text-3xl' : 'text-xl'}`}>

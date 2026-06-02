@@ -15,6 +15,8 @@ export interface UserProfile {
   socialLinks?: { platform: string; url: string }[];
   coins?: number;
   giftsReceivedValue?: number;
+  status?: 'online' | 'offline';
+  lastSeen?: any;
 }
 
 export interface Gift {

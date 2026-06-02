@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare, Coins } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare, Coins, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
@@ -11,11 +11,12 @@ import { useTheme } from '../ThemeContext';
 import { useDevice } from '../hooks/useDevice';
 import { RechargeModal } from './RechargeModal';
 import { listenToUnreadCount } from '../services/notificationService';
+import PresenceNotificationManager from './PresenceNotificationManager';
 import defaultAvatar from '../assets/images/regenerated_image_1779544399609.jpg';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
-  const { primaryColor, setPrimaryColor } = useTheme();
+  const { primaryColor, setPrimaryColor, isDarkMode, toggleTheme } = useTheme();
   const { isMobile } = useDevice();
   const location = useLocation();
   const navigate = useNavigate();
@@ -176,7 +177,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div translate="no" className="min-h-screen bg-[#f5f5f0] text-black font-sans selection:bg-brand selection:text-black overflow-x-hidden">
+    <div translate="no" className="min-h-screen bg-[var(--bg-color)] text-[var(--text-color)] font-sans selection:bg-brand selection:text-white overflow-x-hidden transition-colors duration-300">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />
@@ -197,10 +198,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black/90 leading-none">
+                  <span className="text-2xl md:text-3xl font-display font-bold tracking-tight text-black/90 dark:text-white/90 leading-none">
                     {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
                   </span>
-                  <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-black/30 mt-1">
+                  <span className="text-[8px] font-semibold uppercase tracking-[0.2em] text-black/30 dark:text-white/30 mt-1">
                     {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
                   </span>
                 </div>
@@ -311,7 +312,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </Link>
               ))}
               
-              <div className="w-px h-8 bg-black/[0.06] mx-4" />
+              <div className="w-px h-8 bg-black/[0.06] dark:bg-white/[0.06] mx-4" />
+
+              <button
+                onClick={toggleTheme}
+                className="p-3 glass hover:bg-black/[0.06] dark:hover:bg-white/[0.06] text-black/50 dark:text-white/50 hover:text-brand dark:hover:text-brand rounded-xl transition-all duration-500 border-black/[0.06] dark:border-white/[0.06] group"
+                title={isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5 group-hover:rotate-45 transition-transform" /> : <Moon className="w-5 h-5 group-hover:-rotate-12 transition-transform" />}
+              </button>
+
+              <div className="w-px h-8 bg-black/[0.06] dark:bg-white/[0.06] mx-2" />
 
               <div className="relative">
                 <button
@@ -452,6 +463,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <span className="text-[10px] font-bold font-mono text-black">{user.coins ?? 0}</span>
                 </button>
               )}
+
+              <button
+                onClick={toggleTheme}
+                className="p-3 glass text-black/50 dark:text-white/50 hover:text-brand dark:hover:text-brand rounded-xl border-black/[0.06] dark:border-white/[0.06] transition-all"
+                title={isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}
+              >
+                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
 
               <button
                 onClick={() => {
@@ -831,6 +850,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
       <RechargeModal isOpen={isRechargeModalOpen} onClose={() => setIsRechargeModalOpen(false)} />
+      <PresenceNotificationManager />
       
       <Toast 
         message={`¡Bienvenido, ${user?.displayName || 'Usuario'}!`}

@@ -80,17 +80,17 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-[#f5f5f0] border border-black/[0.08] shadow-2xl rounded-3xl overflow-hidden z-10 text-black max-h-[90vh] flex flex-col"
+          className="relative w-full max-w-lg bg-[var(--card-bg)] border border-[var(--border-color)] shadow-2xl rounded-3xl overflow-hidden z-10 text-[var(--text-color)] max-h-[90vh] flex flex-col backdrop-blur-2xl"
         >
           {/* Header */}
-          <div className="p-6 border-b border-black/[0.06] flex items-center justify-between bg-black/[0.01]">
+          <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between bg-black/[0.01]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
                 <Coins className="w-5 h-5 fill-current" />
               </div>
               <div>
                 <h3 className="text-lg font-bold font-display leading-tight">Centro de Monedas Ayuuk</h3>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-black/40">Recarga saldo virtual para regalos</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-40">Recarga saldo virtual para regalos</p>
               </div>
             </div>
             {!isProcessing && (
@@ -100,7 +100,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                   setStep('packages');
                   setSelectedPackage(null);
                 }}
-                className="p-2 hover:bg-black/[0.05] rounded-xl text-black/40 hover:text-black transition-colors"
+                className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-[var(--text-color)] opacity-40 hover:opacity-100 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -109,8 +109,8 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
 
           {/* Current balance band */}
           {user && (
-            <div className="px-6 py-3 bg-brand/5 border-b border-black/[0.03] flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-black/50">Tu Saldo Actual:</span>
+            <div className="px-6 py-3 bg-brand/5 border-b border-[var(--border-color)] flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-50">Tu Saldo Actual:</span>
               <div className="flex items-center gap-1.5 bg-brand/10 px-3 py-1 rounded-xl border border-brand/15">
                 <Coins className="w-3.5 h-3.5 text-brand fill-current" />
                 <span className="text-xs font-mono font-bold text-brand">{currentCoins} M.A.</span>
@@ -135,8 +135,8 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                     exit={{ opacity: 0, x: 10 }}
                     className="space-y-4"
                   >
-                    <div className="p-4 bg-black/[0.02] border border-black/[0.04] rounded-2xl">
-                      <p className="text-[10px] text-black/50 leading-relaxed font-medium">
+                    <div className="p-4 bg-[var(--text-color)]/5 border border-[var(--border-color)] rounded-2xl">
+                      <p className="text-[10px] text-[var(--text-color)] opacity-50 leading-relaxed font-medium">
                         Adquiere <strong className="text-brand">Monedas Ayuuk (M.A.)</strong> para cambiarlas por coloridos e interactivos regalos virtuales que destacan en el chat y apoyan a tus sabios expositores y artistas locales.
                       </p>
                     </div>
@@ -146,7 +146,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                         <div
                           key={pkg.id}
                           onClick={() => handleSelectPackage(pkg)}
-                          className="group relative bg-white border border-black/[0.06] hover:border-brand/40 hover:bg-brand/[0.01] rounded-2xl p-5 cursor-pointer transition-all hover:shadow-[0_12px_24px_rgba(0,0,0,0.02)] active:scale-[0.98] flex flex-col justify-between"
+                          className="group relative bg-[var(--card-bg)] border border-[var(--border-color)] hover:border-brand/40 hover:bg-brand/[0.01] rounded-2xl p-5 cursor-pointer transition-all hover:shadow-[0_12px_24px_rgba(0,0,0,0.02)] active:scale-[0.98] flex flex-col justify-between"
                         >
                           {pkg.badge && (
                             <span className="absolute -top-2.5 right-4 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-brand text-black shadow-md">
@@ -155,11 +155,11 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                           )}
 
                           <div className="space-y-1">
-                            <span className="text-[9px] font-extrabold text-black/30 uppercase tracking-widest block">
+                            <span className="text-[9px] font-extrabold text-[var(--text-color)] opacity-30 uppercase tracking-widest block">
                               {pkg.title}
                             </span>
                             <div className="flex items-baseline gap-1.5">
-                              <span className="text-2xl font-mono font-bold tracking-tight text-black flex items-center gap-1.5">
+                              <span className="text-2xl font-mono font-bold tracking-tight text-[var(--text-color)] flex items-center gap-1.5">
                                 <Coins className="w-5 h-5 text-brand fill-current shrink-0" />
                                 {pkg.coins}
                               </span>
@@ -171,11 +171,11 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                             </div>
                           </div>
 
-                          <div className="mt-5 pt-3 border-t border-black/[0.04] flex items-center justify-between">
-                            <span className="text-xs font-bold text-black/40">Precio</span>
+                          <div className="mt-5 pt-3 border-t border-[var(--border-color)] flex items-center justify-between">
+                            <span className="text-xs font-bold text-[var(--text-color)] opacity-40">Precio</span>
                             <span className="text-sm font-extrabold text-brand flex items-center gap-1">
                               ${pkg.priceUSD.toFixed(2)} USD
-                              <ChevronRight className="w-4 h-4 text-black/20 group-hover:text-brand transition-colors" />
+                              <ChevronRight className="w-4 h-4 text-[var(--text-color)] opacity-20 group-hover:text-brand transition-colors" />
                             </span>
                           </div>
                         </div>
@@ -192,27 +192,27 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                     exit={{ opacity: 0, x: -10 }}
                     className="space-y-4"
                   >
-                    <div className="bg-white border border-black/[0.06] rounded-2xl p-4 flex items-center justify-between">
+                    <div className="bg-[var(--text-color)]/5 border border-[var(--border-color)] rounded-2xl p-4 flex items-center justify-between">
                       <div>
-                        <span className="text-[9px] font-extrabold text-black/30 uppercase tracking-wider">Paquete Seleccionado</span>
-                        <div className="font-bold flex items-center gap-1.5 text-black">
+                        <span className="text-[9px] font-extrabold text-[var(--text-color)] opacity-30 uppercase tracking-wider">Paquete Seleccionado</span>
+                        <div className="font-bold flex items-center gap-1.5 text-[var(--text-color)]">
                           <Coins className="w-4 h-4 text-brand fill-current" />
                           {selectedPackage.coins} M.A. {selectedPackage.bonusCoins > 0 && `(+${selectedPackage.bonusCoins})`}
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[9px] font-extrabold text-black/30 uppercase tracking-wider block">Total a Pagar</span>
+                        <span className="text-[9px] font-extrabold text-[var(--text-color)] opacity-30 uppercase tracking-wider block">Total a Pagar</span>
                         <span className="text-lg font-extrabold text-brand">${selectedPackage.priceUSD.toFixed(2)} USD</span>
                       </div>
                     </div>
 
                     <form onSubmit={handleConfirmPayment} className="space-y-4">
-                      <div className="p-4 bg-black/[0.02] border border-dashed border-black/[0.1] rounded-2xl">
+                      <div className="p-4 bg-black/5 dark:bg-white/5 border border-dashed border-[var(--border-color)] rounded-2xl">
                         <div className="flex gap-2.5 items-start">
                           <CreditCard className="w-5 h-5 text-brand mt-0.5" />
                           <div className="space-y-1">
                             <h4 className="text-[10px] font-bold uppercase tracking-wider">Simulación de Pago con Tarjeta de Pruebas</h4>
-                            <p className="text-[9px] text-black/40 leading-relaxed font-semibold">
+                            <p className="text-[9px] text-[var(--text-color)] opacity-40 leading-relaxed font-semibold">
                               ¡Esta es una pasarela de pruebas 100% simulada! No se te cobrará dinero real.
                             </p>
                           </div>
@@ -221,20 +221,20 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
 
                       <div className="space-y-3.5">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase tracking-wider text-black/50">Nombre del Titular</label>
+                          <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-50">Nombre del Titular</label>
                           <input
                             type="text"
                             required
                             disabled={isProcessing}
                             value={cardName}
                             onChange={(e) => setCardName(e.target.value)}
-                            className="w-full bg-white border border-black/[0.08] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-semibold"
+                            className="w-full bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-semibold"
                             placeholder="Nombre Completo"
                           />
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold uppercase tracking-wider text-black/50">Número de Tarjeta</label>
+                          <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-50">Número de Tarjeta</label>
                           <div className="relative">
                             <input
                               type="text"
@@ -243,16 +243,16 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                               maxLength={19}
                               value={cardNumber}
                               onChange={(e) => setCardNumber(e.target.value)}
-                              className="w-full bg-white border border-black/[0.08] focus:border-brand/40 outline-none rounded-xl pl-10 pr-4 py-3 text-xs font-mono font-bold"
+                              className="w-full bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand/40 outline-none rounded-xl pl-10 pr-4 py-3 text-xs font-mono font-bold"
                               placeholder="4000 1234 5678 9010"
                             />
-                            <CreditCard className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-black/30" />
+                            <CreditCard className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-color)] opacity-30" />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3.5">
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold uppercase tracking-wider text-black/50">Fecha de Vence</label>
+                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-50">Fecha de Vence</label>
                             <input
                               type="text"
                               required
@@ -260,12 +260,12 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                               maxLength={5}
                               value={cardExpiry}
                               onChange={(e) => setCardExpiry(e.target.value)}
-                              className="w-full bg-white border border-black/[0.08] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-mono font-bold text-center"
+                              className="w-full bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-mono font-bold text-center"
                               placeholder="MM/AA"
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold uppercase tracking-wider text-black/50">CVV</label>
+                            <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-color)] opacity-50">CVV</label>
                             <input
                               type="password"
                               required
@@ -273,7 +273,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                               maxLength={3}
                               value={cardCvv}
                               onChange={(e) => setCardCvv(e.target.value)}
-                              className="w-full bg-white border border-black/[0.08] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-mono font-bold text-center"
+                              className="w-full bg-[var(--card-bg)] text-[var(--text-color)] border border-[var(--border-color)] focus:border-brand/40 outline-none rounded-xl px-4 py-3 text-xs font-mono font-bold text-center"
                               placeholder="•••"
                             />
                           </div>
@@ -285,7 +285,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                           type="button"
                           disabled={isProcessing}
                           onClick={() => setStep('packages')}
-                          className="flex-1 border border-black/[0.08] hover:bg-black/[0.02] text-black text-[10px] font-bold uppercase tracking-wider py-4 rounded-xl transition-all"
+                          className="flex-1 border border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-[var(--text-color)] text-[10px] font-bold uppercase tracking-wider py-4 rounded-xl transition-all"
                         >
                           Atrás
                         </button>
@@ -325,7 +325,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
 
                     <div className="space-y-2">
                       <h4 className="text-xl font-bold font-display">¡Compra Simulada Exitosa!</h4>
-                      <p className="text-[10px] text-black/50 leading-relaxed font-semibold">
+                      <p className="text-[10px] text-[var(--text-color)] opacity-50 leading-relaxed font-semibold">
                         Se han agregado <strong className="text-brand">{selectedPackage.coins + selectedPackage.bonusCoins} Monedas Ayuuk</strong> a tu cuenta de manera recreativa para patrocinar a tus creadores preferidos.
                       </p>
                     </div>
@@ -336,7 +336,7 @@ export const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose })
                         <Coins className="w-5 h-5 text-brand fill-current animate-bounce" />
                       </div>
                       <div className="text-left font-mono">
-                        <span className="text-[8px] font-extrabold text-black/30 uppercase tracking-wider block">Nuevo Saldo</span>
+                        <span className="text-[8px] font-extrabold text-[var(--text-color)] opacity-30 uppercase tracking-wider block">Nuevo Saldo</span>
                         <span className="text-sm font-bold text-brand">{currentCoins} M.A.</span>
                       </div>
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db, onAuthStateChanged, signInWithPopup, googleProvider, signOut, doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc, handleFirestoreError, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously } from './firebase';
 import { UserProfile, OperationType } from './types';
+import { updateUserStatus } from './services/presenceService';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -32,6 +33,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
+        
+        // Update presence
+        updateUserStatus(firebaseUser.uid, 'online');
+
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            updateUserStatus(firebaseUser.uid, 'online');
+          }
+        };
+
+        const handleBeforeUnload = () => {
+          updateUserStatus(firebaseUser.uid, 'offline');
+        };
+
+        window.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
         
         // Initial fetch to ensure we have data before setting loading to false
         try {
@@ -148,6 +165,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubscribeAuth();
       if (unsubscribeUserDoc) unsubscribeUserDoc();
+      if (auth.currentUser) {
+        updateUserStatus(auth.currentUser.uid, 'offline');
+      }
+      window.removeEventListener('visibilitychange', () => {});
+      window.removeEventListener('beforeunload', () => {});
     };
   }, []);
 
@@ -175,6 +197,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      if (user) {
+        await updateUserStatus(user.uid, 'offline');
+      }
       await signOut(auth);
     } catch (error) {
       console.error('Logout error:', error);

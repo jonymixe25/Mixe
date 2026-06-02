@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import Toast from '../components/Toast';
 import { sendNotification } from '../services/notificationService';
+import { subscribeToContactsPresence } from '../services/presenceService';
 
 interface PrivateMessage {
   id: string;
@@ -45,6 +46,7 @@ const Chat: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [statuses, setStatuses] = useState<{ [uid: string]: { status: string, name: string } }>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -141,21 +143,25 @@ const Chat: React.FC = () => {
         console.error('Error fetching contacts in chat list:', error);
         setLoading(false);
       });
-      return () => unsubscribe();
+
+      const unsubPresence = subscribeToContactsPresence(user.uid, (presenceUpdates) => {
+        setStatuses(presenceUpdates);
+      });
+
+      return () => {
+        unsubscribe();
+        if (typeof unsubPresence === 'function') {
+          unsubPresence();
+        }
+      };
     }
 
-    const fetchContact = async () => {
-      try {
-        const contactDoc = await getDoc(doc(db, 'users', contactId));
-        if (contactDoc.exists()) {
-          setContact(contactDoc.data() as UserProfile);
-        }
-      } catch (error) {
-        console.error('Error fetching contact:', error);
+    // Use onSnapshot to listen for profile and presence
+    const unsubscribeContact = onSnapshot(doc(db, 'users', contactId), (docSnap) => {
+      if (docSnap.exists()) {
+        setContact(docSnap.data() as UserProfile);
       }
-    };
-
-    fetchContact();
+    });
 
     const chatId = getChatId(user.uid, contactId);
     
@@ -182,7 +188,10 @@ const Chat: React.FC = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubscribeContact();
+    };
   }, [user, contactId]);
 
   // Auto-send welcome message for new conversations
@@ -560,8 +569,10 @@ const Chat: React.FC = () => {
                   <div className="space-y-1">
                     <h3 className="font-display font-bold text-lg leading-none group-hover:text-brand transition-colors">{c.contactName}</h3>
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <p className="text-[10px] text-black/40 font-semibold uppercase tracking-wider">Chat Disponible</p>
+                      <div className={`w-1.5 h-1.5 rounded-full ${statuses[c.contactId]?.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-black/20'}`} />
+                      <p className={`text-[10px] font-semibold uppercase tracking-wider ${statuses[c.contactId]?.status === 'online' ? 'text-emerald-600/80' : 'text-black/30'}`}>
+                        {statuses[c.contactId]?.status === 'online' ? 'En línea' : 'Desconectado'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -611,14 +622,16 @@ const Chat: React.FC = () => {
                   className="w-full h-full object-cover rounded-[0.8rem] group-hover:scale-110 transition-transform duration-700"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0a0502] shadow-lg" />
+              <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--bg-color)] shadow-lg ${contact?.status === 'online' ? 'bg-emerald-500' : 'bg-black/20'}`} />
             </div>
             <div className="flex flex-col">
               <h2 className="font-display font-bold text-xl tracking-tighter uppercase italic leading-none group-hover:text-brand transition-colors">
                 {contact?.displayName || 'Usuario'}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[8px] font-semibold uppercase tracking-[0.15em] text-emerald-400">En línea ahora</span>
+                <span className={`text-[8px] font-semibold uppercase tracking-[0.15em] ${contact?.status === 'online' ? 'text-emerald-500' : 'text-black/30'}`}>
+                  {contact?.status === 'online' ? 'En línea ahora' : 'Desconectado'}
+                </span>
               </div>
             </div>
           </div>

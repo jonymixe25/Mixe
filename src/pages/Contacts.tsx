@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { db, collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc, deleteDoc, handleFirestoreError, limit } from '../firebase';
 import { Contact, UserProfile, OperationType } from '../types';
-import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle, Video } from 'lucide-react';
+import { Users, UserPlus, Search, Trash2, User as UserIcon, MessageCircle, Video, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import Toast from '../components/Toast';
 
 import { useNavigate } from 'react-router-dom';
 import { sendNotification } from '../services/notificationService';
+import { subscribeToContactsPresence } from '../services/presenceService';
 
 const Contacts: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [statuses, setStatuses] = useState<{ [uid: string]: { status: string, name: string } }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,16 @@ const Contacts: React.FC = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubPresence = subscribeToContactsPresence(user.uid, (presenceUpdates) => {
+      setStatuses(presenceUpdates);
+    });
+
+    return () => {
+      unsubscribe();
+      if (typeof unsubPresence === 'function') {
+        unsubPresence();
+      }
+    };
   }, [user]);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -262,8 +273,10 @@ const Contacts: React.FC = () => {
                     <div className="space-y-1">
                       <h3 className="font-display font-bold text-lg leading-none group-hover:text-brand transition-colors">{contact.contactName}</h3>
                       <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <p className="text-[10px] text-black/30 font-semibold uppercase tracking-wider">Amigo Conectado</p>
+                        <div className={`w-1.5 h-1.5 rounded-full ${statuses[contact.contactId]?.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-black/20'}`} />
+                        <p className={`text-[10px] font-semibold uppercase tracking-wider ${statuses[contact.contactId]?.status === 'online' ? 'text-emerald-600/80' : 'text-black/30'}`}>
+                          {statuses[contact.contactId]?.status === 'online' ? 'En línea' : 'Desconectado'}
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { db, collection, addDoc, serverTimestamp } from '../firebase';
 import { Upload, X, Loader2, Image as ImageIcon, FileText, CheckCircle } from 'lucide-react';
 import { useAuth } from '../AuthContext';
@@ -7,6 +7,7 @@ import Toast from './Toast';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
+  onUploading?: (uploading: boolean) => void;
   label?: string;
   currentImageUrl?: string | null;
   folder?: string;
@@ -16,6 +17,7 @@ interface ImageUploadProps {
 
 const ImageUpload: React.FC<ImageUploadProps> = ({ 
   onUploadComplete, 
+  onUploading,
   label = "Subir Archivo", 
   currentImageUrl,
   folder = "uploads",
@@ -24,10 +26,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (onUploading) onUploading(uploading);
+  }, [uploading, onUploading]);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(currentImageUrl || null);
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<{ name: string; type: string } | null>(null);
-  const [tags, setTags] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -35,10 +41,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Sync preview with currentImageUrl from parent
+  useEffect(() => {
+    setPreview(currentImageUrl || null);
+    if (!currentImageUrl) {
+      setSelectedFile(null);
+    }
+  }, [currentImageUrl]);
 
+  const handleFile = async (file: File) => {
     setSelectedFile({ name: file.name, type: file.type });
     const sizeInMB = file.size / (1024 * 1024);
 
@@ -86,6 +97,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           // Save metadata to Firestore if user is logged in
           if (user) {
             try {
+              const { db, addDoc, collection, serverTimestamp } = await import('../firebase');
               await addDoc(collection(db, 'media'), {
                 userId: user.uid,
                 url,
@@ -94,7 +106,6 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 fileType: file.type,
                 fileSize: file.size,
                 isPublic,
-                tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
                 createdAt: serverTimestamp()
               });
             } catch (err) {
@@ -122,7 +133,29 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
   };
 
-  const clearImage = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const clearImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setPreview(null);
     setSelectedFile(null);
     onUploadComplete('');
@@ -150,32 +183,24 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </span>
         )}
       </div>
-      
-      <input 
-        type="text"
-        value={tags}
-        onChange={(e) => setTags(e.target.value)}
-        placeholder="Etiquetas (separadas por comas)..."
-        className="w-full bg-black/[0.03] border border-black/[0.06] rounded-xl p-4 text-sm focus:border-brand outline-none"
-      />
 
       <div 
-        className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group ${
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative aspect-video rounded-3xl border-2 border-dashed transition-all overflow-hidden flex flex-col items-center justify-center group cursor-pointer ${
           preview || selectedFile ? 'border-transparent' : 'border-black/[0.06] hover:border-brand/50 bg-black/[0.03]'
-        } ${uploading ? 'border-brand/50 bg-brand/5' : ''}`}
+        } ${uploading ? 'border-brand/50 bg-brand/5' : ''} ${isDragging ? 'border-brand bg-brand/10 scale-[0.98]' : ''}`}
       >
         {preview ? (
           <>
             <img src={preview} alt="Preview" className={`w-full h-full object-cover transition-opacity ${uploading ? 'opacity-40' : 'opacity-100'}`} />
             {!uploading && (
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <button 
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3 bg-black/[0.06] backdrop-blur-md rounded-xl hover:bg-black/20 transition-colors"
-                >
+                <div className="p-3 bg-black/[0.06] backdrop-blur-md rounded-xl hover:bg-black/20 transition-colors">
                   <Upload className="w-5 h-5" />
-                </button>
+                </div>
                 <button 
                   type="button"
                   onClick={clearImage}
@@ -196,30 +221,23 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <span className="text-[10px] opacity-50 uppercase tracking-widest block">{selectedFile.type}</span>
             </div>
             {!uploading && (
-              <button 
-                type="button"
-                onClick={clearImage}
-                className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline"
-              >
-                Cambiar archivo
-              </button>
+              <div className="text-[10px] font-bold text-brand uppercase tracking-widest hover:underline mt-2">
+                Click para cambiar archivo
+              </div>
             )}
           </div>
         ) : (
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-4 text-black/30 hover:text-black/50 transition-all group-hover:scale-110"
-          >
+          <div className="flex flex-col items-center gap-4 text-black/30 hover:text-black/50 transition-all group-hover:scale-110">
             <div className="w-16 h-16 bg-black/[0.03] rounded-xl flex items-center justify-center">
               <Upload className="w-8 h-8" />
             </div>
-            <div className="text-center">
-              <span className="text-xs font-bold uppercase tracking-widest block">Seleccionar Archivo</span>
+            <div className="text-center px-6">
+              <span className="text-xs font-bold uppercase tracking-widest block">
+                {isDragging ? '¡Suelta para subir!' : 'Seleccionar o Arrastrar'}
+              </span>
               <span className="text-[10px] opacity-50 uppercase tracking-widest mt-1 block">Soporta más de 80MB</span>
             </div>
-          </button>
+          </div>
         )}
 
         {uploading && (
