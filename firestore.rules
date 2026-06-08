@@ -9,6 +9,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == "jonyoax95@gmail.com" || 
@@ -95,6 +103,24 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow create: if isSignedIn();
       allow read, update, delete: if isSignedIn() && resource.data.recipientId == request.auth.uid;
+    }
+
+    function isValidCamera(data) {
+      return data.keys().hasAll(['userId', 'name', 'url', 'type', 'createdAt']) &&
+             data.keys().size() <= 8 &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.url is string && data.url.size() <= 500 &&
+             data.type in ['ip', 'wifi', 'bluetooth'];
+    }
+
+    match /cameras/{cameraId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidCamera(incoming()) && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
+                    isValidCamera(incoming()) &&
+                    !incoming().diff(existing()).affectedKeys().hasAny(['userId', 'createdAt']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

@@ -1,7 +1,8 @@
-import { db, doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from '../firebase';
-import { UserProfile } from '../types';
+import { db, doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot, handleFirestoreError } from '../firebase';
+import { UserProfile, OperationType } from '../types';
 
 export const updateUserStatus = async (uid: string, status: 'online' | 'offline') => {
+  const path = `users/${uid}`;
   try {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, {
@@ -10,6 +11,7 @@ export const updateUserStatus = async (uid: string, status: 'online' | 'offline'
     });
   } catch (error) {
     console.error('Error updating status:', error);
+    handleFirestoreError(error, OperationType.UPDATE, path);
   }
 };
 
@@ -18,6 +20,7 @@ export const subscribeToContactsPresence = (
   onPresenceUpdate: (updates: { [uid: string]: { status: string, lastSeen: any, name: string } }) => void
 ) => {
   // First get contact IDs
+  const contactsPath = `users/${userId}/contacts`;
   const contactsRef = collection(db, 'users', userId, 'contacts');
   
   return onSnapshot(contactsRef, (snapshot) => {
@@ -28,15 +31,8 @@ export const subscribeToContactsPresence = (
       return;
     }
 
-    // Now subscribe to those users' status
-    // Note: Firestore has a limit of 10-30 IDs in 'in' queries, 
-    // but for a simple social app we'll assume contacts < 30 for now or chunk it.
-    // Let's just listen to all users in small batches or individually.
-    // For simplicity, we'll listen to the whole users collection filtered by IDs if possible.
-    
     const usersRef = collection(db, 'users');
-    // We can't really do dynamic 'in' queries with more than 30 IDs easily.
-    // But we can listen to each user individually or use a single query if IDs are few.
+    const usersPath = 'users';
     
     const presenceUpdates: { [uid: string]: { status: string, lastSeen: any, name: string } } = {};
     
@@ -58,9 +54,13 @@ export const subscribeToContactsPresence = (
           };
         });
         onPresenceUpdate({ ...presenceUpdates });
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, usersPath);
       });
     });
 
     return () => unsubscribes.forEach(unsub => unsub());
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, contactsPath);
   });
 };

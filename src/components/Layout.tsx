@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare, Coins, Sun, Moon } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Palette, Bell, Info, ExternalLink, MessageSquare, Coins, Sun, Moon, Cctv, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { orderBy, limit } from 'firebase/firestore';
 import LoginModal from './LoginModal';
@@ -161,6 +161,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const navItems = [
     { path: '/', label: 'Inicio', icon: Home },
     { path: '/news', label: 'Noticias', icon: Newspaper },
+    { path: '/free-fire', label: 'Sensibilidad', icon: Target },
     ...(user ? [
       { path: '/profile', label: 'Perfil', icon: User },
       { path: '/friends', label: 'Amigos', icon: Users },
@@ -168,6 +169,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { path: '/chat', label: 'Mensajes', icon: MessageSquare },
       { path: '/gallery', label: 'Mis Archivos', icon: Folder },
       { path: '/studio', label: 'Transmitir', icon: Video },
+      { path: '/security', label: 'Cámaras', icon: Cctv },
       ...(user.role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: Shield }] : []),
     ] : []),
   ];
@@ -920,21 +922,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Footer */}
       <footer className="relative z-10 border-t border-black/5 py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col items-center md:items-start gap-4 p-5 rounded-3xl bg-black/[0.015] border border-black/[0.05] backdrop-blur-md shadow-sm hover:bg-black/[0.025] hover:border-black/[0.08] hover:shadow-md transition-all duration-500 max-w-sm group">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[var(--primary-color,#ff4e00)]/10 to-[var(--primary-color,#ff4e00)]/30 rounded-2xl flex items-center justify-center border border-[var(--primary-color,#ff4e00)]/15 group-hover:scale-105 transition-transform duration-500 shadow-sm">
-                <Video className="w-5 h-5 text-[var(--primary-color,#ff4e00)] animate-pulse" />
-              </div>
-              <span className="font-display font-extrabold tracking-tight text-black/90 text-xl">
-                {(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ')[0]} <span className="text-[var(--primary-color,#ff4e00)]">{(globalSettings?.appName?.includes('Voz') ? 'Vida Mixe' : (globalSettings?.appName || 'Vida Mixe')).split(' ').slice(1).join(' ')}</span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2 border-l-2 border-[var(--primary-color,#ff4e00)]/40 pl-3">
-              <p className="text-black/60 text-[11px] font-medium tracking-wide leading-relaxed italic">
-                "{globalSettings?.footerText?.includes('Voz') ? 'La región de los jamás conquistados.' : (globalSettings?.footerText || 'La región de los jamás conquistados.')}"
-              </p>
-            </div>
-          </div>
           
           <div className="flex flex-col items-center gap-6">
             <div className="flex items-center gap-8">

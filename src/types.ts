@@ -108,6 +108,18 @@ export interface Comment {
   createdAt: any;
 }
 
+export interface CameraDevice {
+  id: string;
+  userId: string;
+  name: string;
+  url: string;
+  type: 'ip' | 'wifi' | 'bluetooth';
+  location?: string;
+  isOnline: boolean;
+  createdAt: any;
+  lastSeen?: any;
+}
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',

@@ -12,6 +12,8 @@
         "emailLowercase": { "type": "string" },
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline"] },
+        "lastSeen": { "type": "string", "format": "date-time" },
         "socialLinks": { 
           "type": "array",
           "items": {
@@ -173,6 +175,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["recipientId", "senderId", "senderName", "type", "title", "description", "read", "createdAt"]
+    },
+    "Camera": {
+      "title": "Security Camera",
+      "description": "Linked IP, WiFi or Bluetooth security camera",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["ip", "wifi", "bluetooth"] },
+        "location": { "type": "string" },
+        "isOnline": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "url", "type", "createdAt"]
     }
   },
   "firestore": {
@@ -235,6 +253,10 @@
     "/admins/{uid}": {
       "schema": "object",
       "description": "Admin status documents"
+    },
+    "/cameras/{cameraId}": {
+      "schema": "Camera",
+      "description": "Linked security cameras collection"
     }
   }
 }

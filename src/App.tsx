@@ -14,6 +14,8 @@ import React, { Suspense, lazy } from 'react';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary';
 import MaintenanceGuard from './components/MaintenanceGuard';
 
+import SecurityCameras from './pages/SecurityCameras';
+
 const Home = lazy(() => import('./pages/Home'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Contacts = lazy(() => import('./pages/Contacts'));
@@ -30,6 +32,8 @@ const FileStorage = lazy(() => import('./pages/FileStorage'));
 const GlobalSettings = lazy(() => import('./pages/GlobalSettings'));
 const WebPlatform = lazy(() => import('./pages/WebPlatform'));
 const PrivateConference = lazy(() => import('./pages/PrivateConference'));
+const FreeFireSensitivities = lazy(() => import('./pages/FreeFireSensitivities'));
+// const SecurityCameras = lazy(() => import('./pages/SecurityCameras'));
 
 export default function App() {
   return (
@@ -59,6 +63,8 @@ export default function App() {
                       <Route path="/files" element={<AuthGuard><FileStorage /></AuthGuard>} />
                       <Route path="/web" element={<WebPlatform />} />
                       <Route path="/conference/:roomId" element={<AuthGuard><PrivateConference /></AuthGuard>} />
+                      <Route path="/security" element={<AuthGuard><SecurityCameras /></AuthGuard>} />
+                      <Route path="/free-fire" element={<FreeFireSensitivities />} />
                     </Routes>
                   </Suspense>
                 </MaintenanceGuard>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db, collection, query, where, onSnapshot, orderBy, limit, doc } from '../firebase';
 import { StreamSession } from '../types';
-import { Video, Users, Play, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info } from 'lucide-react';
+import { Video, Users, Play, Newspaper, ArrowRight, Folder, Sparkles, Languages, X, Info, Target, Zap, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -438,6 +438,60 @@ const Home: React.FC = () => {
           )}
         </div>
       </section>
+
+      {/* Free Fire Sensitivities Promo */}
+      <motion.section
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="px-2"
+      >
+        <div className="bg-black text-white p-10 md:p-20 rounded-[3.5rem] relative overflow-hidden group shadow-2xl">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-brand/20 rounded-full blur-[120px] -mr-48 -mt-48 group-hover:bg-brand/30 transition-all duration-1000" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand/10 rounded-full blur-[100px] -ml-32 -mb-32" />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-brand text-black text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand/20">
+                <Zap className="w-3.5 h-3.5" />
+                <span>Mobile Gaming</span>
+              </div>
+              <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tight leading-[0.9] italic">
+                Domina <span className="text-brand">Free Fire</span> con precisión
+              </h2>
+              <p className="text-white/50 text-lg md:text-xl font-medium italic max-w-lg leading-relaxed">
+                Descubre las sensibilidades perfectas para Moto G54, Honor X8c y más modelos. Ajustes probados por expertos.
+              </p>
+              <div className="pt-4">
+                <Link 
+                  to="/free-fire"
+                  className="inline-flex items-center gap-4 bg-brand text-black px-10 py-5 rounded-2xl font-bold uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-brand/20"
+                >
+                  <Target className="w-5 h-5" />
+                  <span>Ver Sensibilidades</span>
+                </Link>
+              </div>
+            </div>
+            
+            <div className="hidden lg:block relative">
+              <div className="aspect-[4/5] bg-brand/5 rounded-[3rem] border border-white/10 flex items-center justify-center relative group-hover:rotate-1 transition-transform duration-700">
+                <Target className="w-32 h-32 text-brand/20 animate-pulse" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-3/4 h-3/4 glass rounded-[2.5rem] border-white/10 flex flex-col items-center justify-center p-8 text-center space-y-6">
+                    <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center text-black shadow-lg">
+                      <Smartphone className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold font-display uppercase italic tracking-tighter">Moto G54 & Honor X8c</h4>
+                      <p className="text-[10px] uppercase font-bold text-white/40 tracking-widest mt-2">Configuraciones Exclusivas</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.section>
     </div>
   );
 };
